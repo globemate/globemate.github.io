@@ -1,29 +1,27 @@
 import React, { useState } from 'react';
 import { db, storage, auth } from './firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Camera, User, MapPin, Calendar, Heart, Briefcase, Globe as GlobeIcon, HelpCircle, Mail, Languages as LanguagesIcon } from 'lucide-react';
+import { Camera, User, MapPin, Heart, Globe as GlobeIcon, HelpCircle, Mail, Languages as LanguagesIcon, X } from 'lucide-react';
 
-const ProfileSetup = ({ onProfileComplete }) => {
+const EditProfile = ({ currentProfile, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    age: '',
-    nationality: '',
-    location: '',
-    education: '',
-    bio: '',
-    hobbies: [],
-    wantsToVisit: [],
-    languages: [],
-    placesVisited: []
+    name: currentProfile.name || '',
+    age: currentProfile.age || '',
+    nationality: currentProfile.nationality || '',
+    location: currentProfile.location || '',
+    education: currentProfile.education || '',
+    bio: currentProfile.bio || '',
+    hobbies: currentProfile.hobbies || [],
+    wantsToVisit: currentProfile.wantsToVisit || [],
+    languages: currentProfile.languages || [],
+    placesVisited: currentProfile.placesVisited || []
   });
   const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(currentProfile.photo || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showSupport, setShowSupport] = useState(false);
 
-  // Listas predefinidas
   const countries = [
     'España', 'México', 'Argentina', 'Colombia', 'Chile', 'Perú', 'Venezuela',
     'Ecuador', 'Guatemala', 'Cuba', 'Bolivia', 'República Dominicana', 'Honduras',
@@ -94,77 +92,48 @@ const ProfileSetup = ({ onProfileComplete }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!photoFile) {
-      setError('Por favor sube una foto de perfil');
-      return;
-    }
-
-    if (formData.hobbies.length === 0) {
-      setError('Selecciona al menos un hobby o interés');
-      return;
-    }
-
-    if (formData.wantsToVisit.length === 0) {
-      setError('Selecciona al menos un destino que quieras visitar');
-      return;
-    }
-
-    if (formData.languages.length === 0) {
-      setError('Selecciona al menos un idioma que hables');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
       const user = auth.currentUser;
-      let photoURL = '';
+      let photoURL = currentProfile.photo;
 
-      // Subir foto
-      const photoRef = ref(storage, `profiles/${user.uid}/photo_${Date.now()}`);
-      await uploadBytes(photoRef, photoFile);
-      photoURL = await getDownloadURL(photoRef);
+      // Subir nueva foto si se seleccionó una
+      if (photoFile) {
+        const photoRef = ref(storage, `profiles/${user.uid}/photo_${Date.now()}`);
+        await uploadBytes(photoRef, photoFile);
+        photoURL = await getDownloadURL(photoRef);
+      }
 
-      // Generar código de referido único
-const generateReferralCode = () => {
-  const name = formData.name.split(' ')[0].toUpperCase();
-  const random = Math.floor(1000 + Math.random() * 9000);
-  return `${name}${random}`;
-};
+      // Actualizar perfil
+      const updatedData = {
+        ...formData,
+        age: parseInt(formData.age),
+        photo: photoURL
+      };
 
-// Guardar perfil
-const profileData = {
-  ...formData,
-  age: parseInt(formData.age),
-  photo: photoURL,
-  userId: user.uid,
-  email: user.email,
-  verified: false,
-  premium: false,
-  balance: 0,
-  referralCode: generateReferralCode(),
-  referralsCount: 0,
-  createdAt: new Date().toISOString()
-};
-
-      await setDoc(doc(db, 'users', user.uid), profileData);
-      onProfileComplete();
+      await updateDoc(doc(db, 'users', user.uid), updatedData);
+      onSave();
     } catch (err) {
       console.error('Error:', err);
-      setError('Error al guardar el perfil: ' + err.message);
+      setError('Error al actualizar el perfil: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 p-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8 my-8">
-        <div className="flex items-center gap-2 mb-6">
-          <GlobeIcon className="text-teal-600" size={32} />
-          <h1 className="text-2xl font-bold text-gray-800">Crea tu Perfil</h1>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl my-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <GlobeIcon className="text-teal-600" size={32} />
+            <h1 className="text-2xl font-bold text-gray-800">Editar Perfil</h1>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X size={24} />
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -185,12 +154,10 @@ const profileData = {
                   accept="image/*"
                   onChange={handlePhotoChange}
                   className="hidden"
-                  required
                 />
               </label>
             </div>
-            <p className="text-sm text-gray-600 mt-2">Haz clic en la cámara para subir tu foto *</p>
-            <p className="text-xs text-gray-500">Máximo 5MB</p>
+            <p className="text-sm text-gray-600 mt-2">Haz clic en la cámara para cambiar tu foto</p>
           </div>
 
           {/* Nombre */}
@@ -204,7 +171,6 @@ const profileData = {
               value={formData.name}
               onChange={handleInputChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="Tu nombre"
               required
             />
           </div>
@@ -220,7 +186,6 @@ const profileData = {
               value={formData.age}
               onChange={handleInputChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="Tu edad"
               min="18"
               max="100"
               required
@@ -257,18 +222,17 @@ const profileData = {
               value={formData.location}
               onChange={handleInputChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="Ej: Madrid, España"
               required
             />
           </div>
 
-          {/* Idiomas - Selección múltiple */}
+          {/* Idiomas */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <LanguagesIcon size={18} />
-              Idiomas que hablas * (Selecciona al menos uno)
+              Idiomas que hablas *
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-300 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-300 rounded-lg">
               {languagesOptions.map(lang => (
                 <button
                   key={lang}
@@ -284,11 +248,6 @@ const profileData = {
                 </button>
               ))}
             </div>
-            {formData.languages.length > 0 && (
-              <p className="text-sm text-purple-600 mt-2">
-                Seleccionados: {formData.languages.join(', ')}
-              </p>
-            )}
           </div>
 
           {/* Educación */}
@@ -302,7 +261,6 @@ const profileData = {
               value={formData.education}
               onChange={handleInputChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="Ej: Arquitectura, Ingeniero"
             />
           </div>
 
@@ -316,19 +274,18 @@ const profileData = {
               value={formData.bio}
               onChange={handleInputChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="Cuéntanos sobre ti..."
               rows="4"
               required
             />
           </div>
 
-          {/* Hobbies - Selección múltiple */}
+          {/* Hobbies */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Heart size={18} />
-              Hobbies e intereses * (Selecciona al menos uno)
+              Hobbies e intereses *
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-300 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-300 rounded-lg">
               {hobbiesOptions.map(hobby => (
                 <button
                   key={hobby}
@@ -344,20 +301,15 @@ const profileData = {
                 </button>
               ))}
             </div>
-            {formData.hobbies.length > 0 && (
-              <p className="text-sm text-teal-600 mt-2">
-                Seleccionados: {formData.hobbies.join(', ')}
-              </p>
-            )}
           </div>
 
-          {/* Destinos que quiere visitar - Selección múltiple */}
+          {/* Destinos */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <MapPin size={18} className="text-blue-600" />
-              Destinos que quieres visitar * (Selecciona al menos uno)
+              Destinos que quieres visitar *
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-300 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-300 rounded-lg">
               {destinations.map(dest => (
                 <button
                   key={dest}
@@ -373,20 +325,15 @@ const profileData = {
                 </button>
               ))}
             </div>
-            {formData.wantsToVisit.length > 0 && (
-              <p className="text-sm text-blue-600 mt-2">
-                Seleccionados: {formData.wantsToVisit.join(', ')}
-              </p>
-            )}
           </div>
 
-          {/* Lugares ya visitados - Selección múltiple */}
+          {/* Lugares visitados */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <MapPin size={18} className="text-green-600" />
-              Lugares donde ya he estado (Opcional)
+              Lugares donde ya he estado
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-300 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-300 rounded-lg">
               {destinations.map(dest => (
                 <button
                   key={dest}
@@ -402,11 +349,6 @@ const profileData = {
                 </button>
               ))}
             </div>
-            {formData.placesVisited.length > 0 && (
-              <p className="text-sm text-green-600 mt-2">
-                Seleccionados: {formData.placesVisited.join(', ')}
-              </p>
-            )}
           </div>
 
           {error && (
@@ -415,57 +357,26 @@ const profileData = {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-teal-600 text-white py-4 rounded-lg font-semibold hover:bg-teal-700 transition disabled:opacity-50 text-lg"
-          >
-            {loading ? 'Guardando...' : 'Crear Perfil'}
-          </button>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition disabled:opacity-50"
+            >
+              {loading ? 'Guardando...' : 'Guardar Cambios'}
+            </button>
+          </div>
         </form>
-
-        {/* Área de Soporte Técnico */}
-        <div className="mt-8 border-t pt-6">
-          <button
-            onClick={() => setShowSupport(!showSupport)}
-            className="flex items-center gap-2 text-gray-700 hover:text-teal-600 transition"
-          >
-            <HelpCircle size={20} />
-            <span className="font-medium">¿Problemas técnicos? Contáctanos</span>
-          </button>
-
-          {showSupport && (
-            <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-2">Soporte Técnico</h3>
-              <p className="text-sm text-gray-600 mb-3">
-                Si tienes problemas para crear tu perfil, subir tu foto, o cualquier otra dificultad técnica, contáctanos:
-              </p>
-              <div className="space-y-2">
-                <a
-                  href="mailto:soporte@globemate.com"
-                  className="flex items-center gap-2 text-teal-600 hover:text-teal-700"
-                >
-                  <Mail size={16} />
-                  soporte@globemate.com
-                </a>
-                <p className="text-xs text-gray-500">
-                  Tiempo de respuesta: 24-48 horas
-                </p>
-                <div className="mt-3 text-xs text-gray-600">
-                  <p className="font-medium mb-1">Problemas comunes:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>La foto no se sube: Verifica que sea menor a 5MB</li>
-                    <li>No puedo guardar: Completa todos los campos obligatorios (*)</li>
-                    <li>La página no carga: Intenta refrescar (F5)</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
 };
 
-export default ProfileSetup;
+export default EditProfile;

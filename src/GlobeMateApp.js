@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+const [showEditProfile, setShowEditProfile] = useState(false);
 import { Globe, User, Search, MessageCircle, CheckCircle, Star, MapPin, Heart, X, Menu, Settings, Camera, Shield, Languages, Download, Wallet, Gift, DollarSign, Copy, Share2, Bitcoin } from 'lucide-react';
-
-const GlobeMateApp = ({ userProfile, allProfiles }) => {
+import EditProfile from './EditProfile';
+const GlobeMateApp = ({ userProfile, allProfiles, onProfileUpdate }) => {
   const [currentView, setCurrentView] = useState('home');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showVerification, setShowVerification] = useState(false);
@@ -11,8 +12,8 @@ const GlobeMateApp = ({ userProfile, allProfiles }) => {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
-  const [userBalance, setUserBalance] = useState(12.50);
-  const [referralCode] = useState('MARIA2025');
+ const [userBalance, setUserBalance] = useState(userProfile.balance || 0);
+const [referralCode] = useState(userProfile.referralCode || 'CODIGO');
   const [withdrawMethod, setWithdrawMethod] = useState('paypal');
   const [selectedCrypto, setSelectedCrypto] = useState('USDT');
 
@@ -161,6 +162,13 @@ const GlobeMateApp = ({ userProfile, allProfiles }) => {
             </button>
             <button onClick={() => setCurrentView('search')} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">
               <Search size={20} />
+              <button
+  onClick={() => setShowEditProfile(true)}
+  className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+>
+  <Settings size={20} />
+  <span className="hidden sm:inline">Editar Perfil</span>
+</button>
               {t.explore}
             </button>
           </div>

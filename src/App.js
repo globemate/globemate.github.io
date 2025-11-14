@@ -5,13 +5,18 @@ import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import Auth from './Auth';
 import ProfileSetup from './ProfileSetup';
 import GlobeMateApp from './GlobeMateApp';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import AdminDashboard from './AdminDashboard';
+import { LogOut, User as UserIcon, Shield } from 'lucide-react';
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [allProfiles, setAllProfiles] = useState([]);
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  // Email del administrador (tu email)
+  const ADMIN_EMAIL = 'iam.rosa18@gmail.com'; // CAMBIA ESTO A TU EMAIL
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -27,6 +32,7 @@ const App = () => {
         }
       } else {
         setProfile(null);
+        setAllProfiles([]);
       }
       
       setLoading(false);
@@ -55,9 +61,16 @@ const App = () => {
       await signOut(auth);
       setProfile(null);
       setAllProfiles([]);
+      setShowAdmin(false);
     } catch (error) {
       console.error('Error logging out:', error);
     }
+  };
+
+  const handleProfileUpdate = () => {
+    setLoading(true);
+    // Recargar perfil después de actualizar
+    window.location.reload();
   };
 
   if (loading) {
@@ -75,14 +88,53 @@ const App = () => {
 
   // Si hay usuario pero no tiene perfil, mostrar creación de perfil
   if (!profile) {
-    return <ProfileSetup onProfileComplete={() => setLoading(true)} />;
+    return <ProfileSetup onProfileComplete={handleProfileUpdate} />;
+  }
+
+  // Verificar si es administrador
+  const isAdmin = user.email === ADMIN_EMAIL;
+
+  // Si el admin quiere ver el dashboard
+  if (showAdmin && isAdmin) {
+    return (
+      <div>
+        <div className="fixed top-4 right-4 z-50 flex gap-2">
+          <button
+            onClick={() => setShowAdmin(false)}
+            className="bg-white px-4 py-2 rounded-lg shadow-lg hover:bg-gray-100 transition"
+          >
+            Volver a la App
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition flex items-center gap-2 shadow-lg"
+          >
+            <LogOut size={20} />
+            Salir
+          </button>
+        </div>
+        <AdminDashboard 
+          allUsers={[...allProfiles, { id: user.uid, ...profile }]}
+          currentUser={profile}
+        />
+      </div>
+    );
   }
 
   // Si hay usuario y perfil, mostrar la app principal
   return (
     <div>
-      {/* Botón de cerrar sesión */}
+      {/* Botones superiores */}
       <div className="fixed top-4 right-4 z-50 flex gap-2">
+        {isAdmin && (
+          <button
+            onClick={() => setShowAdmin(true)}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition flex items-center gap-2 shadow-lg"
+          >
+            <Shield size={20} />
+            Admin
+          </button>
+        )}
         <div className="bg-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
           <UserIcon size={20} className="text-teal-600" />
           <span className="font-medium">{profile.name}</span>
@@ -96,7 +148,11 @@ const App = () => {
         </button>
       </div>
       
-      <GlobeMateApp userProfile={profile} allProfiles={allProfiles} />
+      <GlobeMateApp 
+        userProfile={profile} 
+        allProfiles={allProfiles}
+        onProfileUpdate={handleProfileUpdate}
+      />
     </div>
   );
 };
