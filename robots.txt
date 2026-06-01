@@ -1,3 +1,6 @@
-# https://www.robotstxt.org/robotstxt.html
+# GlobeMate — https://globemate.app
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /static/
+
+Sitemap: https://globemate.app/sitemap.xml
