@@ -1,0 +1,637 @@
+import { useState, useEffect, useRef } from "react";
+import { db, storage } from "./firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
+
+const INTERESTS = [
+  "🏔️ Mountains","🏖️ Beaches","🏛️ History","🍜 Food",
+  "🎭 Culture","🌿 Nature","🎵 Music","📸 Photography",
+  "🧘 Wellness","🎪 Festivals","🍷 Wine","🏄 Adventure",
+  "🎨 Art","🌆 Cities","🚂 Train travel","🤿 Diving",
+];
+
+const STYLES = [
+  "🎒 Backpacker","✨ Luxury","🏕️ Camping","🏨 Boutique hotels",
+  "🚐 Road trips","🛳️ Cruises","🌱 Eco-travel","⚡ Fast-paced",
+];
+
+const ALL_LANGS = [
+  "English","Spanish","French","Portuguese","Italian",
+  "German","Japanese","Mandarin","Arabic","Russian","Hindi","Korean",
+];
+
+const LEVELS = ["Basic","Conversational","Fluent","Native"];
+
+const COUNTRIES = [
+  {code:"AR",name:"Argentina",flag:"🇦🇷"},{code:"AU",name:"Australia",flag:"🇦🇺"},
+  {code:"BR",name:"Brazil",flag:"🇧🇷"},{code:"CA",name:"Canada",flag:"🇨🇦"},
+  {code:"CL",name:"Chile",flag:"🇨🇱"},{code:"CN",name:"China",flag:"🇨🇳"},
+  {code:"CO",name:"Colombia",flag:"🇨🇴"},{code:"HR",name:"Croatia",flag:"🇭🇷"},
+  {code:"CZ",name:"Czech Rep.",flag:"🇨🇿"},{code:"EG",name:"Egypt",flag:"🇪🇬"},
+  {code:"FR",name:"France",flag:"🇫🇷"},{code:"DE",name:"Germany",flag:"🇩🇪"},
+  {code:"GR",name:"Greece",flag:"🇬🇷"},{code:"HK",name:"Hong Kong",flag:"🇭🇰"},
+  {code:"HU",name:"Hungary",flag:"🇭🇺"},{code:"IS",name:"Iceland",flag:"🇮🇸"},
+  {code:"IN",name:"India",flag:"🇮🇳"},{code:"ID",name:"Indonesia",flag:"🇮🇩"},
+  {code:"IT",name:"Italy",flag:"🇮🇹"},{code:"JP",name:"Japan",flag:"🇯🇵"},
+  {code:"KE",name:"Kenya",flag:"🇰🇪"},{code:"KR",name:"S. Korea",flag:"🇰🇷"},
+  {code:"MA",name:"Morocco",flag:"🇲🇦"},{code:"MX",name:"Mexico",flag:"🇲🇽"},
+  {code:"NL",name:"Netherlands",flag:"🇳🇱"},{code:"NZ",name:"New Zealand",flag:"🇳🇿"},
+  {code:"NO",name:"Norway",flag:"🇳🇴"},{code:"PE",name:"Peru",flag:"🇵🇪"},
+  {code:"PL",name:"Poland",flag:"🇵🇱"},{code:"PT",name:"Portugal",flag:"🇵🇹"},
+  {code:"RO",name:"Romania",flag:"🇷🇴"},{code:"SG",name:"Singapore",flag:"🇸🇬"},
+  {code:"ZA",name:"South Africa",flag:"🇿🇦"},{code:"ES",name:"Spain",flag:"🇪🇸"},
+  {code:"SE",name:"Sweden",flag:"🇸🇪"},{code:"CH",name:"Switzerland",flag:"🇨🇭"},
+  {code:"TH",name:"Thailand",flag:"🇹🇭"},{code:"TR",name:"Turkey",flag:"🇹🇷"},
+  {code:"GB",name:"UK",flag:"🇬🇧"},{code:"US",name:"USA",flag:"🇺🇸"},
+  {code:"VN",name:"Vietnam",flag:"🇻🇳"},
+];
+
+const DEF = {
+  displayName: "",
+  location: "",
+  bio: "",
+  photoURL: "",
+  coverURL: "",
+  visitedCountries: [],
+  upcoming: [],
+  interests: [],
+  travelStyles: [],
+  languages: [],
+  socials: { instagram: "", twitter: "", linkedin: "" },
+};
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0a0905; --dark: #100f0a; --card: #141209;
+    --gold: #c9a84c; --gold-light: #e8c97a; --gold-dim: rgba(201,168,76,0.15);
+    --cream: #f5f0e8; --cream-dim: rgba(245,240,232,0.55); --muted: rgba(245,240,232,0.35);
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  body { background: var(--black); color: var(--cream); font-family: var(--sans); font-weight: 300; }
+
+  .pr-root { min-height: 100vh; background: var(--black); font-family: var(--sans); font-weight: 300; color: var(--cream); padding-bottom: 120px; }
+
+  /* cover */
+  .pr-cover { position: relative; height: 260px; background: linear-gradient(135deg,#1a1508 0%,#2a1f0a 40%,#0a0905 100%); overflow: hidden; }
+  .pr-cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
+  .pr-cover-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 30%, rgba(10,9,5,0.85) 100%); }
+  .pr-cover-edit { position: absolute; top: 20px; right: 20px; background: rgba(10,9,5,0.7); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); padding: 8px 18px; font-family: var(--sans); font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.25s; }
+  .pr-cover-edit:hover { background: rgba(201,168,76,0.15); }
+
+  .pr-avatar-wrap { position: absolute; bottom: -52px; left: 56px; }
+  .pr-avatar { width: 108px; height: 108px; border-radius: 50%; border: 3px solid var(--gold); object-fit: cover; background: #1a1508; display: block; }
+  .pr-avatar-placeholder { width: 108px; height: 108px; border-radius: 50%; border: 3px solid var(--gold); background: #1a1508; display: flex; align-items: center; justify-content: center; font-size: 2.6rem; color: var(--gold-dim); }
+  .pr-avatar-btn { position: absolute; bottom: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); border: none; color: var(--black); font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; line-height: 1; }
+  .pr-avatar-btn:hover { background: var(--gold-light); }
+
+  /* header */
+  .pr-header { padding: 68px 56px 28px; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  @media (max-width: 680px) {
+    /* dar espacio arriba para los botones fijos */
+    .pr-root { padding-top: 64px; }
+    .pr-header { padding: 68px 24px 24px; }
+    .pr-avatar-wrap { left: 24px; }
+    /* back fijo arriba-izquierda, simétrico a la campanita */
+    .pr-back {
+      position: fixed;
+      top: 16px; left: 16px; z-index: 301;
+      background: rgba(10,9,5,0.88);
+      border: 1px solid rgba(201,168,76,0.25);
+      padding: 9px 16px;
+      backdrop-filter: blur(6px);
+    }
+    /* stats wrappean si no caben */
+    .pr-stats { flex-wrap: wrap; gap: 18px 28px; }
+  }
+
+  .pr-name-input { font-family: var(--serif); font-size: clamp(1.7rem, 3vw, 2.5rem); font-weight: 300; color: var(--cream); background: transparent; border: none; border-bottom: 1px solid transparent; outline: none; width: 100%; transition: border-color 0.25s; padding: 4px 0; }
+  .pr-name-input:focus { border-bottom-color: var(--gold); }
+  .pr-name-input::placeholder { color: var(--muted); }
+
+  .pr-loc-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .pr-loc-input { background: transparent; border: none; border-bottom: 1px solid transparent; color: var(--cream-dim); font-family: var(--sans); font-size: 0.85rem; font-weight: 300; outline: none; transition: border-color 0.25s; padding: 2px 0; min-width: 160px; }
+  .pr-loc-input:focus { border-bottom-color: var(--gold); }
+  .pr-loc-input::placeholder { color: var(--muted); }
+
+  .pr-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); padding: 3px 10px; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; }
+
+  .pr-stats { display: flex; gap: 36px; margin-top: 18px; }
+  .pr-stat-n { font-family: var(--serif); font-size: 1.7rem; font-weight: 300; color: var(--gold-light); line-height: 1; }
+  .pr-stat-l { font-size: 0.64rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+
+  .pr-back { background: none; border: none; color: var(--gold); font-family: var(--sans); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; padding: 0; transition: color 0.25s; display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; }
+  .pr-back:hover { color: var(--gold-light); }
+  .bell-btn { position:relative; background:none; border:1px solid rgba(201,168,76,0.25); color:var(--gold); padding:6px 10px; cursor:pointer; transition:all 0.22s; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
+  .bell-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.1); }
+  .bell-badge { position:absolute; top:-6px; right:-6px; background:#d32f2f; color:#fff; border-radius:50%; min-width:17px; height:17px; display:flex; align-items:center; justify-content:center; font-size:0.58rem; font-weight:700; font-family:var(--sans); border:1.5px solid var(--black); padding:0 2px; pointer-events:none; }
+
+  /* body grid */
+  .pr-body { padding: 0 56px; display: grid; grid-template-columns: 1fr 340px; gap: 28px; max-width: 1200px; }
+  @media (max-width: 920px) { .pr-body { grid-template-columns: 1fr; padding: 0 24px; } }
+
+  /* sections */
+  .pr-section { background: var(--card); border: 1px solid rgba(201,168,76,0.1); padding: 28px 30px; margin-bottom: 20px; }
+  .pr-section-title { font-family: var(--serif); font-size: 1.05rem; font-weight: 300; letter-spacing: 0.08em; color: var(--cream); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid rgba(201,168,76,0.12); }
+
+  /* bio */
+  .pr-bio { width: 100%; background: transparent; border: 1px solid rgba(201,168,76,0.15); color: var(--cream); font-family: var(--sans); font-size: 0.87rem; font-weight: 300; line-height: 1.78; padding: 14px 16px; resize: vertical; outline: none; min-height: 115px; transition: border-color 0.25s; }
+  .pr-bio:focus { border-color: var(--gold); }
+  .pr-bio::placeholder { color: var(--muted); }
+
+  /* chips */
+  .pr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pr-chip { padding: 7px 14px; border: 1px solid rgba(201,168,76,0.2); background: transparent; color: var(--cream-dim); font-family: var(--sans); font-size: 0.78rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .pr-chip:hover { border-color: rgba(201,168,76,0.5); color: var(--cream); }
+  .pr-chip.on { background: rgba(201,168,76,0.15); border-color: var(--gold); color: var(--gold-light); }
+
+  .pr-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); padding: 5px 10px; font-family: var(--sans); font-size: 0.78rem; cursor: pointer; transition: all 0.2s; }
+  .pr-tag:hover { background: rgba(180,60,60,0.12); border-color: rgba(180,60,60,0.35); color: #f5a0a0; }
+
+  /* destinations */
+  .pr-dest-list { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
+  .pr-dest-row { display: flex; align-items: center; gap: 10px; background: rgba(245,240,232,0.02); padding: 10px 14px; border: 1px solid rgba(201,168,76,0.1); }
+  .pr-dest-input { flex: 1; background: transparent; border: none; color: var(--cream); font-family: var(--sans); font-size: 0.85rem; font-weight: 300; outline: none; }
+  .pr-status-btn { padding: 3px 11px; font-family: var(--sans); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; border: 1px solid; background: transparent; transition: all 0.2s; white-space: nowrap; }
+  .pr-status-btn.confirmed { color: #6fcf97; border-color: rgba(111,207,151,0.4); }
+  .pr-status-btn.planning  { color: var(--gold); border-color: rgba(201,168,76,0.35); }
+  .pr-rm-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 2px 4px; transition: color 0.2s; line-height: 1; }
+  .pr-rm-btn:hover { color: #f5a0a0; }
+
+  /* add row */
+  .pr-add-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+  .pr-inp { background: rgba(245,240,232,0.04); border: 1px solid rgba(201,168,76,0.18); color: var(--cream); padding: 9px 14px; font-family: var(--sans); font-size: 0.82rem; font-weight: 300; outline: none; flex: 1; min-width: 0; transition: border-color 0.25s; }
+  .pr-inp:focus { border-color: var(--gold); }
+  .pr-inp::placeholder { color: var(--muted); }
+  .pr-sel { background: rgba(245,240,232,0.04); border: 1px solid rgba(201,168,76,0.18); color: var(--cream); padding: 9px 12px; font-family: var(--sans); font-size: 0.82rem; font-weight: 300; outline: none; cursor: pointer; }
+  .pr-sel option { background: #141209; }
+  .pr-add-btn { background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 9px 18px; font-family: var(--sans); font-size: 0.71rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.25s; white-space: nowrap; }
+  .pr-add-btn:hover { background: rgba(201,168,76,0.15); }
+
+  /* languages */
+  .pr-lang-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .pr-lang-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: rgba(245,240,232,0.02); border: 1px solid rgba(201,168,76,0.1); }
+  .pr-lang-name { flex: 1; font-size: 0.85rem; }
+  .pr-lang-sel { background: transparent; border: 1px solid rgba(201,168,76,0.22); color: var(--gold); padding: 3px 10px; font-family: var(--sans); font-size: 0.67rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; outline: none; }
+  .pr-lang-sel option { background: #141209; }
+
+  /* social */
+  .pr-social-grid { display: flex; flex-direction: column; gap: 12px; }
+  .pr-social-row { display: flex; align-items: center; gap: 12px; }
+  .pr-social-lbl { width: 80px; font-size: 0.67rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
+
+  /* save bar */
+  .pr-save-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 200; background: rgba(10,9,5,0.97); border-top: 1px solid rgba(201,168,76,0.2); padding: 16px 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  @media (max-width: 680px) { .pr-save-bar { padding: 14px 24px; } }
+  .pr-save-note { font-size: 0.78rem; color: var(--muted); }
+  .pr-save-note.ok { color: #6fcf97; }
+  .pr-save-note.err { color: #f5a0a0; }
+  .pr-save-btn { background: var(--gold); color: var(--black); border: none; padding: 12px 44px; font-family: var(--sans); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; }
+  .pr-save-btn:hover:not(:disabled) { background: var(--gold-light); }
+  .pr-save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* hamburger (mobile only, fixed next to back button) */
+  .pr-hamburger { display:none; }
+  @media (max-width: 680px) {
+    .pr-hamburger {
+      display:flex; flex-direction:column; gap:5px;
+      position:fixed; top:16px; right:70px; z-index:302;
+      background:rgba(10,9,5,0.88); border:1px solid rgba(201,168,76,0.25);
+      cursor:pointer; padding:10px 12px; backdrop-filter:blur(6px);
+    }
+    .pr-hamburger span { display:block; width:18px; height:1.5px; background:var(--gold); transition:transform 0.3s; }
+  }
+
+  /* mobile nav overlay */
+  .mob-nav { position:fixed; inset:0; z-index:500; background:rgba(10,9,5,0.98); backdrop-filter:blur(12px); display:flex; flex-direction:column; padding:28px 32px 40px; opacity:0; visibility:hidden; transition:opacity 0.3s,visibility 0.3s; overflow-y:auto; }
+  .mob-nav.open { opacity:1; visibility:visible; }
+  .mob-nav-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:36px; }
+  .mob-nav-logo { font-family:var(--serif); font-size:1.4rem; font-weight:300; letter-spacing:0.12em; color:var(--gold-light); }
+  .mob-nav-logo span { font-style:italic; }
+  .mob-nav-close { background:none; border:none; color:var(--cream-dim); font-size:1.5rem; cursor:pointer; padding:4px 8px; line-height:1; }
+  .mob-nav-link { background:none; border:none; color:var(--cream-dim); font-family:var(--sans); font-size:1rem; letter-spacing:0.12em; text-transform:uppercase; text-align:left; padding:18px 0; cursor:pointer; border-bottom:1px solid rgba(201,168,76,0.08); transition:color 0.2s; display:block; width:100%; }
+  .mob-nav-link:hover { color:var(--cream); }
+  .mob-nav-link.gold { color:var(--gold); }
+  .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
+`;
+
+export default function Profile({ user, onBack, onNotif, notifCount, onExplore, onMatches, onChat, onMap, onSignOut }) {
+  const [profile, setProfile] = useState(DEF);
+  const [loading, setLoading]   = useState(true);
+  const [dirty, setDirty]       = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [msg, setMsg]           = useState({ text: "", type: "" });
+
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFile, setPhotoFile]       = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
+  const [coverFile, setCoverFile]       = useState(null);
+
+  const [newDest, setNewDest]           = useState("");
+  const [newDestStatus, setNewDestStatus] = useState("planning");
+  const [newCountry, setNewCountry]     = useState("");
+  const [newLang, setNewLang]           = useState("");
+  const [newLangLevel, setNewLangLevel] = useState("Conversational");
+  const [menuOpen, setMenuOpen]         = useState(false);
+
+  const photoRef = useRef();
+  const coverRef = useRef();
+
+  useEffect(() => {
+    getDoc(doc(db, "users", user.uid))
+      .then(snap => {
+        if (snap.exists()) {
+          setProfile({ ...DEF, ...snap.data() });
+        } else {
+          setProfile({ ...DEF, displayName: user.displayName || "", photoURL: user.photoURL || "" });
+        }
+      })
+      .catch(() => {
+        setProfile({ ...DEF, displayName: user.displayName || "", photoURL: user.photoURL || "" });
+      })
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  const upd = (key, val) => {
+    setProfile(p => ({ ...p, [key]: val }));
+    setDirty(true);
+    setMsg({ text: "", type: "" });
+  };
+
+  const updSocial = (key, val) => {
+    setProfile(p => ({ ...p, socials: { ...p.socials, [key]: val } }));
+    setDirty(true);
+    setMsg({ text: "", type: "" });
+  };
+
+  const toggle = (key, val) => {
+    setProfile(p => {
+      const arr = p[key];
+      return { ...p, [key]: arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val] };
+    });
+    setDirty(true);
+    setMsg({ text: "", type: "" });
+  };
+
+  const handlePhoto = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setPhotoFile(f);
+    setPhotoPreview(URL.createObjectURL(f));
+    setDirty(true);
+  };
+
+  const handleCover = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setCoverFile(f);
+    setCoverPreview(URL.createObjectURL(f));
+    setDirty(true);
+  };
+
+  const addDest = () => {
+    if (!newDest.trim()) return;
+    upd("upcoming", [...profile.upcoming, { name: newDest.trim(), status: newDestStatus }]);
+    setNewDest("");
+  };
+
+  const addCountry = () => {
+    if (!newCountry || profile.visitedCountries.includes(newCountry)) return;
+    upd("visitedCountries", [...profile.visitedCountries, newCountry]);
+    setNewCountry("");
+  };
+
+  const addLang = () => {
+    if (!newLang || profile.languages.find(l => l.lang === newLang)) return;
+    upd("languages", [...profile.languages, { lang: newLang, level: newLangLevel }]);
+    setNewLang("");
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMsg({ text: "", type: "" });
+    try {
+      let photoURL = profile.photoURL;
+      let coverURL = profile.coverURL;
+
+      if (photoFile) {
+        try {
+          const r = sRef(storage, `profile-photos/${user.uid}`);
+          await uploadBytes(r, photoFile);
+          photoURL = await getDownloadURL(r);
+        } catch (_) {}
+      }
+      if (coverFile) {
+        try {
+          const r = sRef(storage, `cover-photos/${user.uid}`);
+          await uploadBytes(r, coverFile);
+          coverURL = await getDownloadURL(r);
+        } catch (_) {}
+      }
+
+      await setDoc(doc(db, "users", user.uid), { ...profile, photoURL, coverURL, updatedAt: new Date().toISOString() }, { merge: true });
+      setProfile(p => ({ ...p, photoURL, coverURL }));
+      setPhotoFile(null);
+      setCoverFile(null);
+      setDirty(false);
+      setMsg({ text: "Profile saved ✓", type: "ok" });
+      setTimeout(() => setMsg({ text: "", type: "" }), 3000);
+    } catch {
+      setMsg({ text: "Error saving. Try again.", type: "err" });
+    }
+    setSaving(false);
+  };
+
+  if (loading) return (
+    <div style={{ minHeight:"100vh", background:"#0a0905", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif", color:"rgba(245,240,232,0.4)", fontSize:"0.85rem", letterSpacing:"0.15em", textTransform:"uppercase" }}>
+      Loading profile…
+    </div>
+  );
+
+  const visitedFull      = COUNTRIES.filter(c => profile.visitedCountries.includes(c.code));
+  const availCountries   = COUNTRIES.filter(c => !profile.visitedCountries.includes(c.code));
+  const availLangs       = ALL_LANGS.filter(l => !profile.languages.find(x => x.lang === l));
+  const avatarSrc        = photoPreview || profile.photoURL;
+  const coverSrc         = coverPreview || profile.coverURL;
+
+  return (
+    <>
+      <style>{css}</style>
+
+      {/* mobile nav overlay */}
+      <div className={`mob-nav${menuOpen ? " open" : ""}`}>
+        <div className="mob-nav-top">
+          <div className="mob-nav-logo">Globe<span>Mate</span></div>
+          <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
+        </div>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <div className="mob-nav-divider" />
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+        <div className="mob-nav-divider" />
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
+          Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
+        </button>
+        <div className="mob-nav-divider" />
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+      </div>
+
+      <div className="pr-root">
+
+        {/* hamburger — mobile only, fixed between back and bell */}
+        <button className="pr-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
+          <span /><span /><span />
+        </button>
+
+        {/* bell — fixed top-right */}
+        {onNotif && (
+          <button className="bell-btn" style={{ position:"fixed", top:"18px", right:"18px", zIndex:300 }} onClick={onNotif}>
+            🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
+          </button>
+        )}
+
+        {/* cover */}
+        <div className="pr-cover">
+          {coverSrc && <img className="pr-cover-img" src={coverSrc} alt="" />}
+          <div className="pr-cover-overlay" />
+          <button className="pr-cover-edit" onClick={() => coverRef.current.click()}>
+            📷 Edit cover
+          </button>
+          <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCover} />
+          <div className="pr-avatar-wrap">
+            {avatarSrc
+              ? <img className="pr-avatar" src={avatarSrc} alt="avatar" />
+              : <div className="pr-avatar-placeholder">👤</div>
+            }
+            <button className="pr-avatar-btn" onClick={() => photoRef.current.click()}>✎</button>
+            <input ref={photoRef} type="file" accept="image/*" hidden onChange={handlePhoto} />
+          </div>
+        </div>
+
+        {/* header */}
+        <div className="pr-header">
+          <div style={{ flex: 1 }}>
+            <input
+              className="pr-name-input"
+              placeholder="Your name"
+              value={profile.displayName}
+              onChange={e => upd("displayName", e.target.value)}
+            />
+            <div className="pr-loc-row">
+              <span style={{ color:"var(--muted)", fontSize:"0.9rem" }}>📍</span>
+              <input
+                className="pr-loc-input"
+                placeholder="City, Country"
+                value={profile.location}
+                onChange={e => upd("location", e.target.value)}
+              />
+              <span className="pr-badge">✓ Verified traveler</span>
+            </div>
+            <div className="pr-stats">
+              <div>
+                <div className="pr-stat-n">{profile.visitedCountries.length}</div>
+                <div className="pr-stat-l">Countries</div>
+              </div>
+              <div>
+                <div className="pr-stat-n">{profile.upcoming.filter(d => d.status === "confirmed").length}</div>
+                <div className="pr-stat-l">Confirmed trips</div>
+              </div>
+              <div>
+                <div className="pr-stat-n">{profile.interests.length}</div>
+                <div className="pr-stat-l">Interests</div>
+              </div>
+            </div>
+          </div>
+          <button className="pr-back" onClick={onBack}>← Back</button>
+        </div>
+
+        {/* body */}
+        <div className="pr-body">
+
+          {/* left column */}
+          <div>
+            {/* bio */}
+            <div className="pr-section">
+              <div className="pr-section-title">About me</div>
+              <textarea
+                className="pr-bio"
+                placeholder="Your travel philosophy, most unforgettable trip, what kind of connection you're looking for…"
+                value={profile.bio}
+                onChange={e => upd("bio", e.target.value)}
+              />
+            </div>
+
+            {/* visited countries */}
+            <div className="pr-section">
+              <div className="pr-section-title">Countries visited</div>
+              <div className="pr-chips" style={{ marginBottom: "16px" }}>
+                {visitedFull.map(c => (
+                  <button key={c.code} className="pr-tag" onClick={() => upd("visitedCountries", profile.visitedCountries.filter(x => x !== c.code))}>
+                    {c.flag} {c.name} ×
+                  </button>
+                ))}
+                {visitedFull.length === 0 && <span style={{ color:"var(--muted)", fontSize:"0.82rem" }}>No countries added yet</span>}
+              </div>
+              <div className="pr-add-row">
+                <select className="pr-sel pr-inp" value={newCountry} onChange={e => setNewCountry(e.target.value)}>
+                  <option value="">Select a country…</option>
+                  {availCountries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                </select>
+                <button className="pr-add-btn" onClick={addCountry}>Add</button>
+              </div>
+            </div>
+
+            {/* upcoming */}
+            <div className="pr-section">
+              <div className="pr-section-title">Upcoming destinations</div>
+              <div className="pr-dest-list">
+                {profile.upcoming.map((d, i) => (
+                  <div key={i} className="pr-dest-row">
+                    <span style={{ fontSize:"1rem" }}>✈️</span>
+                    <input
+                      className="pr-dest-input"
+                      value={d.name}
+                      onChange={e => {
+                        const next = profile.upcoming.map((x, xi) => xi === i ? { ...x, name: e.target.value } : x);
+                        upd("upcoming", next);
+                      }}
+                    />
+                    <button
+                      className={`pr-status-btn ${d.status}`}
+                      onClick={() => {
+                        const next = profile.upcoming.map((x, xi) => xi === i ? { ...x, status: x.status === "confirmed" ? "planning" : "confirmed" } : x);
+                        upd("upcoming", next);
+                      }}
+                    >
+                      {d.status === "confirmed" ? "✓ Confirmed" : "Planning"}
+                    </button>
+                    <button className="pr-rm-btn" onClick={() => upd("upcoming", profile.upcoming.filter((_, xi) => xi !== i))}>×</button>
+                  </div>
+                ))}
+              </div>
+              <div className="pr-add-row">
+                <input
+                  className="pr-inp"
+                  placeholder="e.g. Kyoto, Japan"
+                  value={newDest}
+                  onChange={e => setNewDest(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addDest()}
+                />
+                <select className="pr-sel" value={newDestStatus} onChange={e => setNewDestStatus(e.target.value)}>
+                  <option value="planning">Planning</option>
+                  <option value="confirmed">Confirmed</option>
+                </select>
+                <button className="pr-add-btn" onClick={addDest}>Add</button>
+              </div>
+            </div>
+
+            {/* interests */}
+            <div className="pr-section">
+              <div className="pr-section-title">Interests</div>
+              <div className="pr-chips">
+                {INTERESTS.map(item => (
+                  <button
+                    key={item}
+                    className={`pr-chip${profile.interests.includes(item) ? " on" : ""}`}
+                    onClick={() => toggle("interests", item)}
+                  >{item}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* travel style */}
+            <div className="pr-section">
+              <div className="pr-section-title">Travel style</div>
+              <div className="pr-chips">
+                {STYLES.map(s => (
+                  <button
+                    key={s}
+                    className={`pr-chip${profile.travelStyles.includes(s) ? " on" : ""}`}
+                    onClick={() => toggle("travelStyles", s)}
+                  >{s}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* right column */}
+          <div>
+            {/* languages */}
+            <div className="pr-section">
+              <div className="pr-section-title">Languages</div>
+              <div className="pr-lang-list">
+                {profile.languages.map(l => (
+                  <div key={l.lang} className="pr-lang-row">
+                    <span className="pr-lang-name">{l.lang}</span>
+                    <select
+                      className="pr-lang-sel"
+                      value={l.level}
+                      onChange={e => upd("languages", profile.languages.map(x => x.lang === l.lang ? { ...x, level: e.target.value } : x))}
+                    >
+                      {LEVELS.map(lv => <option key={lv} value={lv}>{lv}</option>)}
+                    </select>
+                    <button className="pr-rm-btn" onClick={() => upd("languages", profile.languages.filter(x => x.lang !== l.lang))}>×</button>
+                  </div>
+                ))}
+              </div>
+              <div className="pr-add-row">
+                <select className="pr-sel" style={{ flex: 1 }} value={newLang} onChange={e => setNewLang(e.target.value)}>
+                  <option value="">Language…</option>
+                  {availLangs.map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+                <select className="pr-sel" value={newLangLevel} onChange={e => setNewLangLevel(e.target.value)}>
+                  {LEVELS.map(lv => <option key={lv} value={lv}>{lv}</option>)}
+                </select>
+                <button className="pr-add-btn" onClick={addLang}>Add</button>
+              </div>
+            </div>
+
+            {/* social */}
+            <div className="pr-section">
+              <div className="pr-section-title">Social links</div>
+              <div className="pr-social-grid">
+                {[
+                  { key: "instagram", label: "Instagram", ph: "@username" },
+                  { key: "twitter",   label: "Twitter",   ph: "@username" },
+                  { key: "linkedin",  label: "LinkedIn",  ph: "Profile URL" },
+                ].map(({ key, label, ph }) => (
+                  <div key={key} className="pr-social-row">
+                    <span className="pr-social-lbl">{label}</span>
+                    <input
+                      className="pr-inp"
+                      placeholder={ph}
+                      value={profile.socials[key]}
+                      onChange={e => updSocial(key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* save bar */}
+        {(dirty || msg.text) && (
+          <div className="pr-save-bar">
+            <span className={`pr-save-note ${msg.type}`}>
+              {msg.text || "You have unsaved changes"}
+            </span>
+            {dirty && (
+              <button className="pr-save-btn" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            )}
+          </div>
+        )}
+
+      </div>
+    </>
+  );
+}
