@@ -68,6 +68,9 @@ const style = `
     transition: all 0.3s;
   }
   .nav-cta:hover { background: var(--gold); color: var(--black); }
+  .bell-btn { position:relative; background:none; border:1px solid rgba(201,168,76,0.25); color:var(--gold); padding:6px 10px; cursor:pointer; transition:all 0.22s; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
+  .bell-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.1); }
+  .bell-badge { position:absolute; top:-6px; right:-6px; background:#d32f2f; color:#fff; border-radius:50%; min-width:17px; height:17px; display:flex; align-items:center; justify-content:center; font-size:0.58rem; font-weight:700; font-family:var(--sans); border:1.5px solid var(--black); padding:0 2px; pointer-events:none; }
 
   .hero {
     min-height: 100vh;
@@ -479,6 +482,145 @@ const style = `
     border: 1px solid var(--gold);
     animation: pulse-ring 2s ease infinite;
   }
+
+  /* ── Hamburger button (hidden on desktop) ── */
+  .nav-hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 4px;
+    flex-shrink: 0;
+  }
+  .nav-hamburger span {
+    display: block; width: 22px; height: 1.5px;
+    background: var(--gold); border-radius: 1px; transition: all 0.3s;
+  }
+
+  /* ── Mobile fullscreen menu overlay ── */
+  .mobile-nav {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(10,9,5,0.98);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0; opacity: 0; visibility: hidden;
+    transition: opacity 0.28s, visibility 0.28s;
+  }
+  .mobile-nav.open { opacity: 1; visibility: visible; }
+  .mobile-nav-top {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 28px;
+    border-bottom: 1px solid rgba(201,168,76,0.1);
+  }
+  .mobile-nav-logo {
+    font-family: var(--serif); font-size: 1.4rem; font-weight: 300;
+    letter-spacing: 0.12em; color: var(--gold-light);
+  }
+  .mobile-nav-logo span { font-style: italic; }
+  .mobile-nav-close {
+    background: none; border: 1px solid rgba(201,168,76,0.28);
+    color: var(--gold); cursor: pointer;
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; transition: all 0.2s;
+  }
+  .mobile-nav-close:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+  .mobile-nav-link {
+    font-family: var(--serif); font-size: 1.8rem; font-weight: 300;
+    color: var(--cream-dim); text-decoration: none;
+    background: none; border: none; cursor: pointer;
+    padding: 14px 48px; letter-spacing: 0.04em;
+    transition: color 0.25s; text-align: center; width: 100%; line-height: 1.2; display: block;
+  }
+  .mobile-nav-link:hover { color: var(--gold-light); }
+  .mobile-nav-link.gold { color: var(--gold); }
+  .mobile-nav-link.gold:hover { color: var(--gold-light); }
+  .mobile-nav-divider { width: 44px; height: 1px; background: rgba(201,168,76,0.2); margin: 10px 0; }
+
+  /* ── Responsive breakpoints ── */
+  @media (max-width: 860px) {
+    /* nav */
+    .nav { padding: 20px 24px; }
+    .nav-links { display: none; }
+    .nav-desktop-only { display: none !important; }
+    .nav-hamburger { display: flex; }
+
+    /* hero */
+    .hero {
+      grid-template-columns: 1fr;
+      padding: 100px 24px 48px;
+      text-align: center; gap: 40px;
+    }
+    .hero::before { background: radial-gradient(ellipse 80% 50% at 50% 60%, rgba(201,168,76,0.06) 0%, transparent 70%); }
+    .hero-eyebrow { justify-content: center; }
+    .hero-sub { max-width: 100%; margin-left: auto; margin-right: auto; }
+    .hero-actions { justify-content: center; flex-wrap: wrap; gap: 14px; }
+    .hero-visual { justify-content: center; }
+    .globe-wrap { width: 300px; height: 300px; margin: 0 auto; }
+    .globe-wrap canvas { width: 300px !important; height: 300px !important; }
+    .globe-label { display: none; }
+    .pulse-dot { display: none; }
+
+    /* stats 2×2 */
+    .stats { flex-wrap: wrap; padding: 0; }
+    .stat { flex: 0 0 50%; max-width: 50%; padding: 28px 16px; border-right: none; }
+    .stat:nth-child(odd) { border-right: 1px solid rgba(201,168,76,0.12); }
+    .stat:nth-child(-n+2) { border-bottom: 1px solid rgba(201,168,76,0.1); }
+
+    /* how it works */
+    .section { padding: 64px 24px; }
+    .section-h2 { margin-bottom: 40px; max-width: 100%; }
+    .steps { grid-template-columns: 1fr; gap: 2px; }
+
+    /* destinations — 1 columna */
+    .dest-section { padding: 40px 24px 64px; }
+    .dest-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(5, 200px);
+      margin-top: 32px;
+    }
+    .dest-card:first-child { grid-row: auto; grid-column: auto; }
+    .dest-card:first-child .dest-city { font-size: 1.9rem; }
+
+    /* testimonials — 1 columna */
+    .testimonials { padding: 40px 24px 64px; }
+    .testimonial-grid { grid-template-columns: 1fr; gap: 8px; margin-top: 32px; }
+
+    /* CTA banner */
+    .cta-banner {
+      margin: 0 16px 80px; padding: 44px 28px;
+      flex-direction: column; align-items: stretch; gap: 28px;
+    }
+    .cta-banner::before { display: none; }
+    .cta-text { max-width: 100%; }
+    .cta-form { flex-direction: column; gap: 0; width: 100%; }
+    .cta-input {
+      width: 100% !important;
+      border-right: 1px solid rgba(201,168,76,0.25) !important;
+      border-bottom: none;
+      box-sizing: border-box;
+    }
+
+    /* footer */
+    .footer { padding: 40px 24px; flex-direction: column; align-items: flex-start; gap: 24px; }
+    .footer-links { flex-wrap: wrap; gap: 14px 24px; }
+  }
+
+  @media (max-width: 480px) {
+    .hero { padding: 88px 20px 40px; }
+    .globe-wrap { width: 240px; height: 240px; }
+    .globe-wrap canvas { width: 240px !important; height: 240px !important; }
+    .stat-num { font-size: 2.2rem; }
+    .dest-grid { grid-template-rows: repeat(5, 180px); }
+    .step { padding: 36px 24px; }
+    .step-num { font-size: 3.5rem; }
+    .cta-banner { padding: 36px 20px; }
+    .btn-primary { padding: 14px 28px; font-size: 0.75rem; }
+  }
 `;
 
 function GlobeCanvas() {
@@ -633,9 +775,10 @@ function GlobeCanvas() {
   );
 }
 
-export default function GlobeMate() {
+export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExplore, onChat, onMatches, onMap, onNotif, notifCount }) {
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleJoin = () => {
     if (email.trim()) { setJoined(true); }
@@ -645,14 +788,64 @@ export default function GlobeMate() {
     <>
       <style>{style}</style>
 
+      {/* ── Mobile nav overlay ── */}
+      <div className={`mobile-nav${menuOpen ? " open" : ""}`}>
+        <div className="mobile-nav-top">
+          <div className="mobile-nav-logo">Globe<span>Mate</span></div>
+          <button className="mobile-nav-close" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú">✕</button>
+        </div>
+        <a href="#how" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>How it works</a>
+        <a href="#destinations" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>Destinations</a>
+        <a href="#stories" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>Stories</a>
+        {user && (
+          <>
+            <div className="mobile-nav-divider" />
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+          </>
+        )}
+        <div className="mobile-nav-divider" />
+        {user ? (
+          <>
+            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+          </>
+        ) : (
+          <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onSignIn(); }}>Sign in</button>
+        )}
+      </div>
+
       <nav className="nav">
         <div className="nav-logo">Globe<span>Mate</span></div>
         <ul className="nav-links">
           <li><a href="#how">How it works</a></li>
           <li><a href="#destinations">Destinations</a></li>
           <li><a href="#stories">Stories</a></li>
+          {user && <li><a href="#explore"  onClick={e => { e.preventDefault(); onExplore(); }}  style={{ color: "var(--gold-light)" }}>Explore</a></li>}
+          {user && <li><a href="#matches"  onClick={e => { e.preventDefault(); onMatches(); }} style={{ color: "var(--gold-light)" }}>Matches</a></li>}
+          {user && <li><a href="#messages" onClick={e => { e.preventDefault(); onChat(); }}    style={{ color: "var(--gold-light)" }}>Messages</a></li>}
+          {user && <li><a href="#map"      onClick={e => { e.preventDefault(); onMap(); }}     style={{ color: "var(--gold-light)" }}>Map</a></li>}
         </ul>
-        <button className="nav-cta">Join waitlist</button>
+        <div style={{ display:"flex", gap:"10px", alignItems:"center" }}>
+          {user && (
+            <button className="bell-btn" onClick={onNotif}>
+              🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
+            </button>
+          )}
+          {user ? (
+            <>
+              <button className="nav-cta nav-desktop-only" onClick={onProfile}>My Profile</button>
+              <button className="nav-cta nav-desktop-only" onClick={onSignOut}>Sign out</button>
+            </>
+          ) : (
+            <button className="nav-cta nav-desktop-only" onClick={onSignIn}>Sign in</button>
+          )}
+          <button className="nav-hamburger" onClick={() => setMenuOpen(true)} aria-label="Abrir menú">
+            <span /><span /><span />
+          </button>
+        </div>
       </nav>
 
       <section className="hero">
