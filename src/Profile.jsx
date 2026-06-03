@@ -8,6 +8,7 @@ const INTERESTS = [
   "🎭 Culture","🌿 Nature","🎵 Music","📸 Photography",
   "🧘 Wellness","🎪 Festivals","🍷 Wine","🏄 Adventure",
   "🎨 Art","🌆 Cities","🚂 Train travel","🤿 Diving",
+  "🧗 Escalada","🥘 Gastronomía local","🙏 Espiritual",
 ];
 
 const STYLES = [
