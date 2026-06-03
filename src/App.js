@@ -9,6 +9,7 @@ import Chat from "./Chat.jsx";
 import Notifications from "./Notifications.jsx";
 import Matches from "./Matches.jsx";
 import Map from "./Map.jsx";
+import Settings from "./Settings.jsx";
 
 const t = (ms) => new Date(Date.now() - ms);
 const INIT_NOTIFS = [
@@ -30,6 +31,7 @@ export default function App() {
   const [showMatches, setShowMatches] = useState(false);
   const [showMap, setShowMap]         = useState(false);
   const [showNotif, setShowNotif]     = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [notifs, setNotifs]           = useState(INIT_NOTIFS);
 
   const notifCount  = notifs.filter(n => !n.read).length;
@@ -59,12 +61,14 @@ export default function App() {
       setShowMatches(false);
       setShowMap(false);
       setShowNotif(false);
+      setShowSettings(false);
       if (screen === "profile") setShowProfile(true);
       else if (screen === "explore") setShowExplore(true);
       else if (screen === "chat") setShowChat(true);
       else if (screen === "matches") setShowMatches(true);
       else if (screen === "map") setShowMap(true);
       else if (screen === "notif") setShowNotif(true);
+      else if (screen === "settings") setShowSettings(true);
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -102,12 +106,14 @@ export default function App() {
     setShowMatches(false);
     setShowMap(false);
     setShowNotif(false);
+    setShowSettings(false);
     if (screen === "profile") setShowProfile(true);
     else if (screen === "explore") setShowExplore(true);
     else if (screen === "chat") setShowChat(true);
     else if (screen === "matches") setShowMatches(true);
     else if (screen === "map") setShowMap(true);
     else if (screen === "notif") setShowNotif(true);
+    else if (screen === "settings") setShowSettings(true);
   };
 
   const nav = {
@@ -118,8 +124,13 @@ export default function App() {
     onChat:     () => goTo("chat"),
     onMatches:  () => goTo("matches"),
     onMap:      () => goTo("map"),
+    onSettings: () => goTo("settings"),
     onSignOut:  () => signOut(auth),
   };
+
+  if (showSettings && user) {
+    return <Settings user={user} onBack={() => window.history.back()} {...nav} />;
+  }
 
   if (showNotif && user) {
     return (

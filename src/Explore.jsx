@@ -223,7 +223,7 @@ function TravelerCard({ t, connected, onConnect }) {
   );
 }
 
-export default function Explore({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount }) {
+export default function Explore({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings }) {
   const [travelers, setTravelers] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [connected, setConnected] = useState({});
@@ -305,6 +305,8 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
           Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
+        <div className="mob-nav-divider" />
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
       </div>

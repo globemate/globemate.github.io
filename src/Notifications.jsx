@@ -108,7 +108,7 @@ const css = `
 
 export default function Notifications({
   notifications, onBack, onMarkAllRead, onMarkRead,
-  onChat, onProfile, onExplore, onMatches, onMap, onNotif, onSignOut, notifCount,
+  onChat, onProfile, onExplore, onMatches, onMap, onNotif, onSignOut, notifCount, onSettings,
 }) {
   const [tab, setTab] = useState("All");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -151,6 +151,8 @@ export default function Notifications({
         <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+        <div className="mob-nav-divider" />
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
       </div>

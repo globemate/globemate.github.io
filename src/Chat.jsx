@@ -209,7 +209,7 @@ const css = `
   .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
 `;
 
-export default function Chat({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount }) {
+export default function Chat({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings }) {
   const [convs, setConvs]           = useState([]);
   const [activeId, setActiveId]     = useState(null);
   const [msgMap, setMsgMap]         = useState({});   // { convId: [msgs] }
@@ -347,6 +347,8 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
           Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
+        <div className="mob-nav-divider" />
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
       </div>

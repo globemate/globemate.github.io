@@ -246,7 +246,7 @@ function MatchCard({ m, onMessage }) {
   );
 }
 
-export default function Matches({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount }) {
+export default function Matches({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings }) {
   const [matches, setMatches]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [sort, setSort]           = useState("recent");
@@ -299,6 +299,8 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
           Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
+        <div className="mob-nav-divider" />
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
       </div>
