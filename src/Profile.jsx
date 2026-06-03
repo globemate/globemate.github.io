@@ -9,6 +9,11 @@ const INTERESTS = [
   "🧘 Wellness","🎪 Festivals","🍷 Wine","🏄 Adventure",
   "🎨 Art","🌆 Cities","🚂 Train travel","🤿 Diving",
   "🧗 Escalada","🥘 Gastronomía local","🙏 Espiritual",
+  "🚞 Rutas escénicas","🎬 Cine & locaciones","💪 Gimnasio",
+  "⚽ Deportes","🏊 Natación","🎾 Tenis","🏀 Basketball",
+  "⛷️ Esquí","🧘‍♀️ Yoga","🏋️ Crossfit","🥊 Kickboxing",
+  "🍺 Craft beer","☕ Café culture","🦁 Safari","🌋 Volcanes",
+  "🏖️ Playas",
 ];
 
 const STYLES = [
