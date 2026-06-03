@@ -22,29 +22,170 @@ const ALL_LANGS = [
 
 const LEVELS = ["Basic","Conversational","Fluent","Native"];
 
-const COUNTRIES = [
-  {code:"AR",name:"Argentina",flag:"🇦🇷"},{code:"AU",name:"Australia",flag:"🇦🇺"},
-  {code:"BR",name:"Brazil",flag:"🇧🇷"},{code:"CA",name:"Canada",flag:"🇨🇦"},
-  {code:"CL",name:"Chile",flag:"🇨🇱"},{code:"CN",name:"China",flag:"🇨🇳"},
-  {code:"CO",name:"Colombia",flag:"🇨🇴"},{code:"HR",name:"Croatia",flag:"🇭🇷"},
-  {code:"CZ",name:"Czech Rep.",flag:"🇨🇿"},{code:"EG",name:"Egypt",flag:"🇪🇬"},
-  {code:"FR",name:"France",flag:"🇫🇷"},{code:"DE",name:"Germany",flag:"🇩🇪"},
-  {code:"GR",name:"Greece",flag:"🇬🇷"},{code:"HK",name:"Hong Kong",flag:"🇭🇰"},
-  {code:"HU",name:"Hungary",flag:"🇭🇺"},{code:"IS",name:"Iceland",flag:"🇮🇸"},
-  {code:"IN",name:"India",flag:"🇮🇳"},{code:"ID",name:"Indonesia",flag:"🇮🇩"},
-  {code:"IT",name:"Italy",flag:"🇮🇹"},{code:"JP",name:"Japan",flag:"🇯🇵"},
-  {code:"KE",name:"Kenya",flag:"🇰🇪"},{code:"KR",name:"S. Korea",flag:"🇰🇷"},
-  {code:"MA",name:"Morocco",flag:"🇲🇦"},{code:"MX",name:"Mexico",flag:"🇲🇽"},
-  {code:"NL",name:"Netherlands",flag:"🇳🇱"},{code:"NZ",name:"New Zealand",flag:"🇳🇿"},
-  {code:"NO",name:"Norway",flag:"🇳🇴"},{code:"PE",name:"Peru",flag:"🇵🇪"},
-  {code:"PL",name:"Poland",flag:"🇵🇱"},{code:"PT",name:"Portugal",flag:"🇵🇹"},
-  {code:"RO",name:"Romania",flag:"🇷🇴"},{code:"SG",name:"Singapore",flag:"🇸🇬"},
-  {code:"ZA",name:"South Africa",flag:"🇿🇦"},{code:"ES",name:"Spain",flag:"🇪🇸"},
-  {code:"SE",name:"Sweden",flag:"🇸🇪"},{code:"CH",name:"Switzerland",flag:"🇨🇭"},
-  {code:"TH",name:"Thailand",flag:"🇹🇭"},{code:"TR",name:"Turkey",flag:"🇹🇷"},
-  {code:"GB",name:"UK",flag:"🇬🇧"},{code:"US",name:"USA",flag:"🇺🇸"},
-  {code:"VN",name:"Vietnam",flag:"🇻🇳"},
+const CONTINENTS = [
+  { id:"europa", name:"Europa", emoji:"🏰", regions:[
+    { name:"Europa Occidental", countries:[
+      {code:"AT",name:"Austria",flag:"🇦🇹"},{code:"BE",name:"Bélgica",flag:"🇧🇪"},
+      {code:"FR",name:"Francia",flag:"🇫🇷"},{code:"DE",name:"Alemania",flag:"🇩🇪"},
+      {code:"IE",name:"Irlanda",flag:"🇮🇪"},{code:"LI",name:"Liechtenstein",flag:"🇱🇮"},
+      {code:"LU",name:"Luxemburgo",flag:"🇱🇺"},{code:"MC",name:"Mónaco",flag:"🇲🇨"},
+      {code:"NL",name:"Países Bajos",flag:"🇳🇱"},{code:"CH",name:"Suiza",flag:"🇨🇭"},
+      {code:"ENG",name:"Inglaterra",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿"},{code:"SCT",name:"Escocia",flag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿"},
+      {code:"WLS",name:"Gales",flag:"🏴󠁧󠁢󠁷󠁬󠁳󠁿"},{code:"NIR",name:"Irlanda del Norte",flag:"🇬🇧"},
+    ]},
+    { name:"Europa del Norte", countries:[
+      {code:"DK",name:"Dinamarca",flag:"🇩🇰"},{code:"EE",name:"Estonia",flag:"🇪🇪"},
+      {code:"FI",name:"Finlandia",flag:"🇫🇮"},{code:"IS",name:"Islandia",flag:"🇮🇸"},
+      {code:"LV",name:"Letonia",flag:"🇱🇻"},{code:"LT",name:"Lituania",flag:"🇱🇹"},
+      {code:"NO",name:"Noruega",flag:"🇳🇴"},{code:"SE",name:"Suecia",flag:"🇸🇪"},
+    ]},
+    { name:"Europa del Sur", countries:[
+      {code:"AL",name:"Albania",flag:"🇦🇱"},{code:"AD",name:"Andorra",flag:"🇦🇩"},
+      {code:"BA",name:"Bosnia y Herzegovina",flag:"🇧🇦"},{code:"HR",name:"Croacia",flag:"🇭🇷"},
+      {code:"CY",name:"Chipre",flag:"🇨🇾"},{code:"GR",name:"Grecia",flag:"🇬🇷"},
+      {code:"IT",name:"Italia",flag:"🇮🇹"},{code:"XK",name:"Kosovo",flag:"🇽🇰"},
+      {code:"MT",name:"Malta",flag:"🇲🇹"},{code:"ME",name:"Montenegro",flag:"🇲🇪"},
+      {code:"MK",name:"Macedonia del Norte",flag:"🇲🇰"},{code:"PT",name:"Portugal",flag:"🇵🇹"},
+      {code:"SM",name:"San Marino",flag:"🇸🇲"},{code:"RS",name:"Serbia",flag:"🇷🇸"},
+      {code:"SI",name:"Eslovenia",flag:"🇸🇮"},{code:"ES",name:"España",flag:"🇪🇸"},
+      {code:"VA",name:"Vaticano",flag:"🇻🇦"},
+    ]},
+    { name:"Europa del Este", countries:[
+      {code:"BY",name:"Bielorrusia",flag:"🇧🇾"},{code:"BG",name:"Bulgaria",flag:"🇧🇬"},
+      {code:"CZ",name:"Rep. Checa",flag:"🇨🇿"},{code:"HU",name:"Hungría",flag:"🇭🇺"},
+      {code:"MD",name:"Moldavia",flag:"🇲🇩"},{code:"PL",name:"Polonia",flag:"🇵🇱"},
+      {code:"RO",name:"Rumania",flag:"🇷🇴"},{code:"RU",name:"Rusia",flag:"🇷🇺"},
+      {code:"SK",name:"Eslovaquia",flag:"🇸🇰"},{code:"UA",name:"Ucrania",flag:"🇺🇦"},
+    ]},
+  ]},
+  { id:"asia", name:"Asia", emoji:"🏯", regions:[
+    { name:"Asia del Este", countries:[
+      {code:"CN",name:"China",flag:"🇨🇳"},{code:"HK",name:"Hong Kong",flag:"🇭🇰"},
+      {code:"JP",name:"Japón",flag:"🇯🇵"},{code:"KP",name:"Corea del Norte",flag:"🇰🇵"},
+      {code:"KR",name:"Corea del Sur",flag:"🇰🇷"},{code:"MO",name:"Macao",flag:"🇲🇴"},
+      {code:"MN",name:"Mongolia",flag:"🇲🇳"},{code:"TW",name:"Taiwán",flag:"🇹🇼"},
+    ]},
+    { name:"Asia del Sudeste", countries:[
+      {code:"BN",name:"Brunéi",flag:"🇧🇳"},{code:"KH",name:"Camboya",flag:"🇰🇭"},
+      {code:"TL",name:"Timor-Leste",flag:"🇹🇱"},{code:"ID",name:"Indonesia",flag:"🇮🇩"},
+      {code:"LA",name:"Laos",flag:"🇱🇦"},{code:"MY",name:"Malasia",flag:"🇲🇾"},
+      {code:"MM",name:"Myanmar",flag:"🇲🇲"},{code:"PH",name:"Filipinas",flag:"🇵🇭"},
+      {code:"SG",name:"Singapur",flag:"🇸🇬"},{code:"TH",name:"Tailandia",flag:"🇹🇭"},
+      {code:"VN",name:"Vietnam",flag:"🇻🇳"},
+    ]},
+    { name:"Asia del Sur", countries:[
+      {code:"AF",name:"Afganistán",flag:"🇦🇫"},{code:"BD",name:"Bangladesh",flag:"🇧🇩"},
+      {code:"BT",name:"Bután",flag:"🇧🇹"},{code:"IN",name:"India",flag:"🇮🇳"},
+      {code:"MV",name:"Maldivas",flag:"🇲🇻"},{code:"NP",name:"Nepal",flag:"🇳🇵"},
+      {code:"PK",name:"Pakistán",flag:"🇵🇰"},{code:"LK",name:"Sri Lanka",flag:"🇱🇰"},
+    ]},
+    { name:"Asia Central", countries:[
+      {code:"KZ",name:"Kazajistán",flag:"🇰🇿"},{code:"KG",name:"Kirguistán",flag:"🇰🇬"},
+      {code:"TJ",name:"Tayikistán",flag:"🇹🇯"},{code:"TM",name:"Turkmenistán",flag:"🇹🇲"},
+      {code:"UZ",name:"Uzbekistán",flag:"🇺🇿"},
+    ]},
+    { name:"Oriente Medio", countries:[
+      {code:"AM",name:"Armenia",flag:"🇦🇲"},{code:"AZ",name:"Azerbaiyán",flag:"🇦🇿"},
+      {code:"BH",name:"Baréin",flag:"🇧🇭"},{code:"GE",name:"Georgia",flag:"🇬🇪"},
+      {code:"IQ",name:"Irak",flag:"🇮🇶"},{code:"IR",name:"Irán",flag:"🇮🇷"},
+      {code:"IL",name:"Israel",flag:"🇮🇱"},{code:"JO",name:"Jordania",flag:"🇯🇴"},
+      {code:"KW",name:"Kuwait",flag:"🇰🇼"},{code:"LB",name:"Líbano",flag:"🇱🇧"},
+      {code:"OM",name:"Omán",flag:"🇴🇲"},{code:"PS",name:"Palestina",flag:"🇵🇸"},
+      {code:"QA",name:"Qatar",flag:"🇶🇦"},{code:"SA",name:"Arabia Saudí",flag:"🇸🇦"},
+      {code:"SY",name:"Siria",flag:"🇸🇾"},{code:"TR",name:"Turquía",flag:"🇹🇷"},
+      {code:"AE",name:"Emiratos Árabes",flag:"🇦🇪"},{code:"YE",name:"Yemen",flag:"🇾🇪"},
+    ]},
+  ]},
+  { id:"africa", name:"África", emoji:"🌍", regions:[
+    { name:"África del Norte", countries:[
+      {code:"DZ",name:"Argelia",flag:"🇩🇿"},{code:"EG",name:"Egipto",flag:"🇪🇬"},
+      {code:"LY",name:"Libia",flag:"🇱🇾"},{code:"MA",name:"Marruecos",flag:"🇲🇦"},
+      {code:"MR",name:"Mauritania",flag:"🇲🇷"},{code:"SD",name:"Sudán",flag:"🇸🇩"},
+      {code:"TN",name:"Túnez",flag:"🇹🇳"},
+    ]},
+    { name:"África Occidental", countries:[
+      {code:"BJ",name:"Benín",flag:"🇧🇯"},{code:"BF",name:"Burkina Faso",flag:"🇧🇫"},
+      {code:"CV",name:"Cabo Verde",flag:"🇨🇻"},{code:"CI",name:"Costa de Marfil",flag:"🇨🇮"},
+      {code:"GM",name:"Gambia",flag:"🇬🇲"},{code:"GH",name:"Ghana",flag:"🇬🇭"},
+      {code:"GN",name:"Guinea",flag:"🇬🇳"},{code:"GW",name:"Guinea-Bissau",flag:"🇬🇼"},
+      {code:"LR",name:"Liberia",flag:"🇱🇷"},{code:"ML",name:"Mali",flag:"🇲🇱"},
+      {code:"NE",name:"Níger",flag:"🇳🇪"},{code:"NG",name:"Nigeria",flag:"🇳🇬"},
+      {code:"SN",name:"Senegal",flag:"🇸🇳"},{code:"SL",name:"Sierra Leona",flag:"🇸🇱"},
+      {code:"ST",name:"Santo Tomé y Príncipe",flag:"🇸🇹"},{code:"TG",name:"Togo",flag:"🇹🇬"},
+    ]},
+    { name:"África Central", countries:[
+      {code:"AO",name:"Angola",flag:"🇦🇴"},{code:"CM",name:"Camerún",flag:"🇨🇲"},
+      {code:"CF",name:"Rep. Centroafricana",flag:"🇨🇫"},{code:"TD",name:"Chad",flag:"🇹🇩"},
+      {code:"CG",name:"Congo",flag:"🇨🇬"},{code:"CD",name:"Rep. Dem. del Congo",flag:"🇨🇩"},
+      {code:"GQ",name:"Guinea Ecuatorial",flag:"🇬🇶"},{code:"GA",name:"Gabón",flag:"🇬🇦"},
+    ]},
+    { name:"África Oriental", countries:[
+      {code:"BI",name:"Burundi",flag:"🇧🇮"},{code:"KM",name:"Comoras",flag:"🇰🇲"},
+      {code:"DJ",name:"Djibouti",flag:"🇩🇯"},{code:"ER",name:"Eritrea",flag:"🇪🇷"},
+      {code:"ET",name:"Etiopía",flag:"🇪🇹"},{code:"KE",name:"Kenia",flag:"🇰🇪"},
+      {code:"MG",name:"Madagascar",flag:"🇲🇬"},{code:"MW",name:"Malaui",flag:"🇲🇼"},
+      {code:"MU",name:"Mauricio",flag:"🇲🇺"},{code:"MZ",name:"Mozambique",flag:"🇲🇿"},
+      {code:"RW",name:"Ruanda",flag:"🇷🇼"},{code:"SC",name:"Seychelles",flag:"🇸🇨"},
+      {code:"SO",name:"Somalia",flag:"🇸🇴"},{code:"SS",name:"Sudán del Sur",flag:"🇸🇸"},
+      {code:"TZ",name:"Tanzania",flag:"🇹🇿"},{code:"UG",name:"Uganda",flag:"🇺🇬"},
+      {code:"ZM",name:"Zambia",flag:"🇿🇲"},{code:"ZW",name:"Zimbabue",flag:"🇿🇼"},
+    ]},
+    { name:"África del Sur", countries:[
+      {code:"BW",name:"Botsuana",flag:"🇧🇼"},{code:"SZ",name:"Eswatini",flag:"🇸🇿"},
+      {code:"LS",name:"Lesoto",flag:"🇱🇸"},{code:"NA",name:"Namibia",flag:"🇳🇦"},
+      {code:"ZA",name:"Sudáfrica",flag:"🇿🇦"},
+    ]},
+  ]},
+  { id:"americas", name:"Américas", emoji:"🌎", regions:[
+    { name:"América del Norte", countries:[
+      {code:"CA",name:"Canadá",flag:"🇨🇦"},{code:"US",name:"Estados Unidos",flag:"🇺🇸"},
+      {code:"MX",name:"México",flag:"🇲🇽"},
+    ]},
+    { name:"Centroamérica", countries:[
+      {code:"BZ",name:"Belice",flag:"🇧🇿"},{code:"CR",name:"Costa Rica",flag:"🇨🇷"},
+      {code:"SV",name:"El Salvador",flag:"🇸🇻"},{code:"GT",name:"Guatemala",flag:"🇬🇹"},
+      {code:"HN",name:"Honduras",flag:"🇭🇳"},{code:"NI",name:"Nicaragua",flag:"🇳🇮"},
+      {code:"PA",name:"Panamá",flag:"🇵🇦"},
+    ]},
+    { name:"El Caribe", countries:[
+      {code:"AG",name:"Antigua y Barbuda",flag:"🇦🇬"},{code:"BS",name:"Bahamas",flag:"🇧🇸"},
+      {code:"BB",name:"Barbados",flag:"🇧🇧"},{code:"CU",name:"Cuba",flag:"🇨🇺"},
+      {code:"DM",name:"Dominica",flag:"🇩🇲"},{code:"GD",name:"Granada",flag:"🇬🇩"},
+      {code:"HT",name:"Haití",flag:"🇭🇹"},{code:"JM",name:"Jamaica",flag:"🇯🇲"},
+      {code:"DO",name:"Rep. Dominicana",flag:"🇩🇴"},{code:"LC",name:"Santa Lucía",flag:"🇱🇨"},
+      {code:"KN",name:"San Cristóbal y Nieves",flag:"🇰🇳"},{code:"VC",name:"San Vicente y Granadinas",flag:"🇻🇨"},
+      {code:"TT",name:"Trinidad y Tobago",flag:"🇹🇹"},
+    ]},
+    { name:"América del Sur", countries:[
+      {code:"AR",name:"Argentina",flag:"🇦🇷"},{code:"BO",name:"Bolivia",flag:"🇧🇴"},
+      {code:"BR",name:"Brasil",flag:"🇧🇷"},{code:"CL",name:"Chile",flag:"🇨🇱"},
+      {code:"CO",name:"Colombia",flag:"🇨🇴"},{code:"EC",name:"Ecuador",flag:"🇪🇨"},
+      {code:"GY",name:"Guyana",flag:"🇬🇾"},{code:"PY",name:"Paraguay",flag:"🇵🇾"},
+      {code:"PE",name:"Perú",flag:"🇵🇪"},{code:"SR",name:"Surinam",flag:"🇸🇷"},
+      {code:"UY",name:"Uruguay",flag:"🇺🇾"},{code:"VE",name:"Venezuela",flag:"🇻🇪"},
+    ]},
+  ]},
+  { id:"oceania", name:"Oceanía", emoji:"🌊", regions:[
+    { name:"Australia y Nueva Zelanda", countries:[
+      {code:"AU",name:"Australia",flag:"🇦🇺"},{code:"NZ",name:"Nueva Zelanda",flag:"🇳🇿"},
+    ]},
+    { name:"Melanesia", countries:[
+      {code:"FJ",name:"Fiyi",flag:"🇫🇯"},{code:"PG",name:"Papúa Nueva Guinea",flag:"🇵🇬"},
+      {code:"SB",name:"Islas Salomón",flag:"🇸🇧"},{code:"VU",name:"Vanuatu",flag:"🇻🇺"},
+    ]},
+    { name:"Micronesia", countries:[
+      {code:"FM",name:"Micronesia",flag:"🇫🇲"},{code:"KI",name:"Kiribati",flag:"🇰🇮"},
+      {code:"MH",name:"Islas Marshall",flag:"🇲🇭"},{code:"NR",name:"Nauru",flag:"🇳🇷"},
+      {code:"PW",name:"Palau",flag:"🇵🇼"},
+    ]},
+    { name:"Polinesia", countries:[
+      {code:"WS",name:"Samoa",flag:"🇼🇸"},{code:"TO",name:"Tonga",flag:"🇹🇴"},
+      {code:"TV",name:"Tuvalu",flag:"🇹🇻"},
+    ]},
+  ]},
 ];
+
+const TOTAL_COUNTRIES = CONTINENTS.reduce((s,c) => c.regions.reduce((rs,r) => rs + r.countries.length, s), 0);
 
 const DEF = {
   displayName: "",
@@ -195,6 +336,33 @@ const css = `
   .pr-save-btn:hover:not(:disabled) { background: var(--gold-light); }
   .pr-save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+  /* country explorer */
+  .cv-counter { display:flex; align-items:baseline; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .cv-n { font-family:var(--serif); font-size:clamp(2rem,4vw,2.8rem); font-weight:300; color:var(--gold-light); line-height:1; }
+  .cv-n.total { font-size:clamp(1.3rem,2.5vw,1.8rem); color:var(--cream-dim); }
+  .cv-sep { font-family:var(--serif); font-size:1.6rem; color:rgba(201,168,76,0.35); font-weight:300; }
+  .cv-label { font-size:0.68rem; letter-spacing:0.17em; text-transform:uppercase; color:var(--muted); align-self:center; }
+  .cv-pct { font-size:0.77rem; color:var(--gold); letter-spacing:0.08em; }
+  .cv-bar { height:3px; background:rgba(201,168,76,0.12); border-radius:2px; overflow:hidden; margin:6px 0 22px; }
+  .cv-bar-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--gold-light)); border-radius:2px; transition:width 0.5s ease; }
+
+  .cv-cont-btn { width:100%; background:none; border:none; border-bottom:1px solid rgba(201,168,76,0.1); color:var(--cream); font-family:var(--sans); font-size:0.8rem; letter-spacing:0.07em; text-transform:uppercase; text-align:left; padding:11px 0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px; transition:color 0.2s; }
+  .cv-cont-btn:hover { color:var(--gold-light); }
+  .cv-cont-name { display:flex; align-items:center; gap:8px; }
+  .cv-cont-meta { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .cv-badge { font-size:0.62rem; color:var(--gold); background:rgba(201,168,76,0.12); border:1px solid rgba(201,168,76,0.25); padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .cv-arrow { color:var(--gold); font-size:0.62rem; transition:transform 0.25s; display:inline-block; }
+  .cv-arrow.open { transform:rotate(90deg); }
+
+  .cv-body { overflow:hidden; max-height:0; opacity:0; transition:max-height 0.38s ease, opacity 0.28s ease; }
+  .cv-body.open { max-height:3000px; opacity:1; }
+
+  .cv-region { font-size:0.58rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin:13px 0 7px; }
+  .cv-chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:4px; }
+  .cv-chip { background:none; border:1px solid rgba(245,240,232,0.1); color:var(--cream-dim); font-family:var(--sans); font-size:0.72rem; padding:4px 9px; cursor:pointer; transition:all 0.16s; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+  .cv-chip:hover { border-color:rgba(201,168,76,0.38); color:var(--cream); background:rgba(245,240,232,0.03); }
+  .cv-chip.on { background:rgba(201,168,76,0.14); border-color:var(--gold); color:var(--gold-light); }
+
   /* hamburger — fixed top-right area, shown below 860 px */
   .pr-hamburger { display:none; }
   @media (max-width: 860px) {
@@ -234,7 +402,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
   const [newDest, setNewDest]           = useState("");
   const [newDestStatus, setNewDestStatus] = useState("planning");
-  const [newCountry, setNewCountry]     = useState("");
+  const [openContinents, setOpenContinents] = useState(new Set());
   const [newLang, setNewLang]           = useState("");
   const [newLangLevel, setNewLangLevel] = useState("Conversational");
   const [menuOpen, setMenuOpen]         = useState(false);
@@ -300,12 +468,6 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
     setNewDest("");
   };
 
-  const addCountry = () => {
-    if (!newCountry || profile.visitedCountries.includes(newCountry)) return;
-    upd("visitedCountries", [...profile.visitedCountries, newCountry]);
-    setNewCountry("");
-  };
-
   const addLang = () => {
     if (!newLang || profile.languages.find(l => l.lang === newLang)) return;
     upd("languages", [...profile.languages, { lang: newLang, level: newLangLevel }]);
@@ -353,8 +515,6 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
     </div>
   );
 
-  const visitedFull      = COUNTRIES.filter(c => profile.visitedCountries.includes(c.code));
-  const availCountries   = COUNTRIES.filter(c => !profile.visitedCountries.includes(c.code));
   const availLangs       = ALL_LANGS.filter(l => !profile.languages.find(x => x.lang === l));
   const avatarSrc        = photoPreview || profile.photoURL;
   const coverSrc         = coverPreview || profile.coverURL;
@@ -470,22 +630,64 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
             {/* visited countries */}
             <div className="pr-section">
-              <div className="pr-section-title">Countries visited</div>
-              <div className="pr-chips" style={{ marginBottom: "16px" }}>
-                {visitedFull.map(c => (
-                  <button key={c.code} className="pr-tag" onClick={() => upd("visitedCountries", profile.visitedCountries.filter(x => x !== c.code))}>
-                    {c.flag} {c.name} ×
-                  </button>
-                ))}
-                {visitedFull.length === 0 && <span style={{ color:"var(--muted)", fontSize:"0.82rem" }}>No countries added yet</span>}
+              <div className="pr-section-title">Países visitados</div>
+
+              {/* big counter */}
+              <div className="cv-counter">
+                <span className="cv-n">{profile.visitedCountries.length}</span>
+                <span className="cv-sep">/</span>
+                <span className="cv-n total">{TOTAL_COUNTRIES}</span>
+                <span className="cv-label">países visitados</span>
               </div>
-              <div className="pr-add-row">
-                <select className="pr-sel pr-inp" value={newCountry} onChange={e => setNewCountry(e.target.value)}>
-                  <option value="">Select a country…</option>
-                  {availCountries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
-                </select>
-                <button className="pr-add-btn" onClick={addCountry}>Add</button>
+              <div className="cv-pct">{(profile.visitedCountries.length / TOTAL_COUNTRIES * 100).toFixed(1)}% del mundo visitado</div>
+              <div className="cv-bar">
+                <div className="cv-bar-fill" style={{ width:`${(profile.visitedCountries.length / TOTAL_COUNTRIES * 100).toFixed(2)}%` }} />
               </div>
+
+              {/* continent accordions */}
+              {CONTINENTS.map(cont => {
+                const isOpen = openContinents.has(cont.id);
+                const visitedInCont = cont.regions.reduce((s,r) => s + r.countries.filter(c => profile.visitedCountries.includes(c.code)).length, 0);
+                const totalInCont   = cont.regions.reduce((s,r) => s + r.countries.length, 0);
+                return (
+                  <div key={cont.id}>
+                    <button
+                      className="cv-cont-btn"
+                      onClick={() => setOpenContinents(prev => { const n = new Set(prev); n.has(cont.id) ? n.delete(cont.id) : n.add(cont.id); return n; })}
+                    >
+                      <span className="cv-cont-name">{cont.emoji} {cont.name}</span>
+                      <span className="cv-cont-meta">
+                        {visitedInCont > 0 && <span className="cv-badge">{visitedInCont}/{totalInCont}</span>}
+                        <span className={`cv-arrow${isOpen ? " open" : ""}`}>▶</span>
+                      </span>
+                    </button>
+                    <div className={`cv-body${isOpen ? " open" : ""}`}>
+                      {cont.regions.map(region => (
+                        <div key={region.name}>
+                          <div className="cv-region">{region.name}</div>
+                          <div className="cv-chips">
+                            {region.countries.map(c => {
+                              const visited = profile.visitedCountries.includes(c.code);
+                              return (
+                                <button
+                                  key={c.code}
+                                  className={`cv-chip${visited ? " on" : ""}`}
+                                  onClick={() => upd("visitedCountries", visited
+                                    ? profile.visitedCountries.filter(x => x !== c.code)
+                                    : [...profile.visitedCountries, c.code]
+                                  )}
+                                >
+                                  {c.flag} {c.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* upcoming */}
