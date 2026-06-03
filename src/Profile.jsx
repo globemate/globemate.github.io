@@ -13,7 +13,6 @@ const INTERESTS = [
   "⚽ Deportes","🏊 Natación","🎾 Tenis","🏀 Basketball",
   "⛷️ Esquí","🧘‍♀️ Yoga","🏋️ Crossfit","🥊 Kickboxing",
   "🍺 Craft beer","☕ Café culture","🦁 Safari","🌋 Volcanes",
-  "🏖️ Playas",
 ];
 
 const STYLES = [
