@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Auth from "./Auth.jsx";
@@ -24,6 +24,7 @@ const INIT_NOTIFS = [
 
 export default function App() {
   const [user, setUser]               = useState(undefined);
+  const pendingPhoneRef               = useRef(false);
   const [showAuth, setShowAuth]       = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showExplore, setShowExplore] = useState(false);
@@ -41,7 +42,7 @@ export default function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u) setShowAuth(false);
+      if (u && !pendingPhoneRef.current) setShowAuth(false);
     });
     return () => unsub();
   }, []);
@@ -94,7 +95,12 @@ export default function App() {
   }
 
   if (showAuth) {
-    return <Auth onAuthSuccess={() => setShowAuth(false)} />;
+    return (
+      <Auth
+        onAuthSuccess={() => { pendingPhoneRef.current = false; setShowAuth(false); }}
+        onStartPhone={() => { pendingPhoneRef.current = true; }}
+      />
+    );
   }
 
   // navigate to a screen and push history state

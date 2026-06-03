@@ -369,7 +369,7 @@ const FacebookIcon = () => (
 /* ─────────────────────────────────────────
    Component
 ───────────────────────────────────────── */
-export default function Auth({ onAuthSuccess }) {
+export default function Auth({ onAuthSuccess, onStartPhone }) {
   // Auth mode
   const [mode, setMode]         = useState("login"); // login | register | reset | phone | phone-code
 
@@ -412,6 +412,7 @@ export default function Auth({ onAuthSuccess }) {
       const result = await signInWithPopup(auth, provider);
       const info   = getAdditionalUserInfo(result);
       if (info?.isNewUser) {
+        onStartPhone?.();
         setMode("phone");
       } else {
         onAuthSuccess();
@@ -431,8 +432,9 @@ export default function Auth({ onAuthSuccess }) {
         await signInWithEmailAndPassword(auth, email, password);
         onAuthSuccess();
       } else {
+        onStartPhone?.(); // prevent App.js auth-state listener from closing Auth
         await createUserWithEmailAndPassword(auth, email, password);
-        setMode("phone"); // phone verification required for new registrations
+        setMode("phone");
       }
     } catch (err) {
       setError(getAuthError(err));

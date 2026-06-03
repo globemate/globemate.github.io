@@ -224,13 +224,14 @@ const css = `
   .pr-root { min-height: 100vh; background: var(--black); font-family: var(--sans); font-weight: 300; color: var(--cream); padding-bottom: 120px; }
 
   /* cover */
+  .pr-cover-section { position: relative; }
   .pr-cover { position: relative; height: 260px; background: linear-gradient(135deg,#1a1508 0%,#2a1f0a 40%,#0a0905 100%); overflow: hidden; }
   .pr-cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
   .pr-cover-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 30%, rgba(10,9,5,0.85) 100%); }
   .pr-cover-edit { position: absolute; top: 20px; right: 20px; background: rgba(10,9,5,0.7); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); padding: 8px 18px; font-family: var(--sans); font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.25s; }
   .pr-cover-edit:hover { background: rgba(201,168,76,0.15); }
 
-  .pr-avatar-wrap { position: absolute; bottom: -52px; left: 56px; }
+  .pr-avatar-wrap { position: absolute; bottom: -52px; left: 56px; z-index: 10; }
   .pr-avatar { width: 108px; height: 108px; border-radius: 50%; border: 3px solid var(--gold); object-fit: cover; background: #1a1508; display: block; }
   .pr-avatar-placeholder { width: 108px; height: 108px; border-radius: 50%; border: 3px solid var(--gold); background: #1a1508; display: flex; align-items: center; justify-content: center; font-size: 2.6rem; color: var(--gold-dim); }
   .pr-avatar-btn { position: absolute; bottom: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); border: none; color: var(--black); font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; line-height: 1; }
@@ -565,13 +566,15 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
         )}
 
         {/* cover */}
-        <div className="pr-cover">
-          {coverSrc && <img className="pr-cover-img" src={coverSrc} alt="" />}
-          <div className="pr-cover-overlay" />
-          <button className="pr-cover-edit" onClick={() => coverRef.current.click()}>
-            📷 Edit cover
-          </button>
-          <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCover} />
+        <div className="pr-cover-section">
+          <div className="pr-cover">
+            {coverSrc && <img className="pr-cover-img" src={coverSrc} alt="" />}
+            <div className="pr-cover-overlay" />
+            <button className="pr-cover-edit" onClick={() => coverRef.current.click()}>
+              📷 Edit cover
+            </button>
+            <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCover} />
+          </div>
           <div className="pr-avatar-wrap">
             {avatarSrc
               ? <img className="pr-avatar" src={avatarSrc} alt="avatar" />
