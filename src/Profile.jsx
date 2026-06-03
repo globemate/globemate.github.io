@@ -195,9 +195,9 @@ const css = `
   .pr-save-btn:hover:not(:disabled) { background: var(--gold-light); }
   .pr-save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  /* hamburger (mobile only, fixed next to back button) */
+  /* hamburger — fixed top-right area, shown below 860 px */
   .pr-hamburger { display:none; }
-  @media (max-width: 680px) {
+  @media (max-width: 860px) {
     .pr-hamburger {
       display:flex; flex-direction:column; gap:5px;
       position:fixed; top:16px; right:70px; z-index:302;
