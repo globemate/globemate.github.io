@@ -1,14 +1,87 @@
-import { useState } from "react";
-import { auth, googleProvider, facebookProvider } from "./firebase";
+import { useState, useRef, useEffect } from "react";
+import { auth, googleProvider, facebookProvider, db } from "./firebase";
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
+  linkWithCredential,
+  getAdditionalUserInfo,
 } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 /* ─────────────────────────────────────────
-   Styles (dark / gold theme)
+   Country codes
+───────────────────────────────────────── */
+const COUNTRY_CODES = [
+  { dial:"+1",   name:"EE.UU. / Canadá",     flag:"🇺🇸" },
+  { dial:"+34",  name:"España",               flag:"🇪🇸" },
+  { dial:"+52",  name:"México",               flag:"🇲🇽" },
+  { dial:"+54",  name:"Argentina",            flag:"🇦🇷" },
+  { dial:"+55",  name:"Brasil",               flag:"🇧🇷" },
+  { dial:"+56",  name:"Chile",                flag:"🇨🇱" },
+  { dial:"+57",  name:"Colombia",             flag:"🇨🇴" },
+  { dial:"+51",  name:"Perú",                 flag:"🇵🇪" },
+  { dial:"+58",  name:"Venezuela",            flag:"🇻🇪" },
+  { dial:"+593", name:"Ecuador",              flag:"🇪🇨" },
+  { dial:"+595", name:"Paraguay",             flag:"🇵🇾" },
+  { dial:"+598", name:"Uruguay",              flag:"🇺🇾" },
+  { dial:"+591", name:"Bolivia",              flag:"🇧🇴" },
+  { dial:"+502", name:"Guatemala",            flag:"🇬🇹" },
+  { dial:"+506", name:"Costa Rica",           flag:"🇨🇷" },
+  { dial:"+503", name:"El Salvador",          flag:"🇸🇻" },
+  { dial:"+504", name:"Honduras",             flag:"🇭🇳" },
+  { dial:"+505", name:"Nicaragua",            flag:"🇳🇮" },
+  { dial:"+507", name:"Panamá",               flag:"🇵🇦" },
+  { dial:"+53",  name:"Cuba",                 flag:"🇨🇺" },
+  { dial:"+1809",name:"Rep. Dominicana",      flag:"🇩🇴" },
+  { dial:"+44",  name:"Reino Unido",          flag:"🇬🇧" },
+  { dial:"+33",  name:"Francia",              flag:"🇫🇷" },
+  { dial:"+49",  name:"Alemania",             flag:"🇩🇪" },
+  { dial:"+39",  name:"Italia",               flag:"🇮🇹" },
+  { dial:"+351", name:"Portugal",             flag:"🇵🇹" },
+  { dial:"+31",  name:"Países Bajos",         flag:"🇳🇱" },
+  { dial:"+32",  name:"Bélgica",              flag:"🇧🇪" },
+  { dial:"+41",  name:"Suiza",                flag:"🇨🇭" },
+  { dial:"+43",  name:"Austria",              flag:"🇦🇹" },
+  { dial:"+45",  name:"Dinamarca",            flag:"🇩🇰" },
+  { dial:"+46",  name:"Suecia",               flag:"🇸🇪" },
+  { dial:"+47",  name:"Noruega",              flag:"🇳🇴" },
+  { dial:"+358", name:"Finlandia",            flag:"🇫🇮" },
+  { dial:"+48",  name:"Polonia",              flag:"🇵🇱" },
+  { dial:"+7",   name:"Rusia",                flag:"🇷🇺" },
+  { dial:"+380", name:"Ucrania",              flag:"🇺🇦" },
+  { dial:"+30",  name:"Grecia",               flag:"🇬🇷" },
+  { dial:"+36",  name:"Hungría",              flag:"🇭🇺" },
+  { dial:"+40",  name:"Rumania",              flag:"🇷🇴" },
+  { dial:"+420", name:"Rep. Checa",           flag:"🇨🇿" },
+  { dial:"+81",  name:"Japón",               flag:"🇯🇵" },
+  { dial:"+82",  name:"Corea del Sur",        flag:"🇰🇷" },
+  { dial:"+86",  name:"China",                flag:"🇨🇳" },
+  { dial:"+91",  name:"India",                flag:"🇮🇳" },
+  { dial:"+61",  name:"Australia",            flag:"🇦🇺" },
+  { dial:"+64",  name:"Nueva Zelanda",        flag:"🇳🇿" },
+  { dial:"+27",  name:"Sudáfrica",            flag:"🇿🇦" },
+  { dial:"+20",  name:"Egipto",               flag:"🇪🇬" },
+  { dial:"+212", name:"Marruecos",            flag:"🇲🇦" },
+  { dial:"+90",  name:"Turquía",              flag:"🇹🇷" },
+  { dial:"+972", name:"Israel",               flag:"🇮🇱" },
+  { dial:"+971", name:"Emiratos Árabes",      flag:"🇦🇪" },
+  { dial:"+966", name:"Arabia Saudí",         flag:"🇸🇦" },
+  { dial:"+65",  name:"Singapur",             flag:"🇸🇬" },
+  { dial:"+66",  name:"Tailandia",            flag:"🇹🇭" },
+  { dial:"+62",  name:"Indonesia",            flag:"🇮🇩" },
+  { dial:"+60",  name:"Malasia",              flag:"🇲🇾" },
+  { dial:"+63",  name:"Filipinas",            flag:"🇵🇭" },
+  { dial:"+84",  name:"Vietnam",              flag:"🇻🇳" },
+  { dial:"+92",  name:"Pakistán",             flag:"🇵🇰" },
+];
+
+/* ─────────────────────────────────────────
+   Styles
 ───────────────────────────────────────── */
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -147,15 +220,133 @@ const style = `
   .auth-submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
   /* Footer links */
-  .auth-row { display: flex; justify-content: space-between; align-items: center; }
+  .auth-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
   .auth-link {
     background: none; border: none; color: #c9a84c; cursor: pointer;
     font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500;
     padding: 0; transition: color 0.25s;
   }
   .auth-link:hover { color: #e8c97a; }
+  .auth-link:disabled { opacity: 0.4; cursor: not-allowed; }
   .auth-muted { font-size: 0.78rem; color: rgba(245,240,232,0.3); }
+
+  /* ── Phone step ── */
+  .auth-phone-row {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .auth-cc-sel {
+    width: 128px; flex-shrink: 0;
+    background: rgba(245,240,232,0.04);
+    border: 1px solid rgba(201,168,76,0.18); color: #f5f0e8;
+    padding: 13px 10px; font-family: 'DM Sans', sans-serif;
+    font-size: 0.84rem; font-weight: 300; outline: none; cursor: pointer;
+    transition: border-color 0.3s;
+  }
+  .auth-cc-sel option { background: #141209; }
+  .auth-cc-sel:focus { border-color: #c9a84c; }
+  .auth-phone-inp {
+    flex: 1;
+    background: rgba(245,240,232,0.04);
+    border: 1px solid rgba(201,168,76,0.18); color: #f5f0e8;
+    padding: 13px 16px; font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem; font-weight: 300; outline: none;
+    transition: border-color 0.3s; min-width: 0;
+  }
+  .auth-phone-inp::placeholder { color: rgba(245,240,232,0.18); }
+  .auth-phone-inp:focus { border-color: #c9a84c; }
+
+  .auth-phone-note {
+    font-size: 0.73rem; color: rgba(245,240,232,0.28);
+    margin-bottom: 20px; line-height: 1.5;
+  }
+
+  /* ── SMS code boxes ── */
+  .auth-code-row {
+    display: flex; gap: 10px; justify-content: center;
+    margin: 8px 0 24px;
+  }
+  .auth-code-box {
+    width: 52px; height: 64px; flex-shrink: 0;
+    background: rgba(245,240,232,0.04);
+    border: 1px solid rgba(201,168,76,0.18); color: #f5f0e8;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem; font-weight: 300;
+    text-align: center; outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    caret-color: #c9a84c;
+  }
+  .auth-code-box:focus { border-color: #c9a84c; background: rgba(201,168,76,0.06); }
+  .auth-code-box.filled { border-color: rgba(201,168,76,0.45); }
+  @media (max-width: 400px) {
+    .auth-code-box { width: 42px; height: 54px; font-size: 1.6rem; gap: 7px; }
+    .auth-code-row { gap: 7px; }
+  }
+
+  .auth-code-dest {
+    font-size: 0.82rem; color: rgba(245,240,232,0.45);
+    text-align: center; margin-bottom: 8px;
+  }
+  .auth-code-dest strong { color: #e8c97a; }
+
+  /* ── Step indicator ── */
+  .auth-steps {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 32px;
+  }
+  .auth-step-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(201,168,76,0.2);
+    transition: background 0.25s;
+  }
+  .auth-step-dot.active { background: #c9a84c; }
+  .auth-step-dot.done { background: rgba(201,168,76,0.45); }
+  .auth-step-line { flex: 1; height: 1px; background: rgba(201,168,76,0.12); }
+
+  /* ── Security badge ── */
+  .auth-secure-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.15);
+    padding: 10px 14px; margin-bottom: 24px; font-size: 0.77rem;
+    color: rgba(245,240,232,0.45); line-height: 1.5;
+  }
+  .auth-secure-badge span { color: #c9a84c; font-size: 1rem; }
 `;
+
+/* ─────────────────────────────────────────
+   Error maps
+───────────────────────────────────────── */
+const AUTH_ERRORS = {
+  "auth/invalid-credential":                        "Email o contraseña incorrectos.",
+  "auth/user-not-found":                            "No existe cuenta con ese email.",
+  "auth/wrong-password":                            "Contraseña incorrecta.",
+  "auth/email-already-in-use":                      "Este email ya está registrado.",
+  "auth/weak-password":                             "La contraseña debe tener al menos 6 caracteres.",
+  "auth/invalid-email":                             "El formato del email no es válido.",
+  "auth/too-many-requests":                         "Demasiados intentos. Espera un momento.",
+  "auth/popup-closed-by-user":                      "Ventana cerrada. Inténtalo de nuevo.",
+  "auth/cancelled-popup-request":                   "Solicitud cancelada.",
+  "auth/account-exists-with-different-credential":  "Ya existe una cuenta con ese email usando otro método.",
+  "auth/popup-blocked":                             "El navegador bloqueó el popup. Permite popups para este sitio.",
+};
+
+const PHONE_ERRORS = {
+  "auth/invalid-phone-number":        "Número de teléfono inválido. Incluye el código de país correcto.",
+  "auth/too-many-requests":           "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+  "auth/invalid-verification-code":   "Código incorrecto. Verifícalo e inténtalo de nuevo.",
+  "auth/code-expired":                "El código ha expirado. Solicita uno nuevo.",
+  "auth/credential-already-in-use":   "Este número ya está vinculado a otra cuenta.",
+  "auth/provider-already-linked":     "Tu cuenta ya tiene un teléfono verificado.",
+  "auth/missing-phone-number":        "Por favor ingresa tu número de teléfono.",
+  "auth/captcha-check-failed":        "Error de verificación. Recarga la página e inténtalo de nuevo.",
+  "auth/quota-exceeded":              "Límite de SMS superado. Inténtalo más tarde.",
+  "auth/missing-verification-code":   "Ingresa el código de verificación.",
+  "auth/missing-verification-id":     "Error de sesión. Solicita un nuevo código.",
+  "auth/network-request-failed":      "Error de red. Verifica tu conexión.",
+  "auth/user-disabled":               "Esta cuenta ha sido deshabilitada.",
+};
+
+const getAuthError  = (err) => AUTH_ERRORS[err.code]  || `Error: ${err.message}`;
+const getPhoneError = (code) => PHONE_ERRORS[code]     || "Error inesperado. Inténtalo de nuevo.";
 
 /* ─────────────────────────────────────────
    SVG icons
@@ -176,64 +367,80 @@ const FacebookIcon = () => (
 );
 
 /* ─────────────────────────────────────────
-   Error mapping
-───────────────────────────────────────── */
-const ERRORS = {
-  "auth/invalid-credential":                        "Email o contraseña incorrectos.",
-  "auth/user-not-found":                            "No existe cuenta con ese email.",
-  "auth/wrong-password":                            "Contraseña incorrecta.",
-  "auth/email-already-in-use":                      "Este email ya está registrado.",
-  "auth/weak-password":                             "La contraseña debe tener al menos 6 caracteres.",
-  "auth/invalid-email":                             "El formato del email no es válido.",
-  "auth/too-many-requests":                         "Demasiados intentos. Espera un momento.",
-  "auth/popup-closed-by-user":                      "Ventana cerrada. Inténtalo de nuevo.",
-  "auth/cancelled-popup-request":                   "Solicitud cancelada.",
-  "auth/account-exists-with-different-credential":  "Ya existe una cuenta con ese email usando otro método de login.",
-  "auth/popup-blocked":                             "El navegador bloqueó el popup. Permite popups para este sitio.",
-};
-
-function getErrorMsg(err) {
-  return ERRORS[err.code] || `Error: ${err.message}`;
-}
-
-/* ─────────────────────────────────────────
    Component
 ───────────────────────────────────────── */
 export default function Auth({ onAuthSuccess }) {
-  const [mode, setMode]         = useState("login"); // "login" | "register" | "reset"
+  // Auth mode
+  const [mode, setMode]         = useState("login"); // login | register | reset | phone | phone-code
+
+  // Email / password
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [info, setInfo]         = useState("");
   const [loading, setLoading]   = useState(false);
 
-  const run = async (fn) => {
+  // Phone verification
+  const [countryCode, setCountryCode]     = useState("+34");
+  const [phoneNumber, setPhoneNumber]     = useState("");
+  const [confirmResult, setConfirmResult] = useState(null);
+  const [codeDigits, setCodeDigits]       = useState(["","","","","",""]);
+  const [phoneLoading, setPhoneLoading]   = useState(false);
+  const [phoneError, setPhoneError]       = useState("");
+  const recaptchaRef = useRef(null);
+
+  // Cleanup reCAPTCHA on unmount
+  useEffect(() => {
+    return () => {
+      if (recaptchaRef.current) {
+        try { recaptchaRef.current.clear(); } catch (_) {}
+        recaptchaRef.current = null;
+      }
+    };
+  }, []);
+
+  /* ── Helpers ── */
+  const switchMode = (next) => {
+    setMode(next); setError(""); setInfo("");
+    setPhoneError("");
+  };
+
+  /* ── Social login ── */
+  const loginWithSocial = async (provider) => {
+    setError(""); setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const info   = getAdditionalUserInfo(result);
+      if (info?.isNewUser) {
+        setMode("phone");
+      } else {
+        onAuthSuccess();
+      }
+    } catch (err) {
+      setError(getAuthError(err));
+    }
+    setLoading(false);
+  };
+
+  /* ── Email submit ── */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError(""); setInfo(""); setLoading(true);
     try {
-      await fn();
-      onAuthSuccess();
+      if (mode === "login") {
+        await signInWithEmailAndPassword(auth, email, password);
+        onAuthSuccess();
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+        setMode("phone"); // phone verification required for new registrations
+      }
     } catch (err) {
-      setError(getErrorMsg(err));
-    } finally {
-      setLoading(false);
+      setError(getAuthError(err));
     }
+    setLoading(false);
   };
 
-  /* Social */
-  const loginWithGoogle   = () => run(() => signInWithPopup(auth, googleProvider));
-  const loginWithFacebook = () => run(() => signInWithPopup(auth, facebookProvider));
-
-  /* Email / password */
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (mode === "login") {
-      run(() => signInWithEmailAndPassword(auth, email, password));
-    } else {
-      run(() => createUserWithEmailAndPassword(auth, email, password));
-    }
-  };
-
-  /* Password reset */
+  /* ── Password reset ── */
   const handleReset = async (e) => {
     e.preventDefault();
     if (!email.trim()) { setError("Escribe tu email primero."); return; }
@@ -242,29 +449,147 @@ export default function Auth({ onAuthSuccess }) {
       await sendPasswordResetEmail(auth, email);
       setInfo("Te enviamos un email para restablecer tu contraseña.");
     } catch (err) {
-      setError(getErrorMsg(err));
-    } finally {
-      setLoading(false);
+      setError(getAuthError(err));
+    }
+    setLoading(false);
+  };
+
+  /* ── Phone: send SMS ── */
+  const getOrCreateVerifier = () => {
+    if (!recaptchaRef.current) {
+      recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+        size: "invisible",
+        callback: () => {},
+        "expired-callback": () => {
+          try { recaptchaRef.current?.clear(); } catch (_) {}
+          recaptchaRef.current = null;
+        },
+      });
+    }
+    return recaptchaRef.current;
+  };
+
+  const sendSMS = async () => {
+    const digits = phoneNumber.replace(/\D/g, "");
+    if (digits.length < 6) {
+      setPhoneError("Ingresa un número de teléfono válido.");
+      return;
+    }
+    const fullPhone = countryCode + digits;
+    setPhoneLoading(true);
+    setPhoneError("");
+    try {
+      const verifier = getOrCreateVerifier();
+      const result   = await signInWithPhoneNumber(auth, fullPhone, verifier);
+      setConfirmResult(result);
+      setMode("phone-code");
+    } catch (err) {
+      try { recaptchaRef.current?.clear(); } catch (_) {}
+      recaptchaRef.current = null;
+      setPhoneError(getPhoneError(err.code));
+    }
+    setPhoneLoading(false);
+  };
+
+  /* ── Phone: verify code ── */
+  const verifyCode = async (codeStr) => {
+    const code = codeStr ?? codeDigits.join("");
+    if (code.length !== 6 || !confirmResult || !auth.currentUser) return;
+    setPhoneLoading(true);
+    setPhoneError("");
+    try {
+      const credential = PhoneAuthProvider.credential(confirmResult.verificationId, code);
+      await linkWithCredential(auth.currentUser, credential);
+      await setDoc(doc(db, "users", auth.currentUser.uid), {
+        phone: countryCode + phoneNumber.replace(/\D/g, ""),
+        phoneVerified: true,
+      }, { merge: true });
+      onAuthSuccess();
+    } catch (err) {
+      const msg = getPhoneError(err.code);
+      setPhoneError(msg);
+      // Clear boxes on wrong code so user can re-type
+      if (err.code === "auth/invalid-verification-code" || err.code === "auth/code-expired") {
+        setCodeDigits(["","","","","",""]);
+        setTimeout(() => document.getElementById("code-0")?.focus(), 50);
+      }
+    }
+    setPhoneLoading(false);
+  };
+
+  /* ── Digit box handlers ── */
+  const handleDigit = (i, val) => {
+    const digit = val.replace(/\D/g, "").slice(-1);
+    const next  = [...codeDigits];
+    next[i]     = digit;
+    setCodeDigits(next);
+    if (digit && i < 5) {
+      document.getElementById(`code-${i + 1}`)?.focus();
+    }
+    if (digit && i === 5) {
+      const full = next.join("");
+      if (full.length === 6) verifyCode(full);
     }
   };
 
-  const switchMode = (next) => { setMode(next); setError(""); setInfo(""); };
+  const handleDigitKey = (i, e) => {
+    if (e.key === "Backspace") {
+      if (!codeDigits[i] && i > 0) {
+        const next = [...codeDigits];
+        next[i - 1] = "";
+        setCodeDigits(next);
+        document.getElementById(`code-${i - 1}`)?.focus();
+      }
+    } else if (e.key === "ArrowLeft"  && i > 0) document.getElementById(`code-${i - 1}`)?.focus();
+    else if   (e.key === "ArrowRight" && i < 5) document.getElementById(`code-${i + 1}`)?.focus();
+  };
 
+  const handlePaste = (e) => {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    e.preventDefault();
+    const next = ["","","","","",""];
+    for (let i = 0; i < 6; i++) next[i] = pasted[i] || "";
+    setCodeDigits(next);
+    document.getElementById(`code-${Math.min(pasted.length, 5)}`)?.focus();
+    if (pasted.length === 6) verifyCode(pasted);
+  };
+
+  const resendSMS = async () => {
+    setCodeDigits(["","","","","",""]);
+    setPhoneError("");
+    setMode("phone");
+  };
+
+  /* ── Derived ── */
+  const isPhoneStep = mode === "phone" || mode === "phone-code";
+
+  /* ─────────────────────────────────────────
+     Render
+  ───────────────────────────────────────── */
   return (
     <>
       <style>{style}</style>
+
+      {/* Always-present reCAPTCHA container */}
+      <div id="recaptcha-container" />
+
       <div className="auth-root">
 
         {/* ── Left decorative panel ── */}
         <div className="auth-panel">
           <div className="auth-panel-logo">Globe<span>Mate</span></div>
           <h2 className="auth-panel-h2">
-            Where journeys<br /><em>become connections</em>
+            {isPhoneStep
+              ? <>Casi <em>listo</em></>
+              : <>Where journeys<br /><em>become connections</em></>
+            }
           </h2>
           <p className="auth-panel-sub">
-            Join a curated community of passionate travelers. Find companions
-            who share your destinations, your curiosity, and your way of
-            seeing the world.
+            {isPhoneStep
+              ? "Verificamos tu número de teléfono para proteger tu cuenta y garantizar conexiones seguras con otros viajeros."
+              : "Join a curated community of passionate travelers. Find companions who share your destinations, your curiosity, and your way of seeing the world."
+            }
           </p>
           <div className="auth-panel-stats">
             {[
@@ -284,49 +609,58 @@ export default function Auth({ onAuthSuccess }) {
         <div className="auth-form-wrap">
           <div className="auth-form-box">
 
-            {/* Title */}
+            {/* Step indicator (only for phone steps) */}
+            {isPhoneStep && (
+              <div className="auth-steps">
+                <div className="auth-step-dot done" />
+                <div className="auth-step-line" />
+                <div className={`auth-step-dot ${mode === "phone" ? "active" : "done"}`} />
+                <div className="auth-step-line" />
+                <div className={`auth-step-dot ${mode === "phone-code" ? "active" : ""}`} />
+              </div>
+            )}
+
+            {/* ── Title ── */}
             <h2 className="auth-title">
-              {mode === "login"    && <>Welcome <em>back</em></>}
-              {mode === "register" && <>Create your <em>account</em></>}
-              {mode === "reset"    && <>Reset your <em>password</em></>}
+              {mode === "login"      && <>Welcome <em>back</em></>}
+              {mode === "register"   && <>Create your <em>account</em></>}
+              {mode === "reset"      && <>Reset your <em>password</em></>}
+              {mode === "phone"      && <>Verifica tu <em>teléfono</em></>}
+              {mode === "phone-code" && <>Ingresa el <em>código</em></>}
             </h2>
             <p className="auth-subtitle">
-              {mode === "login"    && "Sign in to continue your journey"}
-              {mode === "register" && "Begin your travel story today"}
-              {mode === "reset"    && "We'll send you a reset link"}
+              {mode === "login"      && "Sign in to continue your journey"}
+              {mode === "register"   && "Begin your travel story today"}
+              {mode === "reset"      && "We'll send you a reset link"}
+              {mode === "phone"      && "Te enviaremos un código SMS de verificación"}
+              {mode === "phone-code" && `Enviado a ${countryCode} ${phoneNumber}`}
             </p>
 
-            {/* Social — only on login / register */}
-            {mode !== "reset" && (
+            {/* ────────────────────────────────────
+                MODE: login / register
+            ──────────────────────────────────── */}
+            {(mode === "login" || mode === "register") && (
               <>
-                <button className="social-btn" disabled={loading} onClick={loginWithGoogle}>
+                <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(googleProvider)}>
                   <GoogleIcon /> Continue with Google
                 </button>
-                <button className="social-btn" disabled={loading} onClick={loginWithFacebook}>
+                <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(facebookProvider)}>
                   <FacebookIcon /> Continue with Facebook
                 </button>
                 <div className="auth-divider">or continue with email</div>
-              </>
-            )}
 
-            {/* Feedback */}
-            {error && <div className="auth-error">{error}</div>}
-            {info  && <div className="auth-info">{info}</div>}
+                {error && <div className="auth-error">{error}</div>}
 
-            {/* Email form */}
-            <form onSubmit={mode === "reset" ? handleReset : handleSubmit}>
-              <label className="auth-label">Email address</label>
-              <input
-                className="auth-input"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-
-              {mode !== "reset" && (
-                <>
+                <form onSubmit={handleSubmit}>
+                  <label className="auth-label">Email address</label>
+                  <input
+                    className="auth-input"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                  />
                   <label className="auth-label">Password</label>
                   <input
                     className="auth-input"
@@ -337,47 +671,163 @@ export default function Auth({ onAuthSuccess }) {
                     required
                     minLength={6}
                   />
-                </>
-              )}
-
-              <button className="auth-submit" type="submit" disabled={loading}>
-                {loading
-                  ? "Please wait…"
-                  : mode === "login"    ? "Sign in"
-                  : mode === "register" ? "Create account"
-                  : "Send reset email"}
-              </button>
-            </form>
-
-            {/* Footer links */}
-            <div className="auth-row">
-              {mode === "login" && (
-                <>
-                  <button className="auth-link" onClick={() => switchMode("reset")}>
-                    Forgot password?
+                  <button className="auth-submit" type="submit" disabled={loading}>
+                    {loading ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
                   </button>
-                  <span className="auth-muted">
-                    No account?{" "}
-                    <button className="auth-link" onClick={() => switchMode("register")}>
-                      Sign up
-                    </button>
-                  </span>
-                </>
-              )}
-              {mode === "register" && (
-                <span className="auth-muted">
-                  Already have an account?{" "}
+                </form>
+
+                <div className="auth-row">
+                  {mode === "login" ? (
+                    <>
+                      <button className="auth-link" onClick={() => switchMode("reset")}>
+                        Forgot password?
+                      </button>
+                      <span className="auth-muted">
+                        No account?{" "}
+                        <button className="auth-link" onClick={() => switchMode("register")}>
+                          Sign up
+                        </button>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="auth-muted">
+                      Already have an account?{" "}
+                      <button className="auth-link" onClick={() => switchMode("login")}>
+                        Sign in
+                      </button>
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ────────────────────────────────────
+                MODE: reset
+            ──────────────────────────────────── */}
+            {mode === "reset" && (
+              <>
+                {error && <div className="auth-error">{error}</div>}
+                {info  && <div className="auth-info">{info}</div>}
+                <form onSubmit={handleReset}>
+                  <label className="auth-label">Email address</label>
+                  <input
+                    className="auth-input"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                  />
+                  <button className="auth-submit" type="submit" disabled={loading}>
+                    {loading ? "Please wait…" : "Send reset email"}
+                  </button>
+                </form>
+                <div className="auth-row">
                   <button className="auth-link" onClick={() => switchMode("login")}>
-                    Sign in
+                    ← Back to sign in
                   </button>
-                </span>
-              )}
-              {mode === "reset" && (
-                <button className="auth-link" onClick={() => switchMode("login")}>
-                  ← Back to sign in
+                </div>
+              </>
+            )}
+
+            {/* ────────────────────────────────────
+                MODE: phone (enter number)
+            ──────────────────────────────────── */}
+            {mode === "phone" && (
+              <>
+                <div className="auth-secure-badge">
+                  <span>🔒</span>
+                  Para proteger tu cuenta y la comunidad, verificamos tu número de teléfono. Solo se usa para seguridad.
+                </div>
+
+                {phoneError && <div className="auth-error">{phoneError}</div>}
+
+                <label className="auth-label">Número de teléfono</label>
+                <div className="auth-phone-row">
+                  <select
+                    className="auth-cc-sel"
+                    value={countryCode}
+                    onChange={e => setCountryCode(e.target.value)}
+                  >
+                    {COUNTRY_CODES.map(c => (
+                      <option key={c.dial} value={c.dial}>
+                        {c.flag} {c.dial}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="auth-phone-inp"
+                    type="tel"
+                    placeholder="600 000 000"
+                    value={phoneNumber}
+                    onChange={e => setPhoneNumber(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && sendSMS()}
+                    autoFocus
+                  />
+                </div>
+                <p className="auth-phone-note">
+                  Ingresa tu número sin el código de país. Ejemplo: 600 123 456
+                </p>
+
+                <button
+                  className="auth-submit"
+                  onClick={sendSMS}
+                  disabled={phoneLoading || phoneNumber.replace(/\D/g, "").length < 6}
+                >
+                  {phoneLoading ? "Enviando…" : "Enviar código SMS"}
                 </button>
-              )}
-            </div>
+              </>
+            )}
+
+            {/* ────────────────────────────────────
+                MODE: phone-code (enter 6-digit code)
+            ──────────────────────────────────── */}
+            {mode === "phone-code" && (
+              <>
+                <p className="auth-code-dest">
+                  Código enviado a <strong>{countryCode} {phoneNumber}</strong>
+                </p>
+
+                {phoneError && <div className="auth-error">{phoneError}</div>}
+
+                <div className="auth-code-row">
+                  {codeDigits.map((d, i) => (
+                    <input
+                      key={i}
+                      id={`code-${i}`}
+                      className={`auth-code-box${d ? " filled" : ""}`}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="\d*"
+                      maxLength={2}
+                      value={d}
+                      onChange={e => handleDigit(i, e.target.value)}
+                      onKeyDown={e => handleDigitKey(i, e)}
+                      onPaste={i === 0 ? handlePaste : undefined}
+                      autoFocus={i === 0}
+                      disabled={phoneLoading}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  className="auth-submit"
+                  onClick={() => verifyCode(undefined)}
+                  disabled={phoneLoading || codeDigits.join("").length !== 6}
+                >
+                  {phoneLoading ? "Verificando…" : "Verificar código"}
+                </button>
+
+                <div className="auth-row" style={{ justifyContent:"center", gap:16 }}>
+                  <button className="auth-link" onClick={resendSMS} disabled={phoneLoading}>
+                    ← Cambiar número
+                  </button>
+                  <button className="auth-link" onClick={sendSMS} disabled={phoneLoading}>
+                    Reenviar código
+                  </button>
+                </div>
+              </>
+            )}
 
           </div>
         </div>
