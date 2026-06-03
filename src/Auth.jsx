@@ -3,11 +3,11 @@ import { auth, googleProvider, facebookProvider, db } from "./firebase";
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   RecaptchaVerifier,
   signInWithPhoneNumber,
   PhoneAuthProvider,
+  EmailAuthProvider,
   linkWithCredential,
   getAdditionalUserInfo,
 } from "firebase/auth";
@@ -369,7 +369,7 @@ const FacebookIcon = () => (
 /* ─────────────────────────────────────────
    Component
 ───────────────────────────────────────── */
-export default function Auth({ onAuthSuccess, onStartPhone }) {
+export default function Auth({ onAuthSuccess }) {
   // Auth mode
   const [mode, setMode]         = useState("login"); // login | register | reset | phone | phone-code
 
@@ -379,6 +379,10 @@ export default function Auth({ onAuthSuccess, onStartPhone }) {
   const [error, setError]       = useState("");
   const [info, setInfo]         = useState("");
   const [loading, setLoading]   = useState(false);
+
+  // Pending email credentials (stored here; Firebase account created after SMS)
+  const [pendingEmail, setPendingEmail]       = useState("");
+  const [pendingPassword, setPendingPassword] = useState("");
 
   // Phone verification
   const [countryCode, setCountryCode]     = useState("+34");
@@ -412,7 +416,6 @@ export default function Auth({ onAuthSuccess, onStartPhone }) {
       const result = await signInWithPopup(auth, provider);
       const info   = getAdditionalUserInfo(result);
       if (info?.isNewUser) {
-        onStartPhone?.();
         setMode("phone");
       } else {
         onAuthSuccess();
@@ -426,20 +429,22 @@ export default function Auth({ onAuthSuccess, onStartPhone }) {
   /* ── Email submit ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); setInfo(""); setLoading(true);
-    try {
-      if (mode === "login") {
+    setError(""); setInfo("");
+    if (mode === "login") {
+      setLoading(true);
+      try {
         await signInWithEmailAndPassword(auth, email, password);
         onAuthSuccess();
-      } else {
-        onStartPhone?.(); // prevent App.js auth-state listener from closing Auth
-        await createUserWithEmailAndPassword(auth, email, password);
-        setMode("phone");
+      } catch (err) {
+        setError(getAuthError(err));
       }
-    } catch (err) {
-      setError(getAuthError(err));
+      setLoading(false);
+    } else {
+      // Store credentials locally; Firebase account is created only after SMS is verified
+      setPendingEmail(email);
+      setPendingPassword(password);
+      setMode("phone");
     }
-    setLoading(false);
   };
 
   /* ── Password reset ── */
@@ -496,21 +501,37 @@ export default function Auth({ onAuthSuccess, onStartPhone }) {
   /* ── Phone: verify code ── */
   const verifyCode = async (codeStr) => {
     const code = codeStr ?? codeDigits.join("");
-    if (code.length !== 6 || !confirmResult || !auth.currentUser) return;
+    if (code.length !== 6 || !confirmResult) return;
     setPhoneLoading(true);
     setPhoneError("");
     try {
-      const credential = PhoneAuthProvider.credential(confirmResult.verificationId, code);
-      await linkWithCredential(auth.currentUser, credential);
-      await setDoc(doc(db, "users", auth.currentUser.uid), {
+      let uid;
+      if (pendingEmail) {
+        // Email registration path:
+        // 1. Confirm SMS → signs in as phone-only user (no email account yet)
+        // 2. Link email+password credential to that phone user → full account created
+        await confirmResult.confirm(code);
+        const emailCred = EmailAuthProvider.credential(pendingEmail, pendingPassword);
+        await linkWithCredential(auth.currentUser, emailCred);
+        uid = auth.currentUser.uid;
+      } else {
+        // Social registration path:
+        // auth.currentUser is already the social user; just link the phone credential
+        if (!auth.currentUser) { setPhoneError("Sesión expirada. Vuelve a intentarlo."); setPhoneLoading(false); return; }
+        const phoneCred = PhoneAuthProvider.credential(confirmResult.verificationId, code);
+        await linkWithCredential(auth.currentUser, phoneCred);
+        uid = auth.currentUser.uid;
+      }
+      await setDoc(doc(db, "users", uid), {
         phone: countryCode + phoneNumber.replace(/\D/g, ""),
         phoneVerified: true,
       }, { merge: true });
       onAuthSuccess();
     } catch (err) {
-      const msg = getPhoneError(err.code);
-      setPhoneError(msg);
-      // Clear boxes on wrong code so user can re-type
+      const phoneMsg = getPhoneError(err.code);
+      setPhoneError(
+        phoneMsg !== "Error inesperado. Inténtalo de nuevo." ? phoneMsg : getAuthError(err)
+      );
       if (err.code === "auth/invalid-verification-code" || err.code === "auth/code-expired") {
         setCodeDigits(["","","","","",""]);
         setTimeout(() => document.getElementById("code-0")?.focus(), 50);

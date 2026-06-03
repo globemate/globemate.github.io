@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Auth from "./Auth.jsx";
@@ -24,7 +24,6 @@ const INIT_NOTIFS = [
 
 export default function App() {
   const [user, setUser]               = useState(undefined);
-  const pendingPhoneRef               = useRef(false);
   const [showAuth, setShowAuth]       = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showExplore, setShowExplore] = useState(false);
@@ -42,7 +41,9 @@ export default function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u && !pendingPhoneRef.current) setShowAuth(false);
+      // Auth closes only when onAuthSuccess() is called explicitly —
+      // never on auth-state change, so the phone-verification step
+      // isn't skipped when Firebase creates the account mid-flow.
     });
     return () => unsub();
   }, []);
@@ -95,12 +96,7 @@ export default function App() {
   }
 
   if (showAuth) {
-    return (
-      <Auth
-        onAuthSuccess={() => { pendingPhoneRef.current = false; setShowAuth(false); }}
-        onStartPhone={() => { pendingPhoneRef.current = true; }}
-      />
-    );
+    return <Auth onAuthSuccess={() => setShowAuth(false)} />;
   }
 
   // navigate to a screen and push history state
