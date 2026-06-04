@@ -362,6 +362,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
           <div className="ch-nav-links">
             {user && <button className="ch-nav-btn ch-desktop" onClick={onExplore}>Explore</button>}
             {user && <button className="ch-nav-btn ch-desktop" onClick={onProfile}>My Profile</button>}
+            <button className="ch-nav-btn ch-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>✦ Planes</button>
             {user && <button className="ch-nav-btn ch-desktop" onClick={onSignOut}>Sign out</button>}
             {user && (
               <button className="bell-btn" onClick={onNotif}>

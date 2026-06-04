@@ -320,6 +320,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
               </button>
             )}
             <button className="mx-nav-btn mx-desktop" onClick={onProfile}>My Profile</button>
+            <button className="mx-nav-btn mx-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>✦ Planes</button>
             <button className="mx-nav-btn mx-desktop" onClick={onSignOut}>Sign out</button>
             <button className="mx-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />

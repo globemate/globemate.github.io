@@ -274,6 +274,15 @@ const css = `
 
   .pr-back { background: none; border: none; color: var(--gold); font-family: var(--sans); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; padding: 0; transition: color 0.25s; display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; }
   .pr-back:hover { color: var(--gold-light); }
+  .pr-desktop-actions { position: fixed; top: 16px; right: 16px; z-index: 300; display: flex; align-items: center; gap: 10px; }
+  .pr-top-btn { background: none; border: 1px solid rgba(201,168,76,0.3); font-family: var(--sans); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; padding: 7px 14px; transition: all 0.22s; }
+  .pr-top-btn.gold { color: var(--gold); border-color: rgba(201,168,76,0.4); }
+  .pr-top-btn.gold:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+  .pr-bell-mobile { display: none; }
+  @media (max-width: 680px) {
+    .pr-desktop-actions { display: none; }
+    .pr-bell-mobile { display: inline-flex !important; }
+  }
   .bell-btn { position:relative; background:none; border:1px solid rgba(201,168,76,0.25); color:var(--gold); padding:6px 10px; cursor:pointer; transition:all 0.22s; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
   .bell-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.1); }
   .bell-badge { position:absolute; top:-6px; right:-6px; background:#d32f2f; color:#fff; border-radius:50%; min-width:17px; height:17px; display:flex; align-items:center; justify-content:center; font-size:0.58rem; font-weight:700; font-family:var(--sans); border:1.5px solid var(--black); padding:0 2px; pointer-events:none; }
@@ -559,9 +568,18 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
           <span /><span /><span />
         </button>
 
-        {/* bell — fixed top-right */}
+        {/* desktop top-right actions — hidden on mobile (hamburger takes over) */}
+        <div className="pr-desktop-actions">
+          {onPricing && <button className="pr-top-btn gold" onClick={onPricing}>✦ Planes</button>}
+          {onNotif && (
+            <button className="bell-btn" onClick={onNotif}>
+              🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
+            </button>
+          )}
+        </div>
+        {/* bell — fixed top-right on mobile only */}
         {onNotif && (
-          <button className="bell-btn" style={{ position:"fixed", top:"18px", right:"18px", zIndex:300 }} onClick={onNotif}>
+          <button className="bell-btn pr-bell-mobile" style={{ position:"fixed", top:"18px", right:"18px", zIndex:300 }} onClick={onNotif}>
             🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
           </button>
         )}

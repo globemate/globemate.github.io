@@ -255,6 +255,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
               </button>
             )}
             <button style={btnStyle("ghost")} onClick={onProfile}  className="mp-hide-xs">My Profile</button>
+            <button style={{...btnStyle("ghost"), borderColor:"#c9a84c", color:"#c9a84c"}} onClick={onPricing} className="mp-hide-xs">✦ Planes</button>
             <button style={btnStyle("ghost")} onClick={onSignOut}  className="mp-hide-xs">Sign out</button>
             <button className="mp-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />

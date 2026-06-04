@@ -163,6 +163,7 @@ export default function Notifications({
         <nav className="nf-nav">
           <button className="nf-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+            <button className="nf-mark-btn nf-desktop" style={{color:"#c9a84c",marginRight:8}} onClick={onPricing}>✦ Planes</button>
             <button className="nf-mark-btn nf-desktop" onClick={onMarkAllRead} disabled={unreadCount === 0}>
               Mark all read
             </button>

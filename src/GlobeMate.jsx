@@ -836,6 +836,7 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
               🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
             </button>
           )}
+          <button className="nav-cta nav-desktop-only" onClick={onPricing}>✦ Planes</button>
           {user ? (
             <>
               <button className="nav-cta nav-desktop-only" onClick={onProfile}>My Profile</button>

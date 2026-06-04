@@ -324,6 +324,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
               </button>
             )}
             {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onProfile}>My Profile</button>}
+            <button className="ex-nav-btn ex-desktop" onClick={onPricing}>✦ Planes</button>
             {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onSignOut}>Sign out</button>}
             <button className="ex-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />

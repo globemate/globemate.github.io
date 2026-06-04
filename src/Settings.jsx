@@ -366,6 +366,7 @@ export default function Settings({
               <button className="sg-nav-btn" onClick={onMatches}>Matches</button>
               <button className="sg-nav-btn" onClick={onChat}>Messages</button>
               <button className="sg-nav-btn" onClick={onProfile}>Profile</button>
+              <button className="sg-nav-btn" style={{color:"#c9a84c"}} onClick={onPricing}>✦ Planes</button>
             </div>
             <button className="sg-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
