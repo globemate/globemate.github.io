@@ -89,7 +89,7 @@ function FlyTo({ target }) {
 }
 
 /* ── component ── */
-export default function Map({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings }) {
+export default function Map({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
   const [clusters, setClusters]     = useState([]);
   const [search, setSearch]         = useState("");
   const [flyTarget, setFlyTarget]   = useState(null);
@@ -229,6 +229,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
           Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
         <div className="mob-nav-divider" />
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>

@@ -775,7 +775,7 @@ function GlobeCanvas() {
   );
 }
 
-export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExplore, onChat, onMatches, onMap, onNotif, notifCount, onSettings }) {
+export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExplore, onChat, onMatches, onMap, onNotif, notifCount, onSettings, onPricing }) {
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -810,6 +810,7 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
         {user ? (
           <>
             <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
             <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
             <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
           </>

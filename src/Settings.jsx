@@ -180,7 +180,7 @@ const css = `
 
 export default function Settings({
   user, onBack, onNotif, notifCount, onExplore, onMatches,
-  onChat, onMap, onProfile, onSignOut,
+  onChat, onMap, onProfile, onSignOut, onPricing,
 }) {
   const [tab, setTab]         = useState("Cuenta");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -351,6 +351,7 @@ export default function Settings({
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif?.(); }}>
           Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
       </div>

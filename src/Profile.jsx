@@ -394,7 +394,7 @@ const css = `
   .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
 `;
 
-export default function Profile({ user, onBack, onNotif, notifCount, onExplore, onMatches, onChat, onMap, onSignOut, onSettings }) {
+export default function Profile({ user, onBack, onNotif, notifCount, onExplore, onMatches, onChat, onMap, onSignOut, onSettings, onPricing }) {
   const [profile, setProfile] = useState(DEF);
   const [loading, setLoading]   = useState(true);
   const [dirty, setDirty]       = useState(false);
@@ -546,6 +546,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
           Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
         <div className="mob-nav-divider" />
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>

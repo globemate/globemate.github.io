@@ -246,7 +246,7 @@ function MatchCard({ m, onMessage }) {
   );
 }
 
-export default function Matches({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings }) {
+export default function Matches({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
   const [matches, setMatches]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [sort, setSort]           = useState("recent");
@@ -300,6 +300,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
           Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
         <div className="mob-nav-divider" />
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>

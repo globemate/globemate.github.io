@@ -10,6 +10,7 @@ import Notifications from "./Notifications.jsx";
 import Matches from "./Matches.jsx";
 import Map from "./Map.jsx";
 import Settings from "./Settings.jsx";
+import Pricing from "./Pricing.jsx";
 
 const t = (ms) => new Date(Date.now() - ms);
 const INIT_NOTIFS = [
@@ -32,6 +33,7 @@ export default function App() {
   const [showMap, setShowMap]         = useState(false);
   const [showNotif, setShowNotif]     = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
   const [notifs, setNotifs]           = useState(INIT_NOTIFS);
 
   const notifCount  = notifs.filter(n => !n.read).length;
@@ -64,6 +66,7 @@ export default function App() {
       setShowMap(false);
       setShowNotif(false);
       setShowSettings(false);
+      setShowPricing(false);
       if (screen === "profile") setShowProfile(true);
       else if (screen === "explore") setShowExplore(true);
       else if (screen === "chat") setShowChat(true);
@@ -71,6 +74,7 @@ export default function App() {
       else if (screen === "map") setShowMap(true);
       else if (screen === "notif") setShowNotif(true);
       else if (screen === "settings") setShowSettings(true);
+      else if (screen === "pricing") setShowPricing(true);
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -109,6 +113,7 @@ export default function App() {
     setShowMap(false);
     setShowNotif(false);
     setShowSettings(false);
+    setShowPricing(false);
     if (screen === "profile") setShowProfile(true);
     else if (screen === "explore") setShowExplore(true);
     else if (screen === "chat") setShowChat(true);
@@ -116,6 +121,7 @@ export default function App() {
     else if (screen === "map") setShowMap(true);
     else if (screen === "notif") setShowNotif(true);
     else if (screen === "settings") setShowSettings(true);
+    else if (screen === "pricing") setShowPricing(true);
   };
 
   const nav = {
@@ -127,8 +133,13 @@ export default function App() {
     onMatches:  () => goTo("matches"),
     onMap:      () => goTo("map"),
     onSettings: () => goTo("settings"),
+    onPricing:  () => goTo("pricing"),
     onSignOut:  () => signOut(auth),
   };
+
+  if (showPricing) {
+    return <Pricing user={user} onBack={() => window.history.back()} {...nav} />;
+  }
 
   if (showSettings && user) {
     return <Settings user={user} onBack={() => window.history.back()} {...nav} />;
