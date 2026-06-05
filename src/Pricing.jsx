@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -281,6 +283,7 @@ export default function Pricing({
   user, onBack, onProfile, onExplore, onMatches, onChat,
   onMap, onSignOut, onNotif, notifCount, onSettings, onPricing,
 }) {
+  const { t } = useTranslation();
   const [menuOpen,  setMenuOpen]  = useState(false);
   const [annual,    setAnnual]    = useState(false);
 
@@ -299,22 +302,22 @@ export default function Pricing({
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore?.(); }}>Explore</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches?.(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat?.(); }}>Messages</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap?.(); }}>Map</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore?.(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches?.(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat?.(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap?.(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile?.(); }}>My Profile</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile?.(); }}>{t("nav.myProfile")}</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif?.(); }}>
-          🔔 Notificaciones{notifCount > 0 ? ` (${notifCount})` : ""}
+          🔔 {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut?.(); }}>Sign out</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut?.(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div className="px-root">
@@ -328,8 +331,9 @@ export default function Pricing({
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
-            <button className="px-nav-btn pxd" onClick={onExplore}>Explore</button>
-            <button className="px-nav-btn pxd" onClick={onProfile}>My Profile</button>
+            <LangButton align="right" />
+            <button className="px-nav-btn pxd" onClick={onExplore}>{t("nav.explore")}</button>
+            <button className="px-nav-btn pxd" onClick={onProfile}>{t("nav.myProfile")}</button>
             <button className="px-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
             </button>
@@ -338,26 +342,23 @@ export default function Pricing({
 
         {/* ── hero ── */}
         <div className="px-hero">
-          <div className="px-eyebrow">Suscripciones</div>
-          <h1 className="px-h1">Elige tu plan <em>ideal</em></h1>
-          <p className="px-sub">
-            Conecta con viajeros de todo el mundo. Desbloquea matches ilimitados,
-            chat completo y funciones exclusivas para encontrar tu compañero de viaje perfecto.
-          </p>
+          <div className="px-eyebrow">{t("pricing.subscriptions")}</div>
+          <h1 className="px-h1">{t("pricing.title")} <em>{t("pricing.titleItalic")}</em></h1>
+          <p className="px-sub">{t("pricing.subtitle")}</p>
         </div>
 
         {/* ── billing toggle ── */}
         <div className="px-toggle-wrap">
-          <span>Mensual</span>
+          <span>{t("pricing.monthly")}</span>
           <button
             className={`px-toggle${annual ? " on" : ""}`}
             onClick={() => setAnnual(a => !a)}
-            aria-label="Toggle anual"
+            aria-label="Toggle annual"
           >
             <div className="px-toggle-knob" />
           </button>
-          <span>Anual</span>
-          {annual && <span className="px-save-badge">Ahorra 17%</span>}
+          <span>{t("pricing.annual")}</span>
+          {annual && <span className="px-save-badge">{t("pricing.save17")}</span>}
         </div>
 
         {/* ── plan cards ── */}

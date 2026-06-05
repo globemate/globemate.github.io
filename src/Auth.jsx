@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 import { auth, googleProvider, facebookProvider, db } from "./firebase";
 import {
   signInWithPopup,
@@ -140,9 +142,13 @@ const style = `
 
   /* ── Right form panel ── */
   .auth-form-wrap {
+    position: relative;
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
     padding: 56px 48px; overflow-y: auto;
+  }
+  .auth-lang-btn {
+    position: absolute; top: 20px; right: 20px;
   }
   .auth-form-box { width: 100%; max-width: 380px; }
 
@@ -370,21 +376,18 @@ const FacebookIcon = () => (
    Component
 ───────────────────────────────────────── */
 export default function Auth({ onAuthSuccess }) {
-  // Auth mode
+  const { t } = useTranslation();
   const [mode, setMode]         = useState("login"); // login | register | reset | phone | phone-code
 
-  // Email / password
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [info, setInfo]         = useState("");
   const [loading, setLoading]   = useState(false);
 
-  // Pending email credentials (stored here; Firebase account created after SMS)
   const [pendingEmail, setPendingEmail]       = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
 
-  // Phone verification
   const [countryCode, setCountryCode]     = useState("+34");
   const [phoneNumber, setPhoneNumber]     = useState("");
   const [confirmResult, setConfirmResult] = useState(null);
@@ -393,7 +396,6 @@ export default function Auth({ onAuthSuccess }) {
   const [phoneError, setPhoneError]       = useState("");
   const recaptchaRef = useRef(null);
 
-  // Cleanup reCAPTCHA on unmount
   useEffect(() => {
     return () => {
       if (recaptchaRef.current) {
@@ -403,13 +405,11 @@ export default function Auth({ onAuthSuccess }) {
     };
   }, []);
 
-  /* ── Helpers ── */
   const switchMode = (next) => {
     setMode(next); setError(""); setInfo("");
     setPhoneError("");
   };
 
-  /* ── Social login ── */
   const loginWithSocial = async (provider) => {
     setError(""); setLoading(true);
     try {
@@ -426,7 +426,6 @@ export default function Auth({ onAuthSuccess }) {
     setLoading(false);
   };
 
-  /* ── Email submit ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(""); setInfo("");
@@ -440,28 +439,25 @@ export default function Auth({ onAuthSuccess }) {
       }
       setLoading(false);
     } else {
-      // Store credentials locally; Firebase account is created only after SMS is verified
       setPendingEmail(email);
       setPendingPassword(password);
       setMode("phone");
     }
   };
 
-  /* ── Password reset ── */
   const handleReset = async (e) => {
     e.preventDefault();
-    if (!email.trim()) { setError("Escribe tu email primero."); return; }
+    if (!email.trim()) { setError(t("auth.emailLabel") + " required"); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      setInfo("Te enviamos un email para restablecer tu contraseña.");
+      setInfo(t("auth.sendResetBtn") + " ✓");
     } catch (err) {
       setError(getAuthError(err));
     }
     setLoading(false);
   };
 
-  /* ── Phone: send SMS ── */
   const getOrCreateVerifier = () => {
     if (!recaptchaRef.current) {
       recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
@@ -479,7 +475,7 @@ export default function Auth({ onAuthSuccess }) {
   const sendSMS = async () => {
     const digits = phoneNumber.replace(/\D/g, "");
     if (digits.length < 6) {
-      setPhoneError("Ingresa un número de teléfono válido.");
+      setPhoneError(t("auth.phoneNote"));
       return;
     }
     const fullPhone = countryCode + digits;
@@ -498,7 +494,6 @@ export default function Auth({ onAuthSuccess }) {
     setPhoneLoading(false);
   };
 
-  /* ── Phone: verify code ── */
   const verifyCode = async (codeStr) => {
     const code = codeStr ?? codeDigits.join("");
     if (code.length !== 6 || !confirmResult) return;
@@ -507,16 +502,11 @@ export default function Auth({ onAuthSuccess }) {
     try {
       let uid;
       if (pendingEmail) {
-        // Email registration path:
-        // 1. Confirm SMS → signs in as phone-only user (no email account yet)
-        // 2. Link email+password credential to that phone user → full account created
         await confirmResult.confirm(code);
         const emailCred = EmailAuthProvider.credential(pendingEmail, pendingPassword);
         await linkWithCredential(auth.currentUser, emailCred);
         uid = auth.currentUser.uid;
       } else {
-        // Social registration path:
-        // auth.currentUser is already the social user; just link the phone credential
         if (!auth.currentUser) { setPhoneError("Sesión expirada. Vuelve a intentarlo."); setPhoneLoading(false); return; }
         const phoneCred = PhoneAuthProvider.credential(confirmResult.verificationId, code);
         await linkWithCredential(auth.currentUser, phoneCred);
@@ -540,15 +530,12 @@ export default function Auth({ onAuthSuccess }) {
     setPhoneLoading(false);
   };
 
-  /* ── Digit box handlers ── */
   const handleDigit = (i, val) => {
     const digit = val.replace(/\D/g, "").slice(-1);
     const next  = [...codeDigits];
     next[i]     = digit;
     setCodeDigits(next);
-    if (digit && i < 5) {
-      document.getElementById(`code-${i + 1}`)?.focus();
-    }
+    if (digit && i < 5) document.getElementById(`code-${i + 1}`)?.focus();
     if (digit && i === 5) {
       const full = next.join("");
       if (full.length === 6) verifyCode(full);
@@ -584,17 +571,11 @@ export default function Auth({ onAuthSuccess }) {
     setMode("phone");
   };
 
-  /* ── Derived ── */
   const isPhoneStep = mode === "phone" || mode === "phone-code";
 
-  /* ─────────────────────────────────────────
-     Render
-  ───────────────────────────────────────── */
   return (
     <>
       <style>{style}</style>
-
-      {/* Always-present reCAPTCHA container */}
       <div id="recaptcha-container" />
 
       <div className="auth-root">
@@ -604,21 +585,21 @@ export default function Auth({ onAuthSuccess }) {
           <div className="auth-panel-logo">Globe<span>Mate</span></div>
           <h2 className="auth-panel-h2">
             {isPhoneStep
-              ? <>Casi <em>listo</em></>
-              : <>Where journeys<br /><em>become connections</em></>
+              ? t("auth.almostReady")
+              : <>{t("auth.whereJourneys")}<br /><em>{t("auth.becomeConnections")}</em></>
             }
           </h2>
           <p className="auth-panel-sub">
             {isPhoneStep
-              ? "Verificamos tu número de teléfono para proteger tu cuenta y garantizar conexiones seguras con otros viajeros."
-              : "Join a curated community of passionate travelers. Find companions who share your destinations, your curiosity, and your way of seeing the world."
+              ? t("auth.panelSubtitlePhone")
+              : t("auth.panelSubtitle")
             }
           </p>
           <div className="auth-panel-stats">
             {[
-              { num: "124K", lbl: "Travelers" },
-              { num: "89",   lbl: "Countries" },
-              { num: "4.2K", lbl: "Matches / mo" },
+              { num: "124K", lbl: t("auth.travelers") },
+              { num: "89",   lbl: t("auth.countries") },
+              { num: "4.2K", lbl: t("auth.matchesPerMonth") },
             ].map((s) => (
               <div key={s.lbl}>
                 <div className="auth-stat-num">{s.num}</div>
@@ -630,9 +611,11 @@ export default function Auth({ onAuthSuccess }) {
 
         {/* ── Form panel ── */}
         <div className="auth-form-wrap">
+          <div className="auth-lang-btn">
+            <LangButton align="right" />
+          </div>
           <div className="auth-form-box">
 
-            {/* Step indicator (only for phone steps) */}
             {isPhoneStep && (
               <div className="auth-steps">
                 <div className="auth-step-dot done" />
@@ -645,57 +628,58 @@ export default function Auth({ onAuthSuccess }) {
 
             {/* ── Title ── */}
             <h2 className="auth-title">
-              {mode === "login"      && <>Welcome <em>back</em></>}
-              {mode === "register"   && <>Create your <em>account</em></>}
-              {mode === "reset"      && <>Reset your <em>password</em></>}
-              {mode === "phone"      && <>Verifica tu <em>teléfono</em></>}
-              {mode === "phone-code" && <>Ingresa el <em>código</em></>}
+              {mode === "login"      && t("auth.welcomeBack")}
+              {mode === "register"   && t("auth.createAccount")}
+              {mode === "reset"      && t("auth.resetPassword")}
+              {mode === "phone"      && t("auth.verifyPhone")}
+              {mode === "phone-code" && t("auth.enterCode")}
             </h2>
             <p className="auth-subtitle">
-              {mode === "login"      && "Sign in to continue your journey"}
-              {mode === "register"   && "Begin your travel story today"}
-              {mode === "reset"      && "We'll send you a reset link"}
-              {mode === "phone"      && "Te enviaremos un código SMS de verificación"}
-              {mode === "phone-code" && `Enviado a ${countryCode} ${phoneNumber}`}
+              {mode === "login"      && t("auth.signInSubtitle")}
+              {mode === "register"   && t("auth.registerSubtitle")}
+              {mode === "reset"      && t("auth.resetSubtitle")}
+              {mode === "phone"      && t("auth.phoneSubtitle")}
+              {mode === "phone-code" && t("auth.codeSubtitle", { phone: `${countryCode} ${phoneNumber}` })}
             </p>
 
-            {/* ────────────────────────────────────
-                MODE: login / register
-            ──────────────────────────────────── */}
+            {/* ── MODE: login / register ── */}
             {(mode === "login" || mode === "register") && (
               <>
                 <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(googleProvider)}>
-                  <GoogleIcon /> Continue with Google
+                  <GoogleIcon /> {t("auth.continueGoogle")}
                 </button>
                 <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(facebookProvider)}>
-                  <FacebookIcon /> Continue with Facebook
+                  <FacebookIcon /> {t("auth.continueFacebook")}
                 </button>
-                <div className="auth-divider">or continue with email</div>
+                <div className="auth-divider">{t("auth.orEmail")}</div>
 
                 {error && <div className="auth-error">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
-                  <label className="auth-label">Email address</label>
+                  <label className="auth-label">{t("auth.emailLabel")}</label>
                   <input
                     className="auth-input"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
                   />
-                  <label className="auth-label">Password</label>
+                  <label className="auth-label">{t("auth.passwordLabel")}</label>
                   <input
                     className="auth-input"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("auth.passwordPlaceholder")}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     required
                     minLength={6}
                   />
                   <button className="auth-submit" type="submit" disabled={loading}>
-                    {loading ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
+                    {loading
+                      ? t("common.pleaseWait")
+                      : mode === "login" ? t("auth.signInBtn") : t("auth.createAccountBtn")
+                    }
                   </button>
                 </form>
 
@@ -703,20 +687,20 @@ export default function Auth({ onAuthSuccess }) {
                   {mode === "login" ? (
                     <>
                       <button className="auth-link" onClick={() => switchMode("reset")}>
-                        Forgot password?
+                        {t("auth.forgotPassword")}
                       </button>
                       <span className="auth-muted">
-                        No account?{" "}
+                        {t("auth.noAccount")}{" "}
                         <button className="auth-link" onClick={() => switchMode("register")}>
-                          Sign up
+                          {t("auth.signUp")}
                         </button>
                       </span>
                     </>
                   ) : (
                     <span className="auth-muted">
-                      Already have an account?{" "}
+                      {t("auth.alreadyAccount")}{" "}
                       <button className="auth-link" onClick={() => switchMode("login")}>
-                        Sign in
+                        {t("auth.signInBtn")}
                       </button>
                     </span>
                   )}
@@ -724,48 +708,44 @@ export default function Auth({ onAuthSuccess }) {
               </>
             )}
 
-            {/* ────────────────────────────────────
-                MODE: reset
-            ──────────────────────────────────── */}
+            {/* ── MODE: reset ── */}
             {mode === "reset" && (
               <>
                 {error && <div className="auth-error">{error}</div>}
                 {info  && <div className="auth-info">{info}</div>}
                 <form onSubmit={handleReset}>
-                  <label className="auth-label">Email address</label>
+                  <label className="auth-label">{t("auth.emailLabel")}</label>
                   <input
                     className="auth-input"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
                   />
                   <button className="auth-submit" type="submit" disabled={loading}>
-                    {loading ? "Please wait…" : "Send reset email"}
+                    {loading ? t("common.pleaseWait") : t("auth.sendResetBtn")}
                   </button>
                 </form>
                 <div className="auth-row">
                   <button className="auth-link" onClick={() => switchMode("login")}>
-                    ← Back to sign in
+                    {t("auth.backToSignIn")}
                   </button>
                 </div>
               </>
             )}
 
-            {/* ────────────────────────────────────
-                MODE: phone (enter number)
-            ──────────────────────────────────── */}
+            {/* ── MODE: phone (enter number) ── */}
             {mode === "phone" && (
               <>
                 <div className="auth-secure-badge">
                   <span>🔒</span>
-                  Para proteger tu cuenta y la comunidad, verificamos tu número de teléfono. Solo se usa para seguridad.
+                  {t("auth.securityBadge")}
                 </div>
 
                 {phoneError && <div className="auth-error">{phoneError}</div>}
 
-                <label className="auth-label">Número de teléfono</label>
+                <label className="auth-label">{t("auth.phoneLabel")}</label>
                 <div className="auth-phone-row">
                   <select
                     className="auth-cc-sel"
@@ -781,34 +761,30 @@ export default function Auth({ onAuthSuccess }) {
                   <input
                     className="auth-phone-inp"
                     type="tel"
-                    placeholder="600 000 000"
+                    placeholder={t("auth.phonePlaceholder")}
                     value={phoneNumber}
                     onChange={e => setPhoneNumber(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && sendSMS()}
                     autoFocus
                   />
                 </div>
-                <p className="auth-phone-note">
-                  Ingresa tu número sin el código de país. Ejemplo: 600 123 456
-                </p>
+                <p className="auth-phone-note">{t("auth.phoneNote")}</p>
 
                 <button
                   className="auth-submit"
                   onClick={sendSMS}
                   disabled={phoneLoading || phoneNumber.replace(/\D/g, "").length < 6}
                 >
-                  {phoneLoading ? "Enviando…" : "Enviar código SMS"}
+                  {phoneLoading ? t("auth.sending") : t("auth.sendSmsBtn")}
                 </button>
               </>
             )}
 
-            {/* ────────────────────────────────────
-                MODE: phone-code (enter 6-digit code)
-            ──────────────────────────────────── */}
+            {/* ── MODE: phone-code (enter 6-digit code) ── */}
             {mode === "phone-code" && (
               <>
                 <p className="auth-code-dest">
-                  Código enviado a <strong>{countryCode} {phoneNumber}</strong>
+                  {t("auth.codeSubtitle", { phone: `${countryCode} ${phoneNumber}` })}
                 </p>
 
                 {phoneError && <div className="auth-error">{phoneError}</div>}
@@ -838,15 +814,15 @@ export default function Auth({ onAuthSuccess }) {
                   onClick={() => verifyCode(undefined)}
                   disabled={phoneLoading || codeDigits.join("").length !== 6}
                 >
-                  {phoneLoading ? "Verificando…" : "Verificar código"}
+                  {phoneLoading ? t("auth.verifying") : t("auth.verifyBtn")}
                 </button>
 
                 <div className="auth-row" style={{ justifyContent:"center", gap:16 }}>
                   <button className="auth-link" onClick={resendSMS} disabled={phoneLoading}>
-                    ← Cambiar número
+                    {t("auth.changeNumber")}
                   </button>
                   <button className="auth-link" onClick={sendSMS} disabled={phoneLoading}>
-                    Reenviar código
+                    {t("auth.resendCode")}
                   </button>
                 </div>
               </>

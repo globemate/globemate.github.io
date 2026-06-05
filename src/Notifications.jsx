@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 
-const TABS = ["All", "Unread", "Messages", "Connections"];
+const TABS_KEYS = ["All", "Unread", "Messages", "Connections"];
 
 const TYPE_ICON = { message:"💬", connect:"🤝", nearby:"✈️", view:"👀", system:"🌍" };
 
@@ -110,8 +112,16 @@ export default function Notifications({
   notifications, onBack, onMarkAllRead, onMarkRead,
   onChat, onProfile, onExplore, onMatches, onMap, onNotif, onSignOut, notifCount, onSettings, onPricing,
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState("All");
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const TAB_LABELS = {
+    All: t("common.all"),
+    Unread: t("common.unread"),
+    Messages: t("nav.messages"),
+    Connections: t("matches.connect"),
+  };
 
   const unreadCount   = notifications.filter(n => !n.read).length;
   const messageCount  = notifications.filter(n => n.type === "message").length;
@@ -143,19 +153,19 @@ export default function Notifications({
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div className="nf-root">
@@ -163,9 +173,10 @@ export default function Notifications({
         <nav className="nf-nav">
           <button className="nf-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-            <button className="nf-mark-btn nf-desktop" style={{color:"#c9a84c",marginRight:8}} onClick={onPricing}>✦ Planes</button>
+            <LangButton align="right" />
+            <button className="nf-mark-btn nf-desktop" style={{color:"#c9a84c",marginRight:8}} onClick={onPricing}>{t("nav.plans")}</button>
             <button className="nf-mark-btn nf-desktop" onClick={onMarkAllRead} disabled={unreadCount === 0}>
-              Mark all read
+              {t("notifications.markAllRead")}
             </button>
             <button className="nf-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
@@ -174,15 +185,15 @@ export default function Notifications({
         </nav>
 
         <div className="nf-header">
-          <div className="nf-eyebrow">Activity</div>
-          <h1 className="nf-h1">Your <em>notifications</em></h1>
+          <div className="nf-eyebrow">{t("notifications.title")}</div>
+          <h1 className="nf-h1"><em>{t("notifications.title")}</em></h1>
         </div>
 
         <div className="nf-tabs">
-          {TABS.map(t => (
-            <button key={t} className={`nf-tab${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>
-              {t}
-              {tabCounts[t] > 0 && <span className="nf-tab-count">{tabCounts[t]}</span>}
+          {TABS_KEYS.map(key => (
+            <button key={key} className={`nf-tab${tab === key ? " on" : ""}`} onClick={() => setTab(key)}>
+              {TAB_LABELS[key]}
+              {tabCounts[key] > 0 && <span className="nf-tab-count">{tabCounts[key]}</span>}
             </button>
           ))}
         </div>

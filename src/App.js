@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { LANGUAGES } from "./i18n";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Auth from "./Auth.jsx";
@@ -24,7 +26,15 @@ const INIT_NOTIFS = [
 ];
 
 export default function App() {
+  const { i18n } = useTranslation();
   const [user, setUser]               = useState(undefined);
+
+  // Apply RTL direction whenever language changes
+  useEffect(() => {
+    const lang = LANGUAGES.find(l => l.code === i18n.resolvedLanguage);
+    document.documentElement.dir  = lang?.dir  || "ltr";
+    document.documentElement.lang = i18n.resolvedLanguage || "en";
+  }, [i18n.resolvedLanguage]);
   const [showAuth, setShowAuth]       = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showExplore, setShowExplore] = useState(false);
