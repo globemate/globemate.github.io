@@ -4,6 +4,8 @@ import {
   collection, query, where, orderBy, onSnapshot,
   addDoc, doc, updateDoc, serverTimestamp,
 } from "firebase/firestore";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 
 /* ── mock conversations shown when Firestore has none ── */
 const t = (offset) => new Date(Date.now() - offset);

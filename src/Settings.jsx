@@ -5,12 +5,13 @@ import {
   updateEmail, updatePassword,
   reauthenticateWithCredential, EmailAuthProvider, deleteUser,
 } from "firebase/auth";
+import { useTranslation } from "react-i18next";
+import { LangButton, LangSelect } from "./LanguageSelector";
 
-const TABS = ["Cuenta", "Notificaciones", "Privacidad", "Avanzada"];
+const TABS_KEYS = ["account", "notifications", "privacy", "advanced"];
 
 const DEF = {
   phone: "",
-  appLanguage: "Español",
   notif: {
     newMatches: true, messages: true, profileViews: true,
     connectionRequests: true, destinationAlerts: true, promotionalEmails: false,
@@ -182,7 +183,8 @@ export default function Settings({
   user, onBack, onNotif, notifCount, onExplore, onMatches,
   onChat, onMap, onProfile, onSignOut, onPricing,
 }) {
-  const [tab, setTab]         = useState("Cuenta");
+  const { t } = useTranslation();
+  const [tab, setTab]           = useState("account");
   const [menuOpen, setMenuOpen] = useState(false);
   const [settings, setSettings] = useState(DEF);
   const [loading, setLoading]   = useState(true);
@@ -190,22 +192,26 @@ export default function Settings({
   const [saving, setSaving]     = useState(false);
   const [saveMsg, setSaveMsg]   = useState({ text:"", type:"" });
 
-  // Cuenta — email
   const [newEmail, setNewEmail]   = useState("");
   const [emailPwd, setEmailPwd]   = useState("");
   const [emailMsg, setEmailMsg]   = useState({ text:"", type:"" });
   const [emailBusy, setEmailBusy] = useState(false);
-  // Cuenta — password
   const [curPwd, setCurPwd]     = useState("");
   const [newPwd, setNewPwd]     = useState("");
   const [cfmPwd, setCfmPwd]     = useState("");
   const [pwdMsg, setPwdMsg]     = useState({ text:"", type:"" });
   const [pwdBusy, setPwdBusy]   = useState(false);
-  // Avanzada — delete
   const [showDel, setShowDel]   = useState(false);
   const [delText, setDelText]   = useState("");
   const [delBusy, setDelBusy]   = useState(false);
   const [delErr, setDelErr]     = useState("");
+
+  const TAB_LABELS = {
+    account:       t("settings.account"),
+    notifications: t("settings.notifications"),
+    privacy:       t("settings.privacy"),
+    advanced:      t("settings.advanced"),
+  };
 
   useEffect(() => {
     getDoc(doc(db, "users", user.uid)).then(snap => {
@@ -213,8 +219,8 @@ export default function Settings({
         const s = snap.data().settings;
         setSettings({
           ...DEF, ...s,
-          notif:   { ...DEF.notif,    ...(s.notif    || {}) },
-          privacy: { ...DEF.privacy,  ...(s.privacy  || {}) },
+          notif:   { ...DEF.notif,   ...(s.notif   || {}) },
+          privacy: { ...DEF.privacy, ...(s.privacy  || {}) },
         });
       }
     }).finally(() => setLoading(false));
@@ -222,17 +228,17 @@ export default function Settings({
 
   const updNotif   = (k, v) => { setSettings(s => ({ ...s, notif:   { ...s.notif,   [k]: v } })); setDirty(true); setSaveMsg({ text:"", type:"" }); };
   const updPrivacy = (k, v) => { setSettings(s => ({ ...s, privacy: { ...s.privacy, [k]: v } })); setDirty(true); setSaveMsg({ text:"", type:"" }); };
-  const updField   = (k, v) => { setSettings(s => ({ ...s, [k]: v }));                             setDirty(true); setSaveMsg({ text:"", type:"" }); };
+  const updField   = (k, v) => { setSettings(s => ({ ...s, [k]: v }));                            setDirty(true); setSaveMsg({ text:"", type:"" }); };
 
   const handleSave = async () => {
     setSaving(true);
     try {
       await setDoc(doc(db, "users", user.uid), { settings }, { merge: true });
       setDirty(false);
-      setSaveMsg({ text:"Guardado ✓", type:"ok" });
+      setSaveMsg({ text: t("settings.savedChanges"), type:"ok" });
       setTimeout(() => setSaveMsg({ text:"", type:"" }), 3000);
     } catch {
-      setSaveMsg({ text:"Error al guardar. Intenta de nuevo.", type:"err" });
+      setSaveMsg({ text: t("settings.errorSaving"), type:"err" });
     }
     setSaving(false);
   };
@@ -244,30 +250,30 @@ export default function Settings({
       const cred = EmailAuthProvider.credential(user.email, emailPwd);
       await reauthenticateWithCredential(user, cred);
       await updateEmail(user, newEmail);
-      setEmailMsg({ text:"Email actualizado ✓", type:"ok" });
+      setEmailMsg({ text:"Email updated ✓", type:"ok" });
       setNewEmail(""); setEmailPwd("");
     } catch (e) {
-      const msg = e.code === "auth/wrong-password"   ? "Contraseña incorrecta."
-                : e.code === "auth/email-already-in-use" ? "Ese email ya está en uso."
-                : "Error al actualizar email.";
+      const msg = e.code === "auth/wrong-password"       ? "Wrong password."
+                : e.code === "auth/email-already-in-use" ? "Email already in use."
+                : "Error updating email.";
       setEmailMsg({ text: msg, type:"err" });
     }
     setEmailBusy(false);
   };
 
   const handleUpdatePassword = async () => {
-    if (!curPwd || !newPwd || !cfmPwd) { setPwdMsg({ text:"Completa todos los campos.", type:"err" }); return; }
-    if (newPwd !== cfmPwd) { setPwdMsg({ text:"Las contraseñas no coinciden.", type:"err" }); return; }
-    if (newPwd.length < 6) { setPwdMsg({ text:"Mínimo 6 caracteres.", type:"err" }); return; }
+    if (!curPwd || !newPwd || !cfmPwd) { setPwdMsg({ text:"Please fill all fields.", type:"err" }); return; }
+    if (newPwd !== cfmPwd)             { setPwdMsg({ text:"Passwords do not match.", type:"err" }); return; }
+    if (newPwd.length < 6)             { setPwdMsg({ text:"Minimum 6 characters.", type:"err" }); return; }
     setPwdBusy(true); setPwdMsg({ text:"", type:"" });
     try {
       const cred = EmailAuthProvider.credential(user.email, curPwd);
       await reauthenticateWithCredential(user, cred);
       await updatePassword(user, newPwd);
-      setPwdMsg({ text:"Contraseña actualizada ✓", type:"ok" });
+      setPwdMsg({ text:"Password updated ✓", type:"ok" });
       setCurPwd(""); setNewPwd(""); setCfmPwd("");
     } catch (e) {
-      setPwdMsg({ text: e.code === "auth/wrong-password" ? "Contraseña actual incorrecta." : "Error al actualizar.", type:"err" });
+      setPwdMsg({ text: e.code === "auth/wrong-password" ? "Wrong current password." : "Error updating.", type:"err" });
     }
     setPwdBusy(false);
   };
@@ -285,14 +291,14 @@ export default function Settings({
       await deleteDoc(doc(db, "users", user.uid));
       await deleteUser(user);
     } catch {
-      setDelErr("Error al eliminar. Vuelve a iniciar sesión e inténtalo de nuevo.");
+      setDelErr("Error deleting account. Please sign in again and retry.");
       setDelBusy(false);
     }
   };
 
   if (loading) return (
     <div style={{ minHeight:"100vh", background:"#0a0905", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif", color:"rgba(245,240,232,0.4)", fontSize:"0.85rem", letterSpacing:"0.15em", textTransform:"uppercase" }}>
-      Cargando…
+      {t("common.loading")}
     </div>
   );
 
@@ -300,16 +306,13 @@ export default function Settings({
     <>
       <style>{css}</style>
 
-      {/* delete confirm modal */}
       {showDel && (
         <div className="sg-overlay" onClick={() => { setShowDel(false); setDelText(""); setDelErr(""); }}>
           <div className="sg-modal" onClick={e => e.stopPropagation()}>
             <div className="sg-modal-icon">⚠️</div>
-            <div className="sg-modal-title">Eliminar cuenta</div>
-            <div className="sg-modal-body">
-              Esta acción es <strong>permanente e irreversible</strong>. Se eliminarán tu perfil, matches, mensajes y todos tus datos de GlobeMate.
-            </div>
-            <div className="sg-modal-lbl">Para confirmar, escribe <strong>ELIMINAR</strong></div>
+            <div className="sg-modal-title">{t("settings.deleteAccount")}</div>
+            <div className="sg-modal-body">{t("settings.deleteWarning")}</div>
+            <div className="sg-modal-lbl">{t("settings.deleteTypeToConfirm")}</div>
             <input
               className="sg-inp"
               placeholder="ELIMINAR"
@@ -320,14 +323,14 @@ export default function Settings({
             {delErr && <div className="sg-modal-err">{delErr}</div>}
             <div className="sg-modal-actions">
               <button className="sg-btn-cancel" onClick={() => { setShowDel(false); setDelText(""); setDelErr(""); }}>
-                Cancelar
+                {t("common.cancel")}
               </button>
               <button
                 className="sg-btn-confirm-del"
                 onClick={handleDeleteAccount}
                 disabled={delText !== "ELIMINAR" || delBusy}
               >
-                {delBusy ? "Eliminando…" : "Eliminar cuenta"}
+                {delBusy ? t("common.pleaseWait") : t("settings.confirmDelete")}
               </button>
             </div>
           </div>
@@ -340,20 +343,20 @@ export default function Settings({
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif?.(); }}>
-          Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
+          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div className="sg-root">
@@ -362,12 +365,13 @@ export default function Settings({
           <button className="sg-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div style={{ display:"flex", gap:4, alignItems:"center" }}>
             <div className="sg-desktop" style={{ display:"flex", alignItems:"center" }}>
-              <button className="sg-nav-btn" onClick={onExplore}>Explore</button>
-              <button className="sg-nav-btn" onClick={onMatches}>Matches</button>
-              <button className="sg-nav-btn" onClick={onChat}>Messages</button>
-              <button className="sg-nav-btn" onClick={onProfile}>Profile</button>
-              <button className="sg-nav-btn" style={{color:"#c9a84c"}} onClick={onPricing}>✦ Planes</button>
+              <button className="sg-nav-btn" onClick={onExplore}>{t("nav.explore")}</button>
+              <button className="sg-nav-btn" onClick={onMatches}>{t("nav.matches")}</button>
+              <button className="sg-nav-btn" onClick={onChat}>{t("nav.messages")}</button>
+              <button className="sg-nav-btn" onClick={onProfile}>{t("nav.profile")}</button>
+              <button className="sg-nav-btn" style={{color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
             </div>
+            <LangButton align="right" />
             <button className="sg-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
             </button>
@@ -375,95 +379,88 @@ export default function Settings({
         </nav>
 
         <div className="sg-header">
-          <div className="sg-eyebrow">Tu cuenta</div>
-          <h1 className="sg-h1"><em>Configuración</em></h1>
+          <div className="sg-eyebrow">{t("settings.title")}</div>
+          <h1 className="sg-h1"><em>{t("settings.title")}</em></h1>
         </div>
 
         <div className="sg-tabs">
-          {TABS.map(t => (
-            <button key={t} className={`sg-tab${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>{t}</button>
+          {TABS_KEYS.map(key => (
+            <button key={key} className={`sg-tab${tab === key ? " on" : ""}`} onClick={() => setTab(key)}>
+              {TAB_LABELS[key]}
+            </button>
           ))}
         </div>
 
         <div className="sg-content">
 
-          {/* ─── CUENTA ─────────────────────────── */}
-          {tab === "Cuenta" && (<>
+          {/* ─── ACCOUNT ─────────────────────────── */}
+          {tab === "account" && (<>
             <div className="sg-section">
-              <div className="sg-sec-title">Email</div>
+              <div className="sg-sec-title">{t("settings.email")}</div>
               <div className="sg-field">
-                <div className="sg-lbl">Email actual</div>
+                <div className="sg-lbl">{t("settings.email")}</div>
                 <div className="sg-cur-val">{user.email}</div>
               </div>
               <div className="sg-field">
-                <div className="sg-lbl">Nuevo email</div>
-                <input className="sg-inp" type="email" placeholder="nuevo@email.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
-                <div className="sg-lbl" style={{ marginTop:6 }}>Contraseña actual (para confirmar)</div>
+                <div className="sg-lbl">{t("settings.newEmail")}</div>
+                <input className="sg-inp" type="email" placeholder="new@email.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.currentPassword")}</div>
                 <input className="sg-inp" type="password" placeholder="••••••••" value={emailPwd} onChange={e => setEmailPwd(e.target.value)} />
                 {emailMsg.text && <div className={`sg-note ${emailMsg.type}`}>{emailMsg.text}</div>}
                 <button className="sg-field-btn" onClick={handleUpdateEmail} disabled={emailBusy || !newEmail || !emailPwd}>
-                  {emailBusy ? "Actualizando…" : "Actualizar email"}
+                  {emailBusy ? t("settings.saving") : t("settings.changeEmail")}
                 </button>
               </div>
             </div>
 
             <div className="sg-section">
-              <div className="sg-sec-title">Contraseña</div>
+              <div className="sg-sec-title">{t("settings.password")}</div>
               <div className="sg-field">
-                <div className="sg-lbl">Contraseña actual</div>
+                <div className="sg-lbl">{t("settings.currentPassword")}</div>
                 <input className="sg-inp" type="password" placeholder="••••••••" value={curPwd} onChange={e => setCurPwd(e.target.value)} />
-                <div className="sg-lbl" style={{ marginTop:6 }}>Nueva contraseña</div>
-                <input className="sg-inp" type="password" placeholder="Mín. 6 caracteres" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-                <div className="sg-lbl" style={{ marginTop:6 }}>Confirmar nueva contraseña</div>
-                <input className="sg-inp" type="password" placeholder="Repite la contraseña" value={cfmPwd} onChange={e => setCfmPwd(e.target.value)} />
+                <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.newPassword")}</div>
+                <input className="sg-inp" type="password" placeholder="••••••••" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+                <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.newPassword")}</div>
+                <input className="sg-inp" type="password" placeholder="••••••••" value={cfmPwd} onChange={e => setCfmPwd(e.target.value)} />
                 {pwdMsg.text && <div className={`sg-note ${pwdMsg.type}`}>{pwdMsg.text}</div>}
                 <button className="sg-field-btn" onClick={handleUpdatePassword} disabled={pwdBusy || !curPwd || !newPwd || !cfmPwd}>
-                  {pwdBusy ? "Actualizando…" : "Cambiar contraseña"}
+                  {pwdBusy ? t("settings.saving") : t("settings.changePassword")}
                 </button>
               </div>
             </div>
 
             <div className="sg-section">
-              <div className="sg-sec-title">Contacto</div>
+              <div className="sg-sec-title">{t("settings.phone")}</div>
               <div className="sg-field">
-                <div className="sg-lbl">Teléfono</div>
-                <input className="sg-inp" type="tel" placeholder="+34 600 000 000" value={settings.phone} onChange={e => updField("phone", e.target.value)} />
+                <div className="sg-lbl">{t("settings.phone")}</div>
+                <input className="sg-inp" type="tel" placeholder="+1 555 000 0000" value={settings.phone} onChange={e => updField("phone", e.target.value)} />
               </div>
             </div>
 
             <div className="sg-section">
-              <div className="sg-sec-title">Preferencias</div>
+              <div className="sg-sec-title">{t("settings.language")}</div>
               <div className="sg-field">
-                <div className="sg-lbl">Idioma de la app</div>
-                <select className="sg-sel" value={settings.appLanguage} onChange={e => updField("appLanguage", e.target.value)}>
-                  <option>Español</option>
-                  <option>English</option>
-                  <option>Français</option>
-                  <option>Português</option>
-                  <option>Deutsch</option>
-                  <option>Italiano</option>
-                  <option>日本語</option>
-                </select>
+                <div className="sg-lbl">{t("settings.selectLanguage")}</div>
+                <LangSelect className="sg-sel" />
               </div>
             </div>
           </>)}
 
-          {/* ─── NOTIFICACIONES ─────────────────── */}
-          {tab === "Notificaciones" && (
+          {/* ─── NOTIFICATIONS ─────────────────── */}
+          {tab === "notifications" && (
             <div className="sg-section">
-              <div className="sg-sec-title">Notificaciones</div>
+              <div className="sg-sec-title">{t("settings.notifications")}</div>
               {[
-                { k:"newMatches",         lbl:"Nuevos matches",             sub:"Cuando alguien hace match contigo." },
-                { k:"messages",           lbl:"Mensajes",                   sub:"Cuando recibes un mensaje nuevo." },
-                { k:"profileViews",       lbl:"Visitas al perfil",          sub:"Cuando alguien ve tu perfil." },
-                { k:"connectionRequests", lbl:"Solicitudes de conexión",    sub:"Cuando alguien quiere conectar contigo." },
-                { k:"destinationAlerts",  lbl:"Alertas de destino",         sub:"Viajeros con tus mismos destinos próximos." },
-                { k:"promotionalEmails",  lbl:"Emails promocionales",       sub:"Novedades, ofertas y actualizaciones de GlobeMate." },
-              ].map(({ k, lbl, sub }) => (
+                { k:"newMatches",         lbl: t("settings.notifNewMatches") },
+                { k:"messages",           lbl: t("settings.notifMessages") },
+                { k:"profileViews",       lbl: t("settings.notifProfileViews") },
+                { k:"connectionRequests", lbl: t("settings.notifConnectionRequests") },
+                { k:"destinationAlerts",  lbl: t("settings.notifDestinationAlerts") },
+                { k:"promotionalEmails",  lbl: t("settings.notifPromotionalEmails") },
+              ].map(({ k, lbl }) => (
                 <div key={k} className="sg-row">
                   <div className="sg-row-info">
                     <div className="sg-row-lbl">{lbl}</div>
-                    <div className="sg-row-sub">{sub}</div>
                   </div>
                   <Toggle on={settings.notif[k]} onChange={v => updNotif(k, v)} />
                 </div>
@@ -471,17 +468,16 @@ export default function Settings({
             </div>
           )}
 
-          {/* ─── PRIVACIDAD ─────────────────────── */}
-          {tab === "Privacidad" && (<>
+          {/* ─── PRIVACY ─────────────────────────── */}
+          {tab === "privacy" && (<>
             <div className="sg-section">
-              <div className="sg-sec-title">Visibilidad del perfil</div>
+              <div className="sg-sec-title">{t("settings.privacyProfileVisibility")}</div>
               <div className="sg-field">
-                <div className="sg-lbl">¿Quién puede ver tu perfil?</div>
                 <div className="sg-radios">
                   {[
-                    { v:"all",     l:"Todos los usuarios" },
-                    { v:"matches", l:"Solo mis matches" },
-                    { v:"hidden",  l:"Oculto (nadie puede verlo)" },
+                    { v:"all",     l: t("settings.visibilityAll") },
+                    { v:"matches", l: t("settings.visibilityMatches") },
+                    { v:"hidden",  l: t("settings.visibilityNone") },
                   ].map(({ v, l }) => (
                     <div key={v} className={`sg-radio${settings.privacy.profileVisibility === v ? " on" : ""}`} onClick={() => updPrivacy("profileVisibility", v)}>
                       <div className="sg-radio-dot" />
@@ -493,16 +489,14 @@ export default function Settings({
             </div>
 
             <div className="sg-section">
-              <div className="sg-sec-title">Datos visibles</div>
               {[
-                { k:"showLocation",        lbl:"Mostrar mi ubicación",         sub:"Tu ciudad es visible en tu perfil." },
-                { k:"showLastSeen",        lbl:"Mostrar última conexión",       sub:"Otros ven cuándo estuviste activo por última vez." },
-                { k:"showVisitedCountries",lbl:"Mostrar países visitados",      sub:"Tu colección de países es visible públicamente." },
-              ].map(({ k, lbl, sub }) => (
+                { k:"showLocation",         lbl: t("settings.privacyShowLocation") },
+                { k:"showLastSeen",         lbl: t("settings.privacyShowLastSeen") },
+                { k:"showVisitedCountries", lbl: t("settings.privacyShowVisitedCountries") },
+              ].map(({ k, lbl }) => (
                 <div key={k} className="sg-row">
                   <div className="sg-row-info">
                     <div className="sg-row-lbl">{lbl}</div>
-                    <div className="sg-row-sub">{sub}</div>
                   </div>
                   <Toggle on={settings.privacy[k]} onChange={v => updPrivacy(k, v)} />
                 </div>
@@ -510,48 +504,41 @@ export default function Settings({
             </div>
 
             <div className="sg-section">
-              <div className="sg-sec-title">Modo incógnito</div>
               <div className="sg-row">
                 <div className="sg-row-info">
-                  <div className="sg-row-lbl">Modo incógnito</div>
-                  <div className="sg-row-sub">Navega perfiles sin aparecer en sus visitas. Disponible para usuarios Premium.</div>
+                  <div className="sg-row-lbl">{t("settings.privacyIncognito")}</div>
                 </div>
                 <Toggle on={settings.privacy.incognitoMode} onChange={v => updPrivacy("incognitoMode", v)} />
               </div>
             </div>
           </>)}
 
-          {/* ─── AVANZADA ───────────────────────── */}
-          {tab === "Avanzada" && (<>
+          {/* ─── ADVANCED ────────────────────────── */}
+          {tab === "advanced" && (<>
             <div className="sg-section">
-              <div className="sg-sec-title">Estado de la cuenta</div>
               <div className="sg-danger-row">
                 <div className="sg-row-info">
-                  <div className="sg-row-lbl">Pausar cuenta</div>
-                  <div className="sg-row-sub" style={{ marginTop:4 }}>
-                    Tu perfil queda oculto temporalmente. Tus datos, matches y mensajes se conservan. Puedes reactivar en cualquier momento.
-                  </div>
+                  <div className="sg-row-lbl">{t("settings.pauseAccount")}</div>
+                  <div className="sg-row-sub" style={{ marginTop:4 }}>{t("settings.pauseAccountDesc")}</div>
                 </div>
                 <button
                   className={`sg-btn-pause${settings.accountPaused ? " paused" : ""}`}
                   onClick={handlePauseToggle}
                 >
-                  {settings.accountPaused ? "⏸ Pausada — reactivar" : "Pausar cuenta"}
+                  {t("settings.pauseAccount")}
                 </button>
               </div>
             </div>
 
             <div className="sg-section danger">
-              <div className="sg-sec-title danger">Zona de peligro</div>
+              <div className="sg-sec-title danger">{t("settings.deleteAccount")}</div>
               <div className="sg-danger-row">
                 <div className="sg-row-info">
-                  <div className="sg-row-lbl" style={{ color:"#e07070" }}>Eliminar cuenta</div>
-                  <div className="sg-row-sub" style={{ marginTop:4 }}>
-                    Elimina de forma permanente tu cuenta, perfil, matches y todos tus datos. Esta acción no puede deshacerse.
-                  </div>
+                  <div className="sg-row-lbl" style={{ color:"#e07070" }}>{t("settings.deleteAccount")}</div>
+                  <div className="sg-row-sub" style={{ marginTop:4 }}>{t("settings.deleteWarning")}</div>
                 </div>
                 <button className="sg-btn-del" onClick={() => setShowDel(true)}>
-                  Eliminar cuenta
+                  {t("settings.deleteAccount")}
                 </button>
               </div>
             </div>
@@ -561,10 +548,10 @@ export default function Settings({
 
         {(dirty || saveMsg.text) && (
           <div className="sg-save-bar">
-            <span className={`sg-save-msg ${saveMsg.type}`}>{saveMsg.text || "Cambios sin guardar"}</span>
+            {saveMsg.text && <span className={`sg-save-msg ${saveMsg.type}`}>{saveMsg.text}</span>}
             {dirty && (
               <button className="sg-save-btn" onClick={handleSave} disabled={saving}>
-                {saving ? "Guardando…" : "Guardar cambios"}
+                {saving ? t("settings.saving") : t("settings.saveChanges")}
               </button>
             )}
           </div>

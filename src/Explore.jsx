@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { collection, getDocs } from "firebase/firestore";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 
 /* ── mock travelers (shown when Firestore has few real users) ── */
 const MOCK = [
@@ -155,22 +157,23 @@ const css = `
   .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
 `;
 
-function TravelerCard({ t, connected, onConnect }) {
-  const gradient = t.travelStyles?.[0] ? (STYLE_GRADIENT[t.travelStyles[0]] || DEF_GRADIENT) : DEF_GRADIENT;
-  const shownInterests = (t.interests || []).slice(0, 3);
-  const extraInterests = (t.interests || []).length - 3;
-  const nextTrip = (t.upcoming || []).find(d => d.status === "confirmed") || (t.upcoming || [])[0];
-  const langStr = (t.languages || []).slice(0, 3).map(l => l.lang).join(" · ");
+function TravelerCard({ traveler, connected, onConnect }) {
+  const { t } = useTranslation();
+  const gradient = traveler.travelStyles?.[0] ? (STYLE_GRADIENT[traveler.travelStyles[0]] || DEF_GRADIENT) : DEF_GRADIENT;
+  const shownInterests = (traveler.interests || []).slice(0, 3);
+  const extraInterests = (traveler.interests || []).length - 3;
+  const nextTrip = (traveler.upcoming || []).find(d => d.status === "confirmed") || (traveler.upcoming || [])[0];
+  const langStr = (traveler.languages || []).slice(0, 3).map(l => l.lang).join(" · ");
 
   return (
     <div className="ex-card">
       <div className="ex-card-banner" style={{ background: gradient }}>
         <div className="ex-card-banner-overlay" />
-        <span className="ex-card-countries">{(t.visitedCountries || []).length} countries</span>
+        <span className="ex-card-countries">{(traveler.visitedCountries || []).length} {t("explore.destinations")}</span>
         <div className="ex-card-avatar">
-          {t.photoURL
-            ? <img src={t.photoURL} alt={t.displayName} />
-            : <span>{t.emoji || "👤"}</span>
+          {traveler.photoURL
+            ? <img src={traveler.photoURL} alt={traveler.displayName} />
+            : <span>{traveler.emoji || "👤"}</span>
           }
         </div>
       </div>
@@ -178,12 +181,12 @@ function TravelerCard({ t, connected, onConnect }) {
       <div className="ex-card-body">
         <div>
           <div className="ex-card-name">
-            {t.displayName || "Traveler"}
+            {traveler.displayName || "Traveler"}
             <span className="ex-card-verified">✓</span>
           </div>
-          {t.location && (
+          {traveler.location && (
             <div className="ex-card-location">
-              <span>📍</span>{t.location}
+              <span>📍</span>{traveler.location}
             </div>
           )}
         </div>
@@ -193,7 +196,7 @@ function TravelerCard({ t, connected, onConnect }) {
             <span>✈️</span>
             <span style={{ flex: 1 }}>{nextTrip.name}</span>
             <span className={`ex-card-dest-status ${nextTrip.status}`}>
-              {nextTrip.status === "confirmed" ? "confirmed" : "planning"}
+              {nextTrip.status}
             </span>
           </div>
         )}
@@ -214,9 +217,9 @@ function TravelerCard({ t, connected, onConnect }) {
             className={`ex-connect-btn${connected ? " connected" : ""}`}
             onClick={!connected ? onConnect : undefined}
           >
-            {connected ? "✓ Connected" : "Connect"}
+            {connected ? "✓" : t("explore.connect")}
           </button>
-          <button className="ex-view-btn">View</button>
+          <button className="ex-view-btn">{t("common.viewProfile")}</button>
         </div>
       </div>
     </div>
@@ -224,6 +227,7 @@ function TravelerCard({ t, connected, onConnect }) {
 }
 
 export default function Explore({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
+  const { t } = useTranslation();
   const [travelers, setTravelers] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [connected, setConnected] = useState({});
@@ -257,20 +261,20 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
   );
 
   const filtered = travelers
-    .filter(t => {
+    .filter(tr => {
       if (search) {
         const q = search.toLowerCase();
-        const matchName = (t.displayName || "").toLowerCase().includes(q);
-        const matchLoc  = (t.location || "").toLowerCase().includes(q);
-        const matchDest = (t.upcoming || []).some(d => d.name.toLowerCase().includes(q));
+        const matchName = (tr.displayName || "").toLowerCase().includes(q);
+        const matchLoc  = (tr.location || "").toLowerCase().includes(q);
+        const matchDest = (tr.upcoming || []).some(d => d.name.toLowerCase().includes(q));
         if (!matchName && !matchLoc && !matchDest) return false;
       }
       if (styleFilters.length > 0) {
-        const hasStyle = styleFilters.some(s => (t.travelStyles || []).includes(s));
+        const hasStyle = styleFilters.some(s => (tr.travelStyles || []).includes(s));
         if (!hasStyle) return false;
       }
       if (langFilter) {
-        const hasLang = (t.languages || []).some(l => l.lang === langFilter);
+        const hasLang = (tr.languages || []).some(l => l.lang === langFilter);
         if (!hasLang) return false;
       }
       return true;
@@ -294,22 +298,22 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
+          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div className="ex-root">
@@ -323,9 +327,10 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
-            {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onProfile}>My Profile</button>}
-            <button className="ex-nav-btn ex-desktop" onClick={onPricing}>✦ Planes</button>
-            {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onSignOut}>Sign out</button>}
+            <LangButton align="right" />
+            {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
+            <button className="ex-nav-btn ex-desktop" onClick={onPricing}>{t("nav.plans")}</button>
+            {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}
             <button className="ex-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
             </button>
@@ -334,9 +339,9 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
 
         {/* hero */}
         <div className="ex-hero">
-          <div className="ex-eyebrow">Discover your travel companion</div>
-          <h1 className="ex-h1">Explore <em>travelers</em></h1>
-          <p className="ex-sub">Browse profiles of passionate explorers who share your destinations, curiosity, and way of seeing the world.</p>
+          <div className="ex-eyebrow">{t("explore.discover")}</div>
+          <h1 className="ex-h1">{t("explore.title").split(" ")[0]} <em>{t("explore.title").split(" ").slice(1).join(" ")}</em></h1>
+          <p className="ex-sub">{t("explore.subtitle")}</p>
         </div>
 
         {/* controls */}
@@ -345,14 +350,14 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
             <span className="ex-search-icon">🔍</span>
             <input
               className="ex-search"
-              placeholder="Search by name, city, or destination…"
+              placeholder={t("explore.searchPlaceholder")}
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
 
           <div className="ex-filter-row">
-            <span className="ex-filter-label">Style</span>
+            <span className="ex-filter-label">{t("explore.filters")}</span>
             {ALL_STYLES.map(s => (
               <button
                 key={s}
@@ -383,33 +388,32 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         <div className="ex-results-bar">
           {!loading && (
             <span className="ex-count">
-              {filtered.length} {filtered.length === 1 ? "traveler" : "travelers"} found
+              {filtered.length} {t("explore.title").toLowerCase()}
             </span>
           )}
           {hasFilters && (
             <button className="ex-clear" onClick={() => { setSearch(""); setStyleFilters([]); setLangFilter(""); }}>
-              Clear filters
+              ✕
             </button>
           )}
         </div>
 
         {/* content */}
         {loading ? (
-          <div className="ex-loading">Discovering travelers…</div>
+          <div className="ex-loading">{t("explore.loading")}</div>
         ) : filtered.length === 0 ? (
           <div className="ex-empty">
             <div className="ex-empty-icon">🌍</div>
-            <div className="ex-empty-text">No travelers found</div>
-            <div className="ex-empty-sub">Try adjusting your filters</div>
+            <div className="ex-empty-text">{t("explore.noResults")}</div>
           </div>
         ) : (
           <div className="ex-grid">
-            {filtered.map(t => (
+            {filtered.map(tr => (
               <TravelerCard
-                key={t.uid}
-                t={t}
-                connected={!!connected[t.uid]}
-                onConnect={() => setConnected(prev => ({ ...prev, [t.uid]: true }))}
+                key={tr.uid}
+                traveler={tr}
+                connected={!!connected[tr.uid]}
+                onConnect={() => setConnected(prev => ({ ...prev, [tr.uid]: true }))}
               />
             ))}
           </div>
