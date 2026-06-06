@@ -2,17 +2,19 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGES } from "./i18n";
 
+const CSS_ID = "ls-styles";
 const style = `
-  .ls-wrap { position: relative; display: inline-block; }
+  .ls-wrap { position: relative; display: inline-flex; align-items: center; }
 
   /* ── compact trigger (navbar) ── */
   .ls-trigger {
-    display: flex; align-items: center; gap: 6px;
-    background: none; border: 1px solid rgba(201,168,76,0.25);
-    color: rgba(245,240,232,0.7); cursor: pointer;
+    display: inline-flex !important; align-items: center; gap: 6px;
+    background: none; border: 1px solid rgba(201,168,76,0.3);
+    color: rgba(245,240,232,0.8); cursor: pointer;
     font-family: 'DM Sans', sans-serif; font-size: 0.72rem;
     letter-spacing: 0.1em; padding: 6px 10px;
     transition: all 0.22s; white-space: nowrap;
+    flex-shrink: 0;
   }
   .ls-trigger:hover { border-color: #c9a84c; color: #f5f0e8; background: rgba(201,168,76,0.06); }
   .ls-trigger.active { border-color: #c9a84c; color: #c9a84c; }
@@ -68,6 +70,15 @@ const style = `
   .ls-full-select option { background: #111009; }
 `;
 
+function injectStyles() {
+  if (!document.getElementById(CSS_ID)) {
+    const el = document.createElement("style");
+    el.id = CSS_ID;
+    el.textContent = style;
+    document.head.appendChild(el);
+  }
+}
+
 /* ── Compact navbar variant ── */
 export function LangButton({ align = "right" }) {
   const { i18n } = useTranslation();
@@ -76,6 +87,7 @@ export function LangButton({ align = "right" }) {
   const current = LANGUAGES.find(l => l.code === i18n.resolvedLanguage) || LANGUAGES[0];
 
   useEffect(() => {
+    injectStyles();
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -90,39 +102,38 @@ export function LangButton({ align = "right" }) {
   };
 
   return (
-    <>
-      <style>{style}</style>
-      <div className="ls-wrap" ref={ref}>
-        <button
-          className={`ls-trigger${open ? " active" : ""}`}
-          onClick={() => setOpen(o => !o)}
-          aria-label="Select language"
-        >
-          <span className="ls-flag">{current.flag}</span>
-          <span className="ls-code">{current.code.toUpperCase()}</span>
-          <span className="ls-chevron">▼</span>
-        </button>
-        <div className={`ls-dropdown ${align} ${open ? "open" : ""}`}>
-          {LANGUAGES.map(lang => (
-            <button
-              key={lang.code}
-              className={`ls-option${lang.code === i18n.resolvedLanguage ? " selected" : ""}`}
-              onClick={() => choose(lang.code)}
-            >
-              <span className="ls-option-flag">{lang.flag}</span>
-              <span className="ls-option-name">{lang.name}</span>
-              {lang.code === i18n.resolvedLanguage && <span className="ls-option-check">✦</span>}
-            </button>
-          ))}
-        </div>
+    <div className="ls-wrap" ref={ref}>
+      <button
+        className={`ls-trigger${open ? " active" : ""}`}
+        onClick={() => setOpen(o => !o)}
+        aria-label="Select language"
+      >
+        <span className="ls-flag">🌐</span>
+        <span className="ls-code">{current.code.toUpperCase()}</span>
+        <span className="ls-chevron">▼</span>
+      </button>
+      <div className={`ls-dropdown ${align} ${open ? "open" : ""}`}>
+        {LANGUAGES.map(lang => (
+          <button
+            key={lang.code}
+            className={`ls-option${lang.code === i18n.resolvedLanguage ? " selected" : ""}`}
+            onClick={() => choose(lang.code)}
+          >
+            <span className="ls-option-flag">{lang.flag}</span>
+            <span className="ls-option-name">{lang.name}</span>
+            {lang.code === i18n.resolvedLanguage && <span className="ls-option-check">✦</span>}
+          </button>
+        ))}
       </div>
-    </>
+    </div>
   );
 }
 
 /* ── Full Settings variant ── */
 export function LangSelect() {
   const { i18n, t } = useTranslation();
+
+  useEffect(() => { injectStyles(); }, []);
 
   const choose = (code) => {
     i18n.changeLanguage(code);
@@ -132,22 +143,19 @@ export function LangSelect() {
   };
 
   return (
-    <>
-      <style>{style}</style>
-      <div className="ls-full">
-        <label className="ls-full-label">{t("settings.language")}</label>
-        <select
-          className="ls-full-select"
-          value={i18n.resolvedLanguage}
-          onChange={e => choose(e.target.value)}
-        >
-          {LANGUAGES.map(lang => (
-            <option key={lang.code} value={lang.code}>
-              {lang.flag} {lang.name}
-            </option>
-          ))}
-        </select>
-      </div>
-    </>
+    <div className="ls-full">
+      <label className="ls-full-label">{t("settings.language")}</label>
+      <select
+        className="ls-full-select"
+        value={i18n.resolvedLanguage}
+        onChange={e => choose(e.target.value)}
+      >
+        {LANGUAGES.map(lang => (
+          <option key={lang.code} value={lang.code}>
+            {lang.flag} {lang.name}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

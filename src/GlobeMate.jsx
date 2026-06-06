@@ -810,6 +810,10 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
           </>
         )}
         <div className="mobile-nav-divider" />
+        <div style={{ padding: "10px 24px" }}>
+          <LangButton align="left" />
+        </div>
+        <div className="mobile-nav-divider" />
         {user ? (
           <>
             <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
