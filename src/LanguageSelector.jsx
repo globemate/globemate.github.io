@@ -4,7 +4,7 @@ import { LANGUAGES } from "./i18n";
 
 const CSS_ID = "ls-styles";
 const style = `
-  .ls-wrap { position: relative; display: inline-flex; align-items: center; }
+  .ls-wrap { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
 
   /* ── compact trigger (navbar) ── */
   .ls-trigger {

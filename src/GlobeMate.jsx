@@ -46,30 +46,38 @@ const style = `
   }
   .nav-logo span { font-style: italic; }
   .nav-links {
-    display: flex; gap: 40px; list-style: none;
+    display: flex; gap: 20px; list-style: none;
+    flex: 1; min-width: 0; overflow: hidden;
   }
   .nav-links a {
     color: var(--cream-dim);
     text-decoration: none;
-    font-size: 0.78rem;
-    letter-spacing: 0.18em;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     transition: color 0.3s;
+    white-space: nowrap;
   }
   .nav-links a:hover { color: var(--gold-light); }
   .nav-cta {
     border: 1px solid var(--gold);
     color: var(--gold);
     background: transparent;
-    padding: 10px 28px;
+    padding: 8px 14px;
     font-family: var(--sans);
-    font-size: 0.75rem;
-    letter-spacing: 0.15em;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     cursor: pointer;
     transition: all 0.3s;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .nav-cta:hover { background: var(--gold); color: var(--black); }
+  .nav-actions {
+    display: flex; gap: 6px; align-items: center;
+    flex-shrink: 0; margin-left: 16px;
+  }
   .bell-btn { position:relative; background:none; border:1px solid rgba(201,168,76,0.25); color:var(--gold); padding:6px 10px; cursor:pointer; transition:all 0.22s; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
   .bell-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.1); }
   .bell-badge { position:absolute; top:-6px; right:-6px; background:#d32f2f; color:#fff; border-radius:50%; min-width:17px; height:17px; display:flex; align-items:center; justify-content:center; font-size:0.58rem; font-weight:700; font-family:var(--sans); border:1.5px solid var(--black); padding:0 2px; pointer-events:none; }
@@ -837,7 +845,7 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
           {user && <li><a href="#messages" onClick={e => { e.preventDefault(); onChat(); }}    style={{ color: "var(--gold-light)" }}>{t("nav.messages")}</a></li>}
           {user && <li><a href="#map"      onClick={e => { e.preventDefault(); onMap(); }}     style={{ color: "var(--gold-light)" }}>{t("nav.map")}</a></li>}
         </ul>
-        <div style={{ display:"flex", gap:"10px", alignItems:"center" }}>
+        <div className="nav-actions">
           {user && (
             <button className="bell-btn" onClick={onNotif}>
               🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
