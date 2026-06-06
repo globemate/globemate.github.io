@@ -4,6 +4,8 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { db } from "./firebase";
 import { collection, getDocs } from "firebase/firestore";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 
 /* ── known destinations with coordinates ── */
 const KNOWN_DESTS = [
@@ -90,6 +92,7 @@ function FlyTo({ target }) {
 
 /* ── component ── */
 export default function Map({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
+  const { t } = useTranslation();
   const [clusters, setClusters]     = useState([]);
   const [search, setSearch]         = useState("");
   const [flyTarget, setFlyTarget]   = useState(null);
@@ -217,22 +220,22 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
+          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div style={{ position:"fixed", inset:0, display:"flex", flexDirection:"column", background:"#0a0905", fontFamily:"'DM Sans',sans-serif" }}>
@@ -246,17 +249,18 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
         }}>
           <button onClick={onBack} style={btnStyle("logo")}>Globe<em style={{fontStyle:"italic"}}>Mate</em></button>
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <button style={btnStyle("ghost")} onClick={onExplore}  className="mp-hide-xs">Explore</button>
-            <button style={btnStyle("ghost")} onClick={onMatches}  className="mp-hide-xs">Matches</button>
-            <button style={btnStyle("ghost")} onClick={onChat}     className="mp-hide-xs">Messages</button>
+            <button style={btnStyle("ghost")} onClick={onExplore}  className="mp-hide-xs">{t("nav.explore")}</button>
+            <button style={btnStyle("ghost")} onClick={onMatches}  className="mp-hide-xs">{t("nav.matches")}</button>
+            <button style={btnStyle("ghost")} onClick={onChat}     className="mp-hide-xs">{t("nav.messages")}</button>
             {onNotif && (
               <button onClick={onNotif} style={{ position:"relative", background:"none", border:"1px solid rgba(201,168,76,0.25)", color:"#c9a84c", padding:"6px 10px", cursor:"pointer", fontSize:"1rem", display:"inline-flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 🔔{notifCount > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:"#d32f2f", color:"#fff", borderRadius:"50%", minWidth:17, height:17, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.58rem", fontWeight:700, border:"1.5px solid #0a0905", padding:"0 2px" }}>{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
-            <button style={btnStyle("ghost")} onClick={onProfile}  className="mp-hide-xs">My Profile</button>
-            <button style={{...btnStyle("ghost"), borderColor:"#c9a84c", color:"#c9a84c"}} onClick={onPricing} className="mp-hide-xs">✦ Planes</button>
-            <button style={btnStyle("ghost")} onClick={onSignOut}  className="mp-hide-xs">Sign out</button>
+            <button style={btnStyle("ghost")} onClick={onProfile}  className="mp-hide-xs">{t("nav.myProfile")}</button>
+            <button style={{...btnStyle("ghost"), borderColor:"#c9a84c", color:"#c9a84c"}} onClick={onPricing} className="mp-hide-xs">{t("nav.plans")}</button>
+            <button style={btnStyle("ghost")} onClick={onSignOut}  className="mp-hide-xs">{t("nav.signOut")}</button>
+            <LangButton align="right" />
             <button className="mp-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
             </button>
@@ -277,7 +281,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
               <input
                 value={search}
                 onChange={e => handleSearchChange(e.target.value)}
-                placeholder="Search destination…"
+                placeholder={t("map.searchPlaceholder")}
                 style={{
                   width:"100%", background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)",
                   color:"#f5f0e8", padding:"11px 14px 11px 38px", fontFamily:"'DM Sans',sans-serif",
@@ -317,13 +321,13 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
             <div style={{ display:"flex", gap:20 }}>
               <div>
                 <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{clusters.length}</div>
-                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>Destinations</div>
+                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.destinations")}</div>
               </div>
               <div>
                 <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>
                   {clusters.reduce((n, c) => n + c.travelers.length, 0)}
                 </div>
-                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>Travelers</div>
+                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.travelers")}</div>
               </div>
             </div>
             <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
@@ -339,7 +343,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
                   transition:"all 0.22s",
                 }}/>
               </div>
-              <span style={{ fontSize:"0.7rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>Confirmed only</span>
+              <span style={{ fontSize:"0.7rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{t("map.confirmedOnly")}</span>
             </label>
           </div>
 
@@ -350,7 +354,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
             padding:"10px 14px", display:"flex", flexDirection:"column", gap:7,
             boxShadow:"0 4px 16px rgba(0,0,0,0.4)",
           }}>
-            {[["✈","1 traveler"],["3+","Multiple travelers"]].map(([icon, label]) => (
+            {[["✈", t("map.oneTraveler")],["3+", t("map.multipleTravelers")]].map(([icon, label]) => (
               <div key={label} style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <div style={{
                   width:22, height:22, borderRadius:"50%",
@@ -410,6 +414,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
 
 /* ── popup content rendered inside Leaflet popup ── */
 function PopupContent({ cluster, connected, onConnect, onChat }) {
+  const { t } = useTranslation();
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:"#f5f0e8" }}>
       {/* header */}
@@ -422,14 +427,14 @@ function PopupContent({ cluster, connected, onConnect, onChat }) {
           {cluster.label}
         </div>
         <div style={{ fontSize:"0.68rem", letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(201,168,76,0.7)" }}>
-          {cluster.country} · {cluster.travelers.length} {cluster.travelers.length === 1 ? "traveler" : "travelers"}
+          {cluster.country} · {cluster.travelers.length} {cluster.travelers.length === 1 ? t("map.oneTraveler") : t("map.multipleTravelers")}
         </div>
       </div>
 
       {/* traveler list */}
       <div style={{ maxHeight:240, overflowY:"auto" }}>
-        {cluster.travelers.map((t, i) => (
-          <div key={t.uid} style={{
+        {cluster.travelers.map((tr, i) => (
+          <div key={tr.uid} style={{
             display:"flex", alignItems:"center", gap:10, padding:"10px 16px",
             borderBottom: i < cluster.travelers.length - 1 ? "1px solid rgba(201,168,76,0.07)" : "none",
           }}>
@@ -439,40 +444,40 @@ function PopupContent({ cluster, connected, onConnect, onChat }) {
               background:"rgba(10,9,5,0.8)", display:"flex", alignItems:"center",
               justifyContent:"center", fontSize:"1.15rem", flexShrink:0, overflow:"hidden",
             }}>
-              {t.photoURL ? <img src={t.photoURL} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : t.emoji}
+              {tr.photoURL ? <img src={tr.photoURL} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : tr.emoji}
             </div>
 
             {/* info */}
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:"0.85rem", color:"#f5f0e8", marginBottom:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                {t.displayName}
+                {tr.displayName}
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:5 }}>
                 <span style={{
                   fontSize:"0.61rem", letterSpacing:"0.1em", textTransform:"uppercase",
-                  color: t.status === "confirmed" ? "#6fcf97" : "#c9a84c",
-                  border: `1px solid ${t.status === "confirmed" ? "rgba(111,207,151,0.35)" : "rgba(201,168,76,0.35)"}`,
+                  color: tr.status === "confirmed" ? "#6fcf97" : "#c9a84c",
+                  border: `1px solid ${tr.status === "confirmed" ? "rgba(111,207,151,0.35)" : "rgba(201,168,76,0.35)"}`,
                   padding:"1px 6px",
                 }}>
-                  {t.status === "confirmed" ? "✓ Confirmed" : "Planning"}
+                  {tr.status === "confirmed" ? t("map.confirmed") : t("map.planning")}
                 </span>
               </div>
             </div>
 
             {/* connect / chat */}
             <button
-              onClick={() => connected[t.uid] ? onChat() : onConnect(t.uid)}
+              onClick={() => connected[tr.uid] ? onChat() : onConnect(tr.uid)}
               style={{
-                background: connected[t.uid] ? "rgba(111,207,151,0.12)" : "rgba(201,168,76,0.15)",
-                border: `1px solid ${connected[t.uid] ? "rgba(111,207,151,0.4)" : "rgba(201,168,76,0.4)"}`,
-                color: connected[t.uid] ? "#6fcf97" : "#c9a84c",
+                background: connected[tr.uid] ? "rgba(111,207,151,0.12)" : "rgba(201,168,76,0.15)",
+                border: `1px solid ${connected[tr.uid] ? "rgba(111,207,151,0.4)" : "rgba(201,168,76,0.4)"}`,
+                color: connected[tr.uid] ? "#6fcf97" : "#c9a84c",
                 padding:"5px 10px", fontFamily:"'DM Sans',sans-serif",
                 fontSize:"0.64rem", letterSpacing:"0.1em", textTransform:"uppercase",
                 cursor:"pointer", whiteSpace:"nowrap", flexShrink:0,
                 transition:"all 0.2s",
               }}
             >
-              {connected[t.uid] ? "Message →" : "Connect"}
+              {connected[tr.uid] ? t("map.messageArrow") : t("map.connect")}
             </button>
           </div>
         ))}
@@ -482,10 +487,10 @@ function PopupContent({ cluster, connected, onConnect, onChat }) {
       {cluster.travelers[0]?.interests?.length > 0 && (
         <div style={{ padding:"8px 16px 12px", borderTop:"1px solid rgba(201,168,76,0.08)" }}>
           <div style={{ fontSize:"0.64rem", letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(245,240,232,0.3)", marginBottom:6 }}>
-            Common interests in this destination
+            {t("map.commonInterests")}
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
-            {[...new Set(cluster.travelers.flatMap(t => t.interests))].slice(0, 5).map(i => (
+            {[...new Set(cluster.travelers.flatMap(tr => tr.interests))].slice(0, 5).map(i => (
               <span key={i} style={{
                 fontSize:"0.7rem", padding:"2px 8px",
                 background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)",

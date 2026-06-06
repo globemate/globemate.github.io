@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -776,6 +778,7 @@ function GlobeCanvas() {
 }
 
 export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExplore, onChat, onMatches, onMap, onNotif, notifCount, onSettings, onPricing }) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -792,43 +795,43 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
       <div className={`mobile-nav${menuOpen ? " open" : ""}`}>
         <div className="mobile-nav-top">
           <div className="mobile-nav-logo">Globe<span>Mate</span></div>
-          <button className="mobile-nav-close" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú">✕</button>
+          <button className="mobile-nav-close" onClick={() => setMenuOpen(false)} aria-label={t("common.close")}>✕</button>
         </div>
-        <a href="#how" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>How it works</a>
-        <a href="#destinations" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>Destinations</a>
-        <a href="#stories" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>Stories</a>
+        <a href="#how" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.howItWorks")}</a>
+        <a href="#destinations" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.destinations")}</a>
+        <a href="#stories" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.stories")}</a>
         {user && (
           <>
             <div className="mobile-nav-divider" />
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
           </>
         )}
         <div className="mobile-nav-divider" />
         {user ? (
           <>
-            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
-            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
-            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
+            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
+            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
           </>
         ) : (
-          <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onSignIn(); }}>Sign in</button>
+          <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onSignIn(); }}>{t("nav.signIn")}</button>
         )}
       </div>
 
       <nav className="nav">
         <div className="nav-logo">Globe<span>Mate</span></div>
         <ul className="nav-links">
-          <li><a href="#how">How it works</a></li>
-          <li><a href="#destinations">Destinations</a></li>
-          <li><a href="#stories">Stories</a></li>
-          {user && <li><a href="#explore"  onClick={e => { e.preventDefault(); onExplore(); }}  style={{ color: "var(--gold-light)" }}>Explore</a></li>}
-          {user && <li><a href="#matches"  onClick={e => { e.preventDefault(); onMatches(); }} style={{ color: "var(--gold-light)" }}>Matches</a></li>}
-          {user && <li><a href="#messages" onClick={e => { e.preventDefault(); onChat(); }}    style={{ color: "var(--gold-light)" }}>Messages</a></li>}
-          {user && <li><a href="#map"      onClick={e => { e.preventDefault(); onMap(); }}     style={{ color: "var(--gold-light)" }}>Map</a></li>}
+          <li><a href="#how">{t("landing.howItWorks")}</a></li>
+          <li><a href="#destinations">{t("landing.destinations")}</a></li>
+          <li><a href="#stories">{t("landing.stories")}</a></li>
+          {user && <li><a href="#explore"  onClick={e => { e.preventDefault(); onExplore(); }}  style={{ color: "var(--gold-light)" }}>{t("nav.explore")}</a></li>}
+          {user && <li><a href="#matches"  onClick={e => { e.preventDefault(); onMatches(); }} style={{ color: "var(--gold-light)" }}>{t("nav.matches")}</a></li>}
+          {user && <li><a href="#messages" onClick={e => { e.preventDefault(); onChat(); }}    style={{ color: "var(--gold-light)" }}>{t("nav.messages")}</a></li>}
+          {user && <li><a href="#map"      onClick={e => { e.preventDefault(); onMap(); }}     style={{ color: "var(--gold-light)" }}>{t("nav.map")}</a></li>}
         </ul>
         <div style={{ display:"flex", gap:"10px", alignItems:"center" }}>
           {user && (
@@ -836,16 +839,17 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
               🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
             </button>
           )}
-          <button className="nav-cta nav-desktop-only" onClick={onPricing}>✦ Planes</button>
+          <LangButton align="right" />
+          <button className="nav-cta nav-desktop-only" onClick={onPricing}>{t("nav.plans")}</button>
           {user ? (
             <>
-              <button className="nav-cta nav-desktop-only" onClick={onProfile}>My Profile</button>
-              <button className="nav-cta nav-desktop-only" onClick={onSignOut}>Sign out</button>
+              <button className="nav-cta nav-desktop-only" onClick={onProfile}>{t("nav.myProfile")}</button>
+              <button className="nav-cta nav-desktop-only" onClick={onSignOut}>{t("nav.signOut")}</button>
             </>
           ) : (
-            <button className="nav-cta nav-desktop-only" onClick={onSignIn}>Sign in</button>
+            <button className="nav-cta nav-desktop-only" onClick={onSignIn}>{t("nav.signIn")}</button>
           )}
-          <button className="nav-hamburger" onClick={() => setMenuOpen(true)} aria-label="Abrir menú">
+          <button className="nav-hamburger" onClick={() => setMenuOpen(true)} aria-label={t("common.search")}>
             <span /><span /><span />
           </button>
         </div>
@@ -853,20 +857,16 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
 
       <section className="hero">
         <div className="hero-text">
-          <div className="hero-eyebrow">The world's most refined travel dating</div>
+          <div className="hero-eyebrow">{t("landing.eyebrow")}</div>
           <h1 className="hero-h1">
-            Find love<br />
-            <em>across time zones</em>
+            {t("landing.appHeroLine1")}<br />
+            <em>{t("landing.appHeroLine2")}</em>
           </h1>
-          <p className="hero-sub">
-            GlobeMate connects passionate travelers who share more than
-            destinations — they share a way of seeing the world. Meaningful
-            connections, curated by curiosity.
-          </p>
+          <p className="hero-sub">{t("landing.heroSub")}</p>
           <div className="hero-actions">
-            <button className="btn-primary">Start your journey</button>
+            <button className="btn-primary" onClick={onSignIn}>{t("landing.startJourney")}</button>
             <button className="btn-ghost">
-              See how it works <span className="arrow">→</span>
+              {t("landing.seeHowItWorks")} <span className="arrow">→</span>
             </button>
           </div>
         </div>
@@ -877,10 +877,10 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
 
       <div className="stats">
         {[
-          { num: "124K", label: "Travelers worldwide" },
-          { num: "89",   label: "Countries represented" },
-          { num: "4.2K", label: "Matches this month" },
-          { num: "96%",  label: "Satisfaction rate" },
+          { num: "124K", label: t("landing.statTravelers") },
+          { num: "89",   label: t("landing.statCountries") },
+          { num: "4.2K", label: t("landing.statMatches") },
+          { num: "96%",  label: t("landing.statSatisfaction") },
         ].map((s, i) => (
           <div key={i} className="stat">
             <div className="stat-num">{s.num}</div>
@@ -890,13 +890,13 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
       </div>
 
       <section className="section" id="how">
-        <div className="section-tag">The experience</div>
-        <h2 className="section-h2">Dating reimagined for <em>the curious traveler</em></h2>
+        <div className="section-tag">{t("landing.experienceTag")}</div>
+        <h2 className="section-h2">{t("landing.experienceTitle")} <em>{t("landing.experienceTitleItalic")}</em></h2>
         <div className="steps">
           {[
-            { n:"01", icon:"🌍", title:"Build your travel story", desc:"Share where you've been, where you're going, and what moves you. Your passport is your personality." },
-            { n:"02", icon:"✦",  title:"Match by destination", desc:"Connect with travelers visiting the same city, or find a companion for your next adventure — before you even land." },
-            { n:"03", icon:"💬", title:"Meet in the world", desc:"From curated itinerary sharing to spontaneous meetups, GlobeMate makes real-world connections feel effortless." },
+            { n:"01", icon:"🌍", title: t("landing.step1Title"), desc: t("landing.step1Desc") },
+            { n:"02", icon:"✦",  title: t("landing.step2Title"), desc: t("landing.step2Desc") },
+            { n:"03", icon:"💬", title: t("landing.step3Title"), desc: t("landing.step3Desc") },
           ].map((step, i) => (
             <div key={i} className="step">
               <div className="step-num">{step.n}</div>
@@ -909,8 +909,8 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
       </section>
 
       <section className="dest-section" id="destinations">
-        <div className="section-tag">Where love travels</div>
-        <h2 className="section-h2">Connections happening <em>right now</em></h2>
+        <div className="section-tag">{t("landing.whereLoveTravels")}</div>
+        <h2 className="section-h2">{t("landing.connectionsTitle")} <em>{t("landing.connectionsTitleItalic")}</em></h2>
         <div className="dest-grid">
           {[
             { city:"Kyoto",    country:"Japan",    emoji:"🏯", matches:"342" },
@@ -925,7 +925,7 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
               <div className="dest-info">
                 <div className="dest-city">{d.city}</div>
                 <div className="dest-country">{d.country}</div>
-                <div className="dest-matches"><span>{d.matches}</span> active travelers</div>
+                <div className="dest-matches"><span>{d.matches}</span> {t("landing.activeTravelers")}</div>
               </div>
             </div>
           ))}
@@ -933,22 +933,22 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
       </section>
 
       <section className="testimonials" id="stories">
-        <div className="section-tag">Love stories</div>
-        <h2 className="section-h2">Journeys that <em>changed everything</em></h2>
+        <div className="section-tag">{t("landing.loveStories")}</div>
+        <h2 className="section-h2">{t("landing.journeysTitle")} <em>{t("landing.journeysTitleItalic")}</em></h2>
         <div className="testimonial-grid">
           {[
-            { text:"We matched while we were both heading to Lisbon. Three months later we were planning our second trip together. GlobeMate understood that some connections begin in airports.", author:"Sofia & Marco", trip:"Lisbon → Amalfi", emoji:"✈️" },
-            { text:"I wasn't looking for a relationship — I was looking for someone to explore Kyoto with. I found both. The serendipity of it still amazes me.", author:"Yuki", trip:"Kyoto solo traveler", emoji:"🌸" },
-            { text:"As a digital nomad, every other dating app felt irrelevant. GlobeMate gets it. The people here actually understand the lifestyle.", author:"James", trip:"34 countries, counting", emoji:"🗺️" },
-          ].map((t, i) => (
+            { text: t("landing.test1"), author: t("landing.test1Author"), trip: t("landing.test1Trip"), emoji:"✈️" },
+            { text: t("landing.test2"), author: t("landing.test2Author"), trip: t("landing.test2Trip"), emoji:"🌸" },
+            { text: t("landing.test3"), author: t("landing.test3Author"), trip: t("landing.test3Trip"), emoji:"🗺️" },
+          ].map((item, i) => (
             <div key={i} className="testimonial">
               <div className="quote-mark">"</div>
-              <p className="quote-text">{t.text}</p>
+              <p className="quote-text">{item.text}</p>
               <div className="quote-author">
-                <div className="author-avatar">{t.emoji}</div>
+                <div className="author-avatar">{item.emoji}</div>
                 <div>
-                  <div className="author-name">{t.author}</div>
-                  <div className="author-trip">{t.trip}</div>
+                  <div className="author-name">{item.author}</div>
+                  <div className="author-trip">{item.trip}</div>
                 </div>
               </div>
             </div>
@@ -958,26 +958,26 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
 
       <div className="cta-banner">
         <div className="cta-text">
-          <h2 className="cta-h2">Your next chapter starts <em>somewhere new</em></h2>
-          <p className="cta-p">Join thousands of travelers already finding meaningful connections across the globe. Early access is limited.</p>
+          <h2 className="cta-h2">{t("landing.ctaTitle")} <em>{t("landing.ctaTitleItalic")}</em></h2>
+          <p className="cta-p">{t("landing.ctaSubtitle")}</p>
         </div>
         <div className="cta-form">
           {joined ? (
             <div style={{ padding:"16px 32px", border:"1px solid rgba(201,168,76,0.4)", color:"var(--gold-light)", fontFamily:"var(--serif)", fontSize:"1rem", fontStyle:"italic" }}>
-              You're on the list ✦
+              {t("landing.onTheList")}
             </div>
           ) : (
             <>
               <input
                 className="cta-input"
                 type="email"
-                placeholder="your@email.com"
+                placeholder={t("auth.emailPlaceholder")}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleJoin()}
               />
               <button className="btn-primary" onClick={handleJoin}>
-                Join waitlist
+                {t("landing.joinWaitlist")}
               </button>
             </>
           )}
@@ -987,12 +987,12 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
       <footer className="footer">
         <div className="footer-logo">Globe<span>Mate</span></div>
         <ul className="footer-links">
-          <li><a href="#">Privacy</a></li>
-          <li><a href="#">Terms</a></li>
-          <li><a href="#">Contact</a></li>
+          <li><a href="#">{t("landing.footerPrivacy")}</a></li>
+          <li><a href="#">{t("landing.footerTerms")}</a></li>
+          <li><a href="#">{t("landing.footerContact")}</a></li>
           <li><a href="#">Instagram</a></li>
         </ul>
-        <div className="footer-copy">© 2026 GlobeMate. All rights reserved.</div>
+        <div className="footer-copy">{t("landing.footerCopy")}</div>
       </footer>
     </>
   );

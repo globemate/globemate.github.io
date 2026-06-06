@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { db, storage } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 
 const INTERESTS = [
   "🏔️ Mountains","🏖️ Beaches","🏛️ History","🍜 Food",
@@ -404,6 +406,7 @@ const css = `
 `;
 
 export default function Profile({ user, onBack, onNotif, notifCount, onExplore, onMatches, onChat, onMap, onSignOut, onSettings, onPricing }) {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState(DEF);
   const [loading, setLoading]   = useState(true);
   const [dirty, setDirty]       = useState(false);
@@ -516,17 +519,17 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
       setPhotoFile(null);
       setCoverFile(null);
       setDirty(false);
-      setMsg({ text: "Profile saved ✓", type: "ok" });
+      setMsg({ text: t("profile.saved"), type: "ok" });
       setTimeout(() => setMsg({ text: "", type: "" }), 3000);
     } catch {
-      setMsg({ text: "Error saving. Try again.", type: "err" });
+      setMsg({ text: t("profile.saveError"), type: "err" });
     }
     setSaving(false);
   };
 
   if (loading) return (
     <div style={{ minHeight:"100vh", background:"#0a0905", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif", color:"rgba(245,240,232,0.4)", fontSize:"0.85rem", letterSpacing:"0.15em", textTransform:"uppercase" }}>
-      Loading profile…
+      {t("profile.loading")}
     </div>
   );
 
@@ -544,21 +547,21 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
+          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div className="pr-root">
@@ -570,7 +573,8 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
         {/* desktop top-right actions — hidden on mobile (hamburger takes over) */}
         <div className="pr-desktop-actions">
-          {onPricing && <button className="pr-top-btn gold" onClick={onPricing}>✦ Planes</button>}
+          {onPricing && <button className="pr-top-btn gold" onClick={onPricing}>{t("nav.plans")}</button>}
+          <LangButton align="right" />
           {onNotif && (
             <button className="bell-btn" onClick={onNotif}>
               🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
@@ -590,7 +594,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
             {coverSrc && <img className="pr-cover-img" src={coverSrc} alt="" />}
             <div className="pr-cover-overlay" />
             <button className="pr-cover-edit" onClick={() => coverRef.current.click()}>
-              📷 Edit cover
+              {t("profile.editCover")}
             </button>
             <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCover} />
           </div>
@@ -609,7 +613,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
           <div style={{ flex: 1 }}>
             <input
               className="pr-name-input"
-              placeholder="Your name"
+              placeholder={t("profile.yourName")}
               value={profile.displayName}
               onChange={e => upd("displayName", e.target.value)}
             />
@@ -617,28 +621,28 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
               <span style={{ color:"var(--muted)", fontSize:"0.9rem" }}>📍</span>
               <input
                 className="pr-loc-input"
-                placeholder="City, Country"
+                placeholder={t("profile.hometownPlaceholder")}
                 value={profile.location}
                 onChange={e => upd("location", e.target.value)}
               />
-              <span className="pr-badge">✓ Verified traveler</span>
+              <span className="pr-badge">{t("profile.verifiedTraveler")}</span>
             </div>
             <div className="pr-stats">
               <div>
                 <div className="pr-stat-n">{profile.visitedCountries.length}</div>
-                <div className="pr-stat-l">Countries</div>
+                <div className="pr-stat-l">{t("auth.countries")}</div>
               </div>
               <div>
                 <div className="pr-stat-n">{profile.upcoming.filter(d => d.status === "confirmed").length}</div>
-                <div className="pr-stat-l">Confirmed trips</div>
+                <div className="pr-stat-l">{t("profile.confirmedTrips")}</div>
               </div>
               <div>
                 <div className="pr-stat-n">{profile.interests.length}</div>
-                <div className="pr-stat-l">Interests</div>
+                <div className="pr-stat-l">{t("profile.interests")}</div>
               </div>
             </div>
           </div>
-          <button className="pr-back" onClick={onBack}>← Back</button>
+          <button className="pr-back" onClick={onBack}>{t("nav.back")}</button>
         </div>
 
         {/* body */}
@@ -648,10 +652,10 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
           <div>
             {/* bio */}
             <div className="pr-section">
-              <div className="pr-section-title">About me</div>
+              <div className="pr-section-title">{t("profile.aboutMe")}</div>
               <textarea
                 className="pr-bio"
-                placeholder="Your travel philosophy, most unforgettable trip, what kind of connection you're looking for…"
+                placeholder={t("profile.bioPlaceholder")}
                 value={profile.bio}
                 onChange={e => upd("bio", e.target.value)}
               />
@@ -659,16 +663,16 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
             {/* visited countries */}
             <div className="pr-section">
-              <div className="pr-section-title">Países visitados</div>
+              <div className="pr-section-title">{t("profile.visitedCountries")}</div>
 
               {/* big counter */}
               <div className="cv-counter">
                 <span className="cv-n">{profile.visitedCountries.length}</span>
                 <span className="cv-sep">/</span>
                 <span className="cv-n total">{TOTAL_COUNTRIES}</span>
-                <span className="cv-label">países visitados</span>
+                <span className="cv-label">{t("profile.countriesVisited", { count:"", total:"" }).replace(/^\s*\/\s*/,"").trim()}</span>
               </div>
-              <div className="cv-pct">{(profile.visitedCountries.length / TOTAL_COUNTRIES * 100).toFixed(1)}% del mundo visitado</div>
+              <div className="cv-pct">{t("profile.worldPercent", { pct: (profile.visitedCountries.length / TOTAL_COUNTRIES * 100).toFixed(1) })}</div>
               <div className="cv-bar">
                 <div className="cv-bar-fill" style={{ width:`${(profile.visitedCountries.length / TOTAL_COUNTRIES * 100).toFixed(2)}%` }} />
               </div>
@@ -721,7 +725,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
             {/* upcoming */}
             <div className="pr-section">
-              <div className="pr-section-title">Upcoming destinations</div>
+              <div className="pr-section-title">{t("profile.nextDestinations")}</div>
               <div className="pr-dest-list">
                 {profile.upcoming.map((d, i) => (
                   <div key={i} className="pr-dest-row">
@@ -741,7 +745,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
                         upd("upcoming", next);
                       }}
                     >
-                      {d.status === "confirmed" ? "✓ Confirmed" : "Planning"}
+                      {d.status === "confirmed" ? t("profile.confirmed") : t("profile.planning")}
                     </button>
                     <button className="pr-rm-btn" onClick={() => upd("upcoming", profile.upcoming.filter((_, xi) => xi !== i))}>×</button>
                   </div>
@@ -750,22 +754,22 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
               <div className="pr-add-row">
                 <input
                   className="pr-inp"
-                  placeholder="e.g. Kyoto, Japan"
+                  placeholder={t("profile.travelStylePlaceholder")}
                   value={newDest}
                   onChange={e => setNewDest(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && addDest()}
                 />
                 <select className="pr-sel" value={newDestStatus} onChange={e => setNewDestStatus(e.target.value)}>
-                  <option value="planning">Planning</option>
-                  <option value="confirmed">Confirmed</option>
+                  <option value="planning">{t("profile.planning")}</option>
+                  <option value="confirmed">{t("profile.confirmed")}</option>
                 </select>
-                <button className="pr-add-btn" onClick={addDest}>Add</button>
+                <button className="pr-add-btn" onClick={addDest}>{t("profile.add")}</button>
               </div>
             </div>
 
             {/* interests */}
             <div className="pr-section">
-              <div className="pr-section-title">Interests</div>
+              <div className="pr-section-title">{t("profile.interests")}</div>
               <div className="pr-chips">
                 {INTERESTS.map(item => (
                   <button
@@ -779,7 +783,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
             {/* travel style */}
             <div className="pr-section">
-              <div className="pr-section-title">Travel style</div>
+              <div className="pr-section-title">{t("profile.travelStyle")}</div>
               <div className="pr-chips">
                 {STYLES.map(s => (
                   <button
@@ -796,7 +800,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
           <div>
             {/* languages */}
             <div className="pr-section">
-              <div className="pr-section-title">Languages</div>
+              <div className="pr-section-title">{t("profile.languages")}</div>
               <div className="pr-lang-list">
                 {profile.languages.map(l => (
                   <div key={l.lang} className="pr-lang-row">
@@ -814,19 +818,19 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
               </div>
               <div className="pr-add-row">
                 <select className="pr-sel" style={{ flex: 1 }} value={newLang} onChange={e => setNewLang(e.target.value)}>
-                  <option value="">Language…</option>
+                  <option value="">{t("profile.languagePlaceholder")}</option>
                   {availLangs.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
                 <select className="pr-sel" value={newLangLevel} onChange={e => setNewLangLevel(e.target.value)}>
                   {LEVELS.map(lv => <option key={lv} value={lv}>{lv}</option>)}
                 </select>
-                <button className="pr-add-btn" onClick={addLang}>Add</button>
+                <button className="pr-add-btn" onClick={addLang}>{t("profile.add")}</button>
               </div>
             </div>
 
             {/* social */}
             <div className="pr-section">
-              <div className="pr-section-title">Social links</div>
+              <div className="pr-section-title">{t("profile.socialLinks")}</div>
               <div className="pr-social-grid">
                 {[
                   { key: "instagram", label: "Instagram", ph: "@username" },
@@ -852,11 +856,11 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
         {(dirty || msg.text) && (
           <div className="pr-save-bar">
             <span className={`pr-save-note ${msg.type}`}>
-              {msg.text || "You have unsaved changes"}
+              {msg.text || t("profile.unsavedChanges")}
             </span>
             {dirty && (
               <button className="pr-save-btn" onClick={handleSave} disabled={saving}>
-                {saving ? "Saving…" : "Save changes"}
+                {saving ? t("profile.saving") : t("profile.saveChanges")}
               </button>
             )}
           </div>

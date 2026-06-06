@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { collection, getDocs } from "firebase/firestore";
+import { useTranslation } from "react-i18next";
+import { LangButton } from "./LanguageSelector";
 
 /* ── mock matches ── */
 const MOCK_MATCHES = [
@@ -30,11 +32,11 @@ function compatibility(match) {
   return { score, sharedInterests, sharedDests };
 }
 
-function ago(d) {
+function ago(d, t) {
   const s = Math.floor((Date.now() - d) / 1000);
-  if (s < 3600)   return `${Math.floor(s/60)}m ago`;
-  if (s < 86400)  return `${Math.floor(s/3600)}h ago`;
-  if (s < 604800) return `${Math.floor(s/86400)}d ago`;
+  if (s < 3600)   return t("matches.minutesAgo", { n: Math.floor(s/60) });
+  if (s < 86400)  return t("matches.hoursAgo",   { n: Math.floor(s/3600) });
+  if (s < 604800) return t("matches.daysAgo",    { n: Math.floor(s/86400) });
   return d.toLocaleDateString([], { month:"short", day:"numeric" });
 }
 
@@ -179,14 +181,9 @@ const css = `
   .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
 `;
 
-const SORTS = [
-  { key:"recent",  label:"Most recent" },
-  { key:"compat",  label:"Most compatible" },
-  { key:"shared",  label:"Shared destinations" },
-  { key:"countries", label:"Most traveled" },
-];
 
 function MatchCard({ m, onMessage }) {
+  const { t } = useTranslation();
   const { score, sharedInterests, sharedDests } = compatibility(m);
   const gradient = m.travelStyles?.[0] ? (STYLE_GRADIENT[m.travelStyles[0]] || DEF_GRADIENT) : DEF_GRADIENT;
   const sharedInterestList = (m.interests || []).filter(i => MY_PROFILE.interests.includes(i));
@@ -213,12 +210,12 @@ function MatchCard({ m, onMessage }) {
             <span className="mx-verified">✓</span>
           </div>
           <div className="mx-location">📍 {m.location}</div>
-          <div className="mx-matched-at">Matched {ago(m.matchedAt)}</div>
+          <div className="mx-matched-at">{t("matches.matchedAgo", { time: ago(m.matchedAt, t) })}</div>
         </div>
 
         {sharedDests.length > 0 && (
           <div className="mx-shared">
-            <span className="mx-shared-label">✈️ Both going to</span>
+            <span className="mx-shared-label">✈️ {t("map.goingTo")}</span>
             <span className="mx-shared-text">{sharedDests.map(d => d.name).join(" · ")}</span>
           </div>
         )}
@@ -238,8 +235,8 @@ function MatchCard({ m, onMessage }) {
         </div>
 
         <div className="mx-card-footer">
-          <button className="mx-msg-btn" onClick={onMessage}>Message</button>
-          <button className="mx-view-btn">View</button>
+          <button className="mx-msg-btn" onClick={onMessage}>{t("matches.message")}</button>
+          <button className="mx-view-btn">{t("common.viewProfile")}</button>
         </div>
       </div>
     </div>
@@ -247,6 +244,13 @@ function MatchCard({ m, onMessage }) {
 }
 
 export default function Matches({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
+  const { t } = useTranslation();
+  const SORTS = [
+    { key:"recent",   label: t("matches.sortRecent") },
+    { key:"compat",   label: t("matches.sortCompat") },
+    { key:"shared",   label: t("matches.sortShared") },
+    { key:"countries",label: t("matches.sortCountries") },
+  ];
   const [matches, setMatches]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [sort, setSort]           = useState("recent");
@@ -288,22 +292,22 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
+          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div className="mx-root">
@@ -312,16 +316,17 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
         <nav className="mx-nav">
           <button className="mx-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div className="mx-nav-actions">
-            <button className="mx-nav-btn mx-desktop" onClick={onExplore}>Explore</button>
-            <button className="mx-nav-btn mx-desktop" onClick={onChat}>Messages</button>
+            <button className="mx-nav-btn mx-desktop" onClick={onExplore}>{t("nav.explore")}</button>
+            <button className="mx-nav-btn mx-desktop" onClick={onChat}>{t("nav.messages")}</button>
             {onNotif && (
               <button className="bell-btn" onClick={onNotif}>
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
-            <button className="mx-nav-btn mx-desktop" onClick={onProfile}>My Profile</button>
-            <button className="mx-nav-btn mx-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>✦ Planes</button>
-            <button className="mx-nav-btn mx-desktop" onClick={onSignOut}>Sign out</button>
+            <button className="mx-nav-btn mx-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>
+            <button className="mx-nav-btn mx-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
+            <button className="mx-nav-btn mx-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>
+            <LangButton align="right" />
             <button className="mx-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
             </button>
@@ -330,21 +335,21 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
 
         {/* hero */}
         <div className="mx-hero">
-          <div className="mx-eyebrow">Curated connections</div>
-          <h1 className="mx-h1">Your <em>matches</em></h1>
+          <div className="mx-eyebrow">{t("matches.subtitle")}</div>
+          <h1 className="mx-h1">{t("matches.title").split(" ").slice(0,-1).join(" ")} <em>{t("matches.title").split(" ").slice(-1)}</em></h1>
           {!loading && (
             <div className="mx-stats">
               <div className="mx-stat">
                 <span className="mx-stat-n">{matches.length}</span>
-                <span className="mx-stat-l">Total matches</span>
+                <span className="mx-stat-l">{t("matches.title")}</span>
               </div>
               <div className="mx-stat">
                 <span className="mx-stat-n">{newCount}</span>
-                <span className="mx-stat-l">New this week</span>
+                <span className="mx-stat-l">{t("explore.title")}</span>
               </div>
               <div className="mx-stat">
                 <span className="mx-stat-n">{sharedDestAll}</span>
-                <span className="mx-stat-l">Shared destinations</span>
+                <span className="mx-stat-l">{t("explore.sharedDestinations")}</span>
               </div>
             </div>
           )}
@@ -352,7 +357,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
 
         {/* controls */}
         <div className="mx-controls">
-          <span className="mx-filter-label">Sort</span>
+          <span className="mx-filter-label">{t("matches.sortLabel")}</span>
           {SORTS.map(s => (
             <button key={s.key} className={`mx-sort-chip${sort === s.key ? " on" : ""}`} onClick={() => setSort(s.key)}>
               {s.label}
@@ -362,26 +367,24 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
             <div className={`mx-toggle${newOnly ? " on" : ""}`} onClick={() => setNewOnly(v => !v)}>
               <div className="mx-toggle-dot" />
             </div>
-            New only
+            {t("matches.newOnly")}
           </label>
         </div>
 
         {/* content */}
         {loading ? (
           <div style={{ padding:"80px 56px", textAlign:"center", fontSize:"0.8rem", letterSpacing:"0.2em", textTransform:"uppercase", color:"rgba(245,240,232,0.3)" }}>
-            Loading matches…
+            {t("matches.loadingMatches")}
           </div>
         ) : sorted.length === 0 ? (
           <div className="mx-empty">
             <div className="mx-empty-icon">💫</div>
-            <div className="mx-empty-txt">{newOnly ? "No new matches" : "No matches yet"}</div>
+            <div className="mx-empty-txt">{newOnly ? t("matches.noNewMatches") : t("matches.noMatches")}</div>
             <div className="mx-empty-sub">
-              {newOnly
-                ? 'Toggle off "New only" to see all your matches.'
-                : "Start connecting with travelers in Explore to get your first matches."}
+              {newOnly ? t("matches.noNewMatchesHint") : t("matches.noMatchesHint")}
             </div>
             {!newOnly && (
-              <button className="mx-explore-btn" onClick={onExplore}>Explore travelers</button>
+              <button className="mx-explore-btn" onClick={onExplore}>{t("matches.exploreTravelers")}</button>
             )}
           </div>
         ) : (
