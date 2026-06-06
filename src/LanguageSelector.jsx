@@ -79,6 +79,30 @@ function injectStyles() {
   }
 }
 
+const TRIGGER_STYLE = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  background: "none",
+  border: "1px solid rgba(201,168,76,0.35)",
+  color: "rgba(245,240,232,0.85)",
+  cursor: "pointer",
+  fontFamily: "'DM Sans', sans-serif",
+  fontSize: "0.72rem",
+  letterSpacing: "0.1em",
+  padding: "6px 10px",
+  whiteSpace: "nowrap",
+  flexShrink: 0,
+  transition: "border-color 0.22s, color 0.22s",
+};
+
+const WRAP_STYLE = {
+  position: "relative",
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+};
+
 /* ── Compact navbar variant ── */
 export function LangButton({ align = "right" }) {
   const { i18n } = useTranslation();
@@ -102,15 +126,20 @@ export function LangButton({ align = "right" }) {
   };
 
   return (
-    <div className="ls-wrap" ref={ref}>
+    <div style={WRAP_STYLE} ref={ref}>
       <button
-        className={`ls-trigger${open ? " active" : ""}`}
+        style={open
+          ? { ...TRIGGER_STYLE, borderColor: "#c9a84c", color: "#c9a84c" }
+          : TRIGGER_STYLE
+        }
         onClick={() => setOpen(o => !o)}
         aria-label="Select language"
       >
-        <span className="ls-flag">🌐</span>
-        <span className="ls-code">{current.code.toUpperCase()}</span>
-        <span className="ls-chevron">▼</span>
+        <span style={{ fontSize: "1rem", lineHeight: 1 }}>🌐</span>
+        <span style={{ fontSize: "0.68rem", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          {current.code.toUpperCase()}
+        </span>
+        <span style={{ fontSize: "0.55rem", opacity: 0.6, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
       </button>
       <div className={`ls-dropdown ${align} ${open ? "open" : ""}`}>
         {LANGUAGES.map(lang => (

@@ -212,6 +212,7 @@ const css = `
 `;
 
 export default function Chat({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
+  const { t } = useTranslation();
   const [convs, setConvs]           = useState([]);
   const [activeId, setActiveId]     = useState(null);
   const [msgMap, setMsgMap]         = useState({});   // { convId: [msgs] }
@@ -338,22 +339,22 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>← Home</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explore</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Messages</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Map</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>My Profile</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          Notifications{notifCount > 0 ? ` (${notifCount})` : ""}
+          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
         </button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>✦ Planes</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>⚙ Configuración</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Sign out</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div className="ch-root">
@@ -362,10 +363,11 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
         <nav className="ch-nav">
           <button className="ch-nav-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div className="ch-nav-links">
-            {user && <button className="ch-nav-btn ch-desktop" onClick={onExplore}>Explore</button>}
-            {user && <button className="ch-nav-btn ch-desktop" onClick={onProfile}>My Profile</button>}
-            <button className="ch-nav-btn ch-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>✦ Planes</button>
-            {user && <button className="ch-nav-btn ch-desktop" onClick={onSignOut}>Sign out</button>}
+            {user && <button className="ch-nav-btn ch-desktop" onClick={onExplore}>{t("nav.explore")}</button>}
+            {user && <button className="ch-nav-btn ch-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
+            <button className="ch-nav-btn ch-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
+            {user && <button className="ch-nav-btn ch-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}
+            <LangButton align="right" />
             {user && (
               <button className="bell-btn" onClick={onNotif}>
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
@@ -382,18 +384,18 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
           {/* sidebar */}
           <div className={`ch-sidebar${mobileView === "chat" ? " hidden-mobile" : ""}`}>
             <div className="ch-sidebar-head">
-              <div className="ch-sidebar-title">Messages</div>
+              <div className="ch-sidebar-title">{t("chat.title")}</div>
               <input
                 className="ch-search"
-                placeholder="Search conversations…"
+                placeholder={t("chat.searchPlaceholder")}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
             <div className="ch-conv-list">
-              {loading && <div className="ch-no-convs">Loading…</div>}
+              {loading && <div className="ch-no-convs">{t("common.loading")}</div>}
               {!loading && filtered.length === 0 && (
-                <div className="ch-no-convs">No conversations yet.<br />Connect with travelers to start chatting.</div>
+                <div className="ch-no-convs">{t("chat.noConversations")}<br />{t("chat.noConversationsHint")}</div>
               )}
               {filtered.map(c => {
                 const other = getOtherProfile(c, user.uid);
@@ -431,8 +433,8 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
             {!activeConv ? (
               <div className="ch-empty-thread">
                 <div className="ch-empty-thread-icon">✈️</div>
-                <div className="ch-empty-thread-txt">Select a conversation</div>
-                <div className="ch-empty-thread-sub">Choose a traveler from the list to start or continue a conversation.</div>
+                <div className="ch-empty-thread-txt">{t("chat.title")}</div>
+                <div className="ch-empty-thread-sub">{t("chat.noConversationsHint")}</div>
               </div>
             ) : (
               <>
@@ -458,7 +460,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                     return (
                       <div key={msg.id}>
                         {showDay && (
-                          <div className="ch-day-label">{dayLabel(msg.createdAt)}</div>
+                          <div className="ch-day-label">{dayLabel(msg.createdAt, t("common.today"), t("common.yesterday"))}</div>
                         )}
                         <div className={`ch-msg-row${isMine ? " mine" : ""}`}>
                           <div className="ch-msg-mini-avatar">
@@ -483,7 +485,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                     ref={textareaRef}
                     className="ch-textarea"
                     rows={1}
-                    placeholder="Write a message…"
+                    placeholder={t("chat.messagePlaceholder")}
                     value={input}
                     onChange={e => {
                       setInput(e.target.value);
@@ -493,7 +495,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                     onKeyDown={handleKey}
                   />
                   <button className="ch-send-btn" onClick={handleSend} disabled={!input.trim() || sending}>
-                    Send
+                    {t("common.send")}
                   </button>
                 </div>
               </>
@@ -524,11 +526,11 @@ function sameDay(a, b) {
   return da.toDateString() === db2.toDateString();
 }
 
-function dayLabel(raw) {
+function dayLabel(raw, todayStr, yesterdayStr) {
   const d = (raw?.toDate ? raw.toDate() : new Date(raw));
   const today = new Date();
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString())     return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  if (d.toDateString() === today.toDateString())     return todayStr;
+  if (d.toDateString() === yesterday.toDateString()) return yesterdayStr;
   return d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
 }
