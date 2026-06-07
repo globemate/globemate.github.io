@@ -69,24 +69,19 @@ const TRIGGER_STYLE = {
   display: "inline-flex",
   alignItems: "center",
   gap: "6px",
-  background: "none",
-  border: "1px solid rgba(201,168,76,0.35)",
-  color: "rgba(245,240,232,0.85)",
+  background: "transparent",
+  border: "1px solid rgba(201,168,76,0.4)",
+  color: "#e8c97a",
   cursor: "pointer",
-  fontFamily: "'DM Sans', sans-serif",
+  fontFamily: "inherit",
   fontSize: "0.72rem",
   letterSpacing: "0.1em",
   padding: "6px 10px",
   whiteSpace: "nowrap",
   flexShrink: 0,
+  lineHeight: 1,
+  outline: "none",
   transition: "border-color 0.22s, color 0.22s",
-};
-
-const WRAP_STYLE = {
-  position: "relative",
-  display: "inline-flex",
-  alignItems: "center",
-  flexShrink: 0,
 };
 
 /* ── Compact navbar variant ── */
@@ -137,7 +132,8 @@ export function LangButton({ align = "right" }) {
   };
 
   return (
-    <div style={WRAP_STYLE}>
+    <>
+      {/* Trigger button — direct flex child, no wrapper div that could collapse */}
       <button
         ref={triggerRef}
         style={open
@@ -152,10 +148,10 @@ export function LangButton({ align = "right" }) {
         <span style={{ fontSize: "0.68rem", letterSpacing: "0.12em", textTransform: "uppercase" }}>
           {current.code.toUpperCase()}
         </span>
-        <span style={{ fontSize: "0.55rem", opacity: 0.6, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+        <span style={{ fontSize: "0.55rem", opacity: 0.6, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "inline-block" }}>▼</span>
       </button>
 
-      {/* Portal: renders directly in <body>, outside any stacking context */}
+      {/* Portal dropdown — renders in <body>, completely independent of nav stacking context */}
       {createPortal(
         <div
           ref={dropRef}
@@ -176,7 +172,7 @@ export function LangButton({ align = "right" }) {
         </div>,
         document.body
       )}
-    </div>
+    </>
   );
 }
 
