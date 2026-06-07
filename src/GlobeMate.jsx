@@ -837,6 +837,7 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
       </div>
 
       <nav className="nav">
+        <button style={{position:'fixed', top:'200px', left:'20px', zIndex:99999, background:'red', color:'white', padding:'20px', fontSize:'20px'}} onClick={() => alert('funciona')}>TEST IDIOMA</button>
         <div className="nav-logo">Globe<span>Mate</span></div>
         <ul className="nav-links">
           <li><a href="#how">{t("landing.howItWorks")}</a></li>
