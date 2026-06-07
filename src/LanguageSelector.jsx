@@ -65,24 +65,6 @@ function injectStyles() {
   }
 }
 
-const TRIGGER_STYLE = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "6px",
-  background: "transparent",
-  border: "1px solid rgba(201,168,76,0.4)",
-  color: "#e8c97a",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: "0.72rem",
-  letterSpacing: "0.1em",
-  padding: "6px 10px",
-  whiteSpace: "nowrap",
-  flexShrink: 0,
-  lineHeight: 1,
-  outline: "none",
-  transition: "border-color 0.22s, color 0.22s",
-};
 
 /* ── Compact navbar variant ── */
 export function LangButton({ align = "right" }) {
@@ -136,10 +118,8 @@ export function LangButton({ align = "right" }) {
       {/* Trigger button — direct flex child, no wrapper div that could collapse */}
       <button
         ref={triggerRef}
-        style={open
-          ? { ...TRIGGER_STYLE, borderColor: "#c9a84c", color: "#c9a84c" }
-          : TRIGGER_STYLE
-        }
+        className="lang-btn"
+        style={open ? { borderColor: "#c9a84c", color: "#c9a84c" } : undefined}
         onClick={() => setOpen(o => !o)}
         aria-label="Select language"
         aria-expanded={open}

@@ -53,6 +53,8 @@ const css = `
   .sg-nav { position:fixed; top:0; left:0; right:0; z-index:200; height:58px; display:flex; align-items:center; justify-content:space-between; padding:0 32px; background:rgba(10,9,5,0.98); border-bottom:1px solid rgba(201,168,76,0.1); }
   @media(max-width:600px){ .sg-nav{ padding:0 16px; } }
   .sg-logo { font-family:var(--serif); font-size:1.3rem; font-weight:300; letter-spacing:0.12em; color:var(--gold-light); cursor:pointer; border:none; background:none; padding:0; transition:opacity 0.2s; }
+  .lang-btn { display:inline-flex !important; align-items:center; gap:6px; background:none; border:1px solid rgba(201,168,76,0.35); color:#e8c97a; cursor:pointer; font-family:inherit; font-size:0.72rem; letter-spacing:0.1em; padding:6px 10px; white-space:nowrap; flex-shrink:0; line-height:1; outline:none; transition:border-color 0.22s,color 0.22s; }
+  .lang-btn:hover { border-color:#c9a84c; color:#c9a84c; }
   .sg-logo:hover { opacity:0.75; }
   .sg-logo span { font-style:italic; }
   .sg-nav-btn { background:none; border:none; color:var(--cream-dim); font-family:var(--sans); font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; padding:6px 10px; transition:color 0.2s; }

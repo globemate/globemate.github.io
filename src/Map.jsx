@@ -152,6 +152,8 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
         .mob-nav-link:hover { color:#f5f0e8; }
         .mob-nav-link.gold { color:#c9a84c; }
         .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
+        .lang-btn { display:inline-flex !important; align-items:center; gap:6px; background:none; border:1px solid rgba(201,168,76,0.35); color:#e8c97a; cursor:pointer; font-family:inherit; font-size:0.72rem; letter-spacing:0.1em; padding:6px 10px; white-space:nowrap; flex-shrink:0; line-height:1; outline:none; transition:border-color 0.22s,color 0.22s; }
+        .lang-btn:hover { border-color:#c9a84c; color:#c9a84c; }
       `}</style>
       <style>{`
         /* ── Leaflet popup ── */

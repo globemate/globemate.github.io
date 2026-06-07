@@ -150,6 +150,8 @@ const style = `
   .auth-lang-btn {
     position: absolute; top: 20px; right: 20px;
   }
+  .lang-btn { display:inline-flex !important; align-items:center; gap:6px; background:none; border:1px solid rgba(201,168,76,0.35); color:#e8c97a; cursor:pointer; font-family:inherit; font-size:0.72rem; letter-spacing:0.1em; padding:6px 10px; white-space:nowrap; flex-shrink:0; line-height:1; outline:none; transition:border-color 0.22s,color 0.22s; }
+  .lang-btn:hover { border-color:#c9a84c; color:#c9a84c; }
   .auth-form-box { width: 100%; max-width: 380px; }
 
   .auth-title {

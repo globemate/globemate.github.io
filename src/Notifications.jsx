@@ -36,6 +36,8 @@ const css = `
   .nf-mark-btn { background:none; border:none; color:var(--gold); font-family:var(--sans); font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; padding:0; transition:color 0.2s; }
   .nf-mark-btn:hover { color:var(--gold-light); }
   .nf-mark-btn:disabled { opacity:0.3; cursor:default; }
+  .lang-btn { display:inline-flex !important; align-items:center; gap:6px; background:none; border:1px solid rgba(201,168,76,0.35); color:#e8c97a; cursor:pointer; font-family:inherit; font-size:0.72rem; letter-spacing:0.1em; padding:6px 10px; white-space:nowrap; flex-shrink:0; line-height:1; outline:none; transition:border-color 0.22s,color 0.22s; }
+  .lang-btn:hover { border-color:#c9a84c; color:#c9a84c; }
 
   /* page */
   .nf-root { min-height:100vh; background:var(--black); padding-top:58px; }
