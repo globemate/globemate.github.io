@@ -326,12 +326,12 @@ export default function Pricing({
         <nav className="px-nav">
           <button className="px-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div className="px-nav-actions">
+            <LangButton align="right" />
             {user && (
               <button className="bell-btn" onClick={onNotif}>
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
-            <LangButton align="right" />
             <button className="px-nav-btn pxd" onClick={onExplore}>{t("nav.explore")}</button>
             <button className="px-nav-btn pxd" onClick={onProfile}>{t("nav.myProfile")}</button>
             <button className="px-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">

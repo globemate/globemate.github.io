@@ -322,12 +322,12 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         <nav className="ex-nav">
           <button className="ex-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div className="ex-nav-actions">
+            <LangButton align="right" />
             {user && (
               <button className="bell-btn" onClick={onNotif}>
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
-            <LangButton align="right" />
             {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
             <button className="ex-nav-btn ex-desktop" onClick={onPricing}>{t("nav.plans")}</button>
             {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}

@@ -364,15 +364,15 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
           <button className="ch-nav-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div className="ch-nav-links">
             {user && <button className="ch-nav-btn ch-desktop" onClick={onExplore}>{t("nav.explore")}</button>}
-            {user && <button className="ch-nav-btn ch-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
-            <button className="ch-nav-btn ch-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
-            {user && <button className="ch-nav-btn ch-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}
             <LangButton align="right" />
             {user && (
               <button className="bell-btn" onClick={onNotif}>
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
+            <button className="ch-nav-btn ch-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
+            {user && <button className="ch-nav-btn ch-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
+            {user && <button className="ch-nav-btn ch-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}
             <button className="ch-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
             </button>

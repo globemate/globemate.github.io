@@ -252,6 +252,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
             <button style={btnStyle("ghost")} onClick={onExplore}  className="mp-hide-xs">{t("nav.explore")}</button>
             <button style={btnStyle("ghost")} onClick={onMatches}  className="mp-hide-xs">{t("nav.matches")}</button>
             <button style={btnStyle("ghost")} onClick={onChat}     className="mp-hide-xs">{t("nav.messages")}</button>
+            <LangButton align="right" />
             {onNotif && (
               <button onClick={onNotif} style={{ position:"relative", background:"none", border:"1px solid rgba(201,168,76,0.25)", color:"#c9a84c", padding:"6px 10px", cursor:"pointer", fontSize:"1rem", display:"inline-flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 🔔{notifCount > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:"#d32f2f", color:"#fff", borderRadius:"50%", minWidth:17, height:17, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.58rem", fontWeight:700, border:"1.5px solid #0a0905", padding:"0 2px" }}>{notifCount > 9 ? "9+" : notifCount}</span>}
@@ -260,7 +261,6 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
             <button style={btnStyle("ghost")} onClick={onProfile}  className="mp-hide-xs">{t("nav.myProfile")}</button>
             <button style={{...btnStyle("ghost"), borderColor:"#c9a84c", color:"#c9a84c"}} onClick={onPricing} className="mp-hide-xs">{t("nav.plans")}</button>
             <button style={btnStyle("ghost")} onClick={onSignOut}  className="mp-hide-xs">{t("nav.signOut")}</button>
-            <LangButton align="right" />
             <button className="mp-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
             </button>

@@ -75,8 +75,8 @@ const style = `
   }
   .nav-cta:hover { background: var(--gold); color: var(--black); }
   .nav-actions {
-    display: flex; gap: 6px; align-items: center;
-    flex-shrink: 0; margin-left: 16px;
+    display: flex; gap: 8px; align-items: center;
+    flex-shrink: 0; margin-left: 12px;
   }
   .bell-btn { position:relative; background:none; border:1px solid rgba(201,168,76,0.25); color:var(--gold); padding:6px 10px; cursor:pointer; transition:all 0.22s; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
   .bell-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.1); }
@@ -846,12 +846,12 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
           {user && <li><a href="#map"      onClick={e => { e.preventDefault(); onMap(); }}     style={{ color: "var(--gold-light)" }}>{t("nav.map")}</a></li>}
         </ul>
         <div className="nav-actions">
+          <LangButton align="right" />
           {user && (
             <button className="bell-btn" onClick={onNotif}>
               🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
             </button>
           )}
-          <LangButton align="right" />
           <button className="nav-cta nav-desktop-only" onClick={onPricing}>{t("nav.plans")}</button>
           {user ? (
             <>

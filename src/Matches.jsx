@@ -318,6 +318,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
           <div className="mx-nav-actions">
             <button className="mx-nav-btn mx-desktop" onClick={onExplore}>{t("nav.explore")}</button>
             <button className="mx-nav-btn mx-desktop" onClick={onChat}>{t("nav.messages")}</button>
+            <LangButton align="right" />
             {onNotif && (
               <button className="bell-btn" onClick={onNotif}>
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
@@ -326,7 +327,6 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
             <button className="mx-nav-btn mx-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>
             <button className="mx-nav-btn mx-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
             <button className="mx-nav-btn mx-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>
-            <LangButton align="right" />
             <button className="mx-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
               <span /><span /><span />
             </button>

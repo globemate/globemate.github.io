@@ -573,13 +573,13 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
         {/* desktop top-right actions — hidden on mobile (hamburger takes over) */}
         <div className="pr-desktop-actions">
-          {onPricing && <button className="pr-top-btn gold" onClick={onPricing}>{t("nav.plans")}</button>}
           <LangButton align="right" />
           {onNotif && (
             <button className="bell-btn" onClick={onNotif}>
               🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
             </button>
           )}
+          {onPricing && <button className="pr-top-btn gold" onClick={onPricing}>{t("nav.plans")}</button>}
         </div>
         {/* bell — fixed top-right on mobile only */}
         {onNotif && (
