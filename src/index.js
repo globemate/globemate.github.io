@@ -5,6 +5,13 @@ import './i18n';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Unregister any previously installed service workers so users always get fresh code
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
