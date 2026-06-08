@@ -463,6 +463,13 @@ const style = `
     transition: color 0.3s;
   }
   .footer-links a:hover { color: var(--gold); }
+  .footer-link-btn {
+    background: none; border: none; padding: 0; cursor: pointer;
+    color: var(--muted); font-family: var(--sans);
+    font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .footer-link-btn:hover { color: var(--gold); }
   .footer-copy {
     font-size: 0.75rem;
     color: rgba(245,240,232,0.2);
@@ -787,7 +794,7 @@ function GlobeCanvas() {
   );
 }
 
-export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExplore, onChat, onMatches, onMap, onNotif, notifCount, onSettings, onPricing }) {
+export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExplore, onChat, onMatches, onMap, onNotif, notifCount, onSettings, onPricing, onPrivacy, onTerms }) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
@@ -1001,8 +1008,8 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
       <footer className="footer">
         <div className="footer-logo">Globe<span>Mate</span></div>
         <ul className="footer-links">
-          <li><a href="#">{t("landing.footerPrivacy")}</a></li>
-          <li><a href="#">{t("landing.footerTerms")}</a></li>
+          <li><button className="footer-link-btn" onClick={onPrivacy}>{t("landing.footerPrivacy")}</button></li>
+          <li><button className="footer-link-btn" onClick={onTerms}>{t("landing.footerTerms")}</button></li>
           <li><a href="#">{t("landing.footerContact")}</a></li>
           <li><a href="#">Instagram</a></li>
         </ul>

@@ -13,6 +13,8 @@ import Matches from "./Matches.jsx";
 import Map from "./Map.jsx";
 import Settings from "./Settings.jsx";
 import Pricing from "./Pricing.jsx";
+import Privacy from "./Privacy.jsx";
+import Terms from "./Terms.jsx";
 
 const t = (ms) => new Date(Date.now() - ms);
 const INIT_NOTIFS = [
@@ -44,6 +46,8 @@ export default function App() {
   const [showNotif, setShowNotif]     = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms,   setShowTerms]   = useState(false);
   const [notifs, setNotifs]           = useState(INIT_NOTIFS);
 
   const notifCount  = notifs.filter(n => !n.read).length;
@@ -77,6 +81,8 @@ export default function App() {
       setShowNotif(false);
       setShowSettings(false);
       setShowPricing(false);
+      setShowPrivacy(false);
+      setShowTerms(false);
       if (screen === "profile") setShowProfile(true);
       else if (screen === "explore") setShowExplore(true);
       else if (screen === "chat") setShowChat(true);
@@ -85,6 +91,8 @@ export default function App() {
       else if (screen === "notif") setShowNotif(true);
       else if (screen === "settings") setShowSettings(true);
       else if (screen === "pricing") setShowPricing(true);
+      else if (screen === "privacy") setShowPrivacy(true);
+      else if (screen === "terms")   setShowTerms(true);
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -124,6 +132,8 @@ export default function App() {
     setShowNotif(false);
     setShowSettings(false);
     setShowPricing(false);
+    setShowPrivacy(false);
+    setShowTerms(false);
     if (screen === "profile") setShowProfile(true);
     else if (screen === "explore") setShowExplore(true);
     else if (screen === "chat") setShowChat(true);
@@ -132,6 +142,8 @@ export default function App() {
     else if (screen === "notif") setShowNotif(true);
     else if (screen === "settings") setShowSettings(true);
     else if (screen === "pricing") setShowPricing(true);
+    else if (screen === "privacy") setShowPrivacy(true);
+    else if (screen === "terms")   setShowTerms(true);
   };
 
   const nav = {
@@ -144,8 +156,18 @@ export default function App() {
     onMap:      () => goTo("map"),
     onSettings: () => goTo("settings"),
     onPricing:  () => goTo("pricing"),
+    onPrivacy:  () => goTo("privacy"),
+    onTerms:    () => goTo("terms"),
     onSignOut:  () => signOut(auth),
   };
+
+  if (showPrivacy) {
+    return <Privacy onBack={() => window.history.back()} />;
+  }
+
+  if (showTerms) {
+    return <Terms onBack={() => window.history.back()} />;
+  }
 
   if (showPricing) {
     return <Pricing user={user} onBack={() => window.history.back()} {...nav} />;
