@@ -280,10 +280,8 @@ const css = `
   .pr-top-btn { background: none; border: 1px solid rgba(201,168,76,0.3); font-family: var(--sans); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; padding: 7px 14px; transition: all 0.22s; }
   .pr-top-btn.gold { color: var(--gold); border-color: rgba(201,168,76,0.4); }
   .pr-top-btn.gold:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
-  .pr-bell-mobile { display: none !important; }
   @media (max-width: 860px) {
     .pr-desktop-actions { display: none !important; }
-    .pr-bell-mobile { display: inline-flex !important; }
   }
   .bell-btn { position:relative; background:none; border:1px solid rgba(201,168,76,0.25); color:var(--gold); padding:6px 10px; cursor:pointer; transition:all 0.22s; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
   .bell-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.1); }
@@ -387,11 +385,19 @@ const css = `
   @media (max-width: 860px) {
     .pr-hamburger {
       display:flex; flex-direction:column; gap:5px;
-      position:fixed; top:16px; right:72px; z-index:302;
+      position:fixed; top:16px; right:16px; z-index:302;
       background:rgba(10,9,5,0.88); border:1px solid rgba(201,168,76,0.25);
       cursor:pointer; padding:10px 12px; backdrop-filter:blur(6px);
     }
     .pr-hamburger span { display:block; width:18px; height:1.5px; background:var(--gold); transition:transform 0.3s; }
+  }
+  .pr-hamburger-badge {
+    position:absolute; top:-5px; right:-5px;
+    background:#d32f2f; color:#fff; border-radius:50%;
+    min-width:16px; height:16px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.55rem; font-weight:700; font-family:var(--sans);
+    border:1.5px solid var(--black); padding:0 2px; pointer-events:none;
   }
 
   /* mobile nav overlay */
@@ -568,12 +574,15 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
       <div className="pr-root">
 
-        {/* hamburger — mobile only, fixed between back and bell */}
+        {/* hamburger — mobile only (≤860px), carries notification badge */}
         <button className="pr-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
           <span /><span /><span />
+          {notifCount > 0 && (
+            <span className="pr-hamburger-badge">{notifCount > 9 ? "9+" : notifCount}</span>
+          )}
         </button>
 
-        {/* desktop top-right actions — hidden on mobile (hamburger takes over) */}
+        {/* desktop top-right actions — hidden at ≤860px */}
         <div className="pr-desktop-actions">
           <LangButton align="right" />
           {onNotif && (
@@ -583,12 +592,6 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
           )}
           {onPricing && <button className="pr-top-btn gold" onClick={onPricing}>{t("nav.plans")}</button>}
         </div>
-        {/* bell — fixed top-right on mobile only */}
-        {onNotif && (
-          <button className="bell-btn pr-bell-mobile" style={{ position:"fixed", top:"18px", right:"18px", zIndex:300 }} onClick={onNotif}>
-            🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
-          </button>
-        )}
 
         {/* cover */}
         <div className="pr-cover-section">
