@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LANGUAGES } from "./i18n";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { useSubscription } from "./useSubscription";
 import Auth from "./Auth.jsx";
 import GlobeMate from "./GlobeMate.jsx";
 import Profile from "./Profile.jsx";
@@ -30,6 +31,7 @@ const INIT_NOTIFS = [
 export default function App() {
   const { i18n } = useTranslation();
   const [user, setUser]               = useState(undefined);
+  const subscription = useSubscription(user || null);
 
   // Apply RTL direction whenever language changes
   useEffect(() => {
@@ -170,7 +172,7 @@ export default function App() {
   }
 
   if (showPricing) {
-    return <Pricing user={user} onBack={() => window.history.back()} {...nav} />;
+    return <Pricing user={user} onBack={() => window.history.back()} subscription={subscription} {...nav} />;
   }
 
   if (showSettings && user) {
@@ -190,7 +192,7 @@ export default function App() {
   }
 
   if (showProfile && user) {
-    return <Profile user={user} onBack={() => window.history.back()} {...nav} />;
+    return <Profile user={user} onBack={() => window.history.back()} subscription={subscription} {...nav} />;
   }
 
   if (showExplore) {

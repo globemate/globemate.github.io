@@ -230,7 +230,7 @@ const css = `
   .pr-cover { position: relative; height: 260px; background: linear-gradient(135deg,#1a1508 0%,#2a1f0a 40%,#0a0905 100%); overflow: hidden; }
   .pr-cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
   .pr-cover-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 30%, rgba(10,9,5,0.85) 100%); }
-  .pr-cover-edit { position: absolute; top: 20px; right: 20px; background: rgba(10,9,5,0.7); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); padding: 8px 18px; font-family: var(--sans); font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.25s; }
+  .pr-cover-edit { position: absolute; bottom: 20px; right: 20px; background: rgba(10,9,5,0.7); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); padding: 8px 18px; font-family: var(--sans); font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.25s; }
   .pr-cover-edit:hover { background: rgba(201,168,76,0.15); }
 
   .pr-avatar-wrap { position: absolute; bottom: -52px; left: 56px; z-index: 10; }
@@ -241,12 +241,10 @@ const css = `
 
   /* header */
   .pr-header { padding: 68px 56px 28px; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
-  @media (max-width: 680px) {
-    /* dar espacio arriba para los botones fijos */
+  @media (max-width: 860px) {
     .pr-root { padding-top: 64px; }
     .pr-header { padding: 68px 24px 24px; }
     .pr-avatar-wrap { left: 24px; }
-    /* back fijo arriba-izquierda, simétrico a la campanita */
     .pr-back {
       position: fixed;
       top: 16px; left: 16px; z-index: 301;
@@ -255,7 +253,6 @@ const css = `
       padding: 9px 16px;
       backdrop-filter: blur(6px);
     }
-    /* stats wrappean si no caben */
     .pr-stats { flex-wrap: wrap; gap: 18px 28px; }
   }
 
@@ -269,6 +266,9 @@ const css = `
   .pr-loc-input::placeholder { color: var(--muted); }
 
   .pr-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); padding: 3px 10px; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; }
+  .pr-plan-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase; font-family: var(--sans); font-weight: 500; margin-top: 7px; }
+  .pr-plan-badge.premium { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.4); color: var(--gold); }
+  .pr-plan-badge.elite { background: rgba(245,240,232,0.07); border: 1px solid rgba(245,240,232,0.3); color: var(--cream); }
 
   .pr-stats { display: flex; gap: 36px; margin-top: 18px; }
   .pr-stat-n { font-family: var(--serif); font-size: 1.7rem; font-weight: 300; color: var(--gold-light); line-height: 1; }
@@ -280,9 +280,9 @@ const css = `
   .pr-top-btn { background: none; border: 1px solid rgba(201,168,76,0.3); font-family: var(--sans); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; padding: 7px 14px; transition: all 0.22s; }
   .pr-top-btn.gold { color: var(--gold); border-color: rgba(201,168,76,0.4); }
   .pr-top-btn.gold:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
-  .pr-bell-mobile { display: none; }
-  @media (max-width: 680px) {
-    .pr-desktop-actions { display: none; }
+  .pr-bell-mobile { display: none !important; }
+  @media (max-width: 860px) {
+    .pr-desktop-actions { display: none !important; }
     .pr-bell-mobile { display: inline-flex !important; }
   }
   .bell-btn { position:relative; background:none; border:1px solid rgba(201,168,76,0.25); color:var(--gold); padding:6px 10px; cursor:pointer; transition:all 0.22s; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
@@ -382,12 +382,12 @@ const css = `
   .cv-chip:hover { border-color:rgba(201,168,76,0.38); color:var(--cream); background:rgba(245,240,232,0.03); }
   .cv-chip.on { background:rgba(201,168,76,0.14); border-color:var(--gold); color:var(--gold-light); }
 
-  /* hamburger — fixed top-right area, shown below 860 px */
+  /* hamburger — fixed top-right, shown below 860 px */
   .pr-hamburger { display:none; }
   @media (max-width: 860px) {
     .pr-hamburger {
       display:flex; flex-direction:column; gap:5px;
-      position:fixed; top:16px; right:70px; z-index:302;
+      position:fixed; top:16px; right:72px; z-index:302;
       background:rgba(10,9,5,0.88); border:1px solid rgba(201,168,76,0.25);
       cursor:pointer; padding:10px 12px; backdrop-filter:blur(6px);
     }
@@ -407,7 +407,7 @@ const css = `
   .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
 `;
 
-export default function Profile({ user, onBack, onNotif, notifCount, onExplore, onMatches, onChat, onMap, onSignOut, onSettings, onPricing }) {
+export default function Profile({ user, onBack, onNotif, notifCount, onExplore, onMatches, onChat, onMap, onSignOut, onSettings, onPricing, subscription }) {
   const { t } = useTranslation();
   const [profile, setProfile] = useState(DEF);
   const [loading, setLoading]   = useState(true);
@@ -619,6 +619,11 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
               value={profile.displayName}
               onChange={e => upd("displayName", e.target.value)}
             />
+            {subscription?.isActive && (
+              <span className={`pr-plan-badge ${subscription.plan}`}>
+                {subscription.plan === "elite" ? "⋆ Elite" : "✦ Premium"}
+              </span>
+            )}
             <div className="pr-loc-row">
               <span style={{ color:"var(--muted)", fontSize:"0.9rem" }}>📍</span>
               <input

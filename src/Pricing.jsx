@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
+import { db } from "./firebase";
+import { addDoc, collection, onSnapshot } from "firebase/firestore";
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -231,14 +233,19 @@ const style = `
     cursor: pointer; transition: all 0.25s;
     text-decoration: none; display: block; text-align: center;
   }
-  .px-btn-subscribe:hover {
+  .px-btn-subscribe:hover:not(:disabled) {
     background: rgba(201,168,76,0.1); border-color: var(--gold); color: var(--gold-light);
   }
+  .px-btn-subscribe:disabled { opacity: 0.55; cursor: not-allowed; }
   .px-card.featured .px-btn-subscribe {
     background: var(--gold); color: var(--black); border-color: var(--gold);
   }
-  .px-card.featured .px-btn-subscribe:hover {
+  .px-card.featured .px-btn-subscribe:hover:not(:disabled) {
     background: var(--gold-light); border-color: var(--gold-light);
+  }
+  .px-checkout-error {
+    margin-top: 10px; font-size: 0.72rem; color: #f5a0a0;
+    text-align: center; line-height: 1.5;
   }
 
   /* ── footer note ── */
@@ -281,18 +288,63 @@ const ELITE_FEATURES = [
   { ok: true, text: "Acceso anticipado a nuevas funciones" },
 ];
 
+const PRICE_IDS = {
+  premium: "price_1TeHGSQvs8aipB6ZWZ3rlBEE",
+  elite:   "price_1TeHHmQvs8aipB6ZW7edIWGw",
+};
+
+async function createCheckoutSession(uid, priceId) {
+  const ref = await addDoc(
+    collection(db, "customers", uid, "checkout_sessions"),
+    {
+      price: priceId,
+      trial_period_days: 7,
+      success_url: window.location.origin,
+      cancel_url: window.location.origin,
+      allow_promotion_codes: true,
+    }
+  );
+  return new Promise((resolve, reject) => {
+    const unsub = onSnapshot(ref, (snap) => {
+      const data = snap.data();
+      if (data?.url)   { unsub(); resolve(data.url); }
+      if (data?.error) { unsub(); reject(new Error(data.error.message || "Error al crear sesión")); }
+    });
+  });
+}
+
 export default function Pricing({
   user, onBack, onProfile, onExplore, onMatches, onChat,
   onMap, onSignOut, onNotif, notifCount, onSettings, onPricing,
+  subscription,
 }) {
   const { t } = useTranslation();
-  const [menuOpen,  setMenuOpen]  = useState(false);
-  const [annual,    setAnnual]    = useState(false);
+  const [menuOpen,    setMenuOpen]    = useState(false);
+  const [annual,      setAnnual]      = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState(null);
+  const [checkoutErr, setCheckoutErr] = useState("");
 
   const premiumPrice = annual ? "8,32" : "9,99";
   const elitePrice   = annual ? "16,65" : "19,99";
-  const premiumLink  = "https://buy.stripe.com/test_9B6fZj2FWeCQ3cy3jo6c000";
-  const eliteLink    = "https://buy.stripe.com/test_14A7sNa8o2U8bJ46vA6c001";
+
+  const handleSubscribe = async (planKey) => {
+    if (!user) {
+      setCheckoutErr("Inicia sesión para suscribirte.");
+      return;
+    }
+    setCheckoutErr("");
+    setLoadingPlan(planKey);
+    try {
+      const url = await createCheckoutSession(user.uid, PRICE_IDS[planKey]);
+      window.location.assign(url);
+    } catch (err) {
+      setCheckoutErr(err.message || "Error inesperado. Inténtalo de nuevo.");
+      setLoadingPlan(null);
+    }
+  };
+
+  const isCurrentPlan = (planKey) =>
+    subscription?.isActive && subscription?.plan === planKey;
 
   return (
     <>
@@ -406,14 +458,18 @@ export default function Pricing({
                 </li>
               ))}
             </ul>
-            <a
-              className="px-btn-subscribe"
-              href={premiumLink}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Suscribirse
-            </a>
+            {isCurrentPlan("premium") ? (
+              <button className="px-btn-current" disabled>Plan actual ✦</button>
+            ) : (
+              <button
+                className="px-btn-subscribe"
+                onClick={() => handleSubscribe("premium")}
+                disabled={!!loadingPlan}
+              >
+                {loadingPlan === "premium" ? "Redirigiendo…" : "Suscribirse — 7 días gratis"}
+              </button>
+            )}
+            {checkoutErr && <div className="px-checkout-error">{checkoutErr}</div>}
           </div>
 
           {/* ELITE */}
@@ -435,14 +491,17 @@ export default function Pricing({
                 </li>
               ))}
             </ul>
-            <a
-              className="px-btn-subscribe"
-              href={eliteLink}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Suscribirse
-            </a>
+            {isCurrentPlan("elite") ? (
+              <button className="px-btn-current" disabled>Plan actual ✦</button>
+            ) : (
+              <button
+                className="px-btn-subscribe"
+                onClick={() => handleSubscribe("elite")}
+                disabled={!!loadingPlan}
+              >
+                {loadingPlan === "elite" ? "Redirigiendo…" : "Suscribirse — 7 días gratis"}
+              </button>
+            )}
           </div>
 
         </div>
