@@ -176,6 +176,7 @@ export default function Notifications({
           <button className="nf-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div style={{ display:"flex", gap:12, alignItems:"center" }}>
             <LangButton align="right" />
+            <button className="bell-btn nf-desktop" onClick={onSettings} title={t("nav.settings")}>⚙</button>
             <button className="nf-mark-btn nf-desktop" style={{color:"#c9a84c",marginRight:8}} onClick={onPricing}>{t("nav.plans")}</button>
             <button className="nf-mark-btn nf-desktop" onClick={onMarkAllRead} disabled={unreadCount === 0}>
               {t("notifications.markAllRead")}

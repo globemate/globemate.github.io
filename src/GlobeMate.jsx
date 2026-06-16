@@ -794,7 +794,7 @@ function GlobeCanvas() {
   );
 }
 
-export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExplore, onChat, onMatches, onMap, onNotif, notifCount, onSettings, onPricing, onPrivacy, onTerms }) {
+export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExplore, onChat, onMatches, onMap, onNotif, notifCount, onSettings, onPricing, onPrivacy, onTerms, onAdmin }) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
@@ -836,6 +836,7 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
             <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
             <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
             <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
+            {onAdmin && <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onAdmin(); }} style={{ color:"var(--gold)", opacity:0.7 }}>◆ Admin</button>}
             <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
           </>
         ) : (
@@ -861,6 +862,7 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
               🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
             </button>
           )}
+          {user && <button className="bell-btn nav-desktop-only" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
           <button className="nav-cta nav-desktop-only" onClick={onPricing}>{t("nav.plans")}</button>
           {user ? (
             <>
@@ -1014,6 +1016,14 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
           <li><a href="#">Instagram</a></li>
         </ul>
         <div className="footer-copy">{t("landing.footerCopy")}</div>
+        {onAdmin && (
+          <button
+            onClick={onAdmin}
+            style={{ background:"none", border:"none", color:"rgba(201,168,76,0.25)", fontSize:"0.58rem", letterSpacing:"0.18em", textTransform:"uppercase", cursor:"pointer", padding:"4px 0", transition:"color 0.2s", marginTop:"8px" }}
+            onMouseEnter={e => e.target.style.color="rgba(201,168,76,0.6)"}
+            onMouseLeave={e => e.target.style.color="rgba(201,168,76,0.25)"}
+          >◆ Admin</button>
+        )}
       </footer>
     </>
   );

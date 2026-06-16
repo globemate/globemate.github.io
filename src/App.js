@@ -16,6 +16,7 @@ import Settings from "./Settings.jsx";
 import Pricing from "./Pricing.jsx";
 import Privacy from "./Privacy.jsx";
 import Terms from "./Terms.jsx";
+import AdminDashboard, { ADMIN_EMAIL } from "./AdminDashboard.js";
 
 const t = (ms) => new Date(Date.now() - ms);
 const INIT_NOTIFS = [
@@ -50,6 +51,7 @@ export default function App() {
   const [showPricing, setShowPricing] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms,   setShowTerms]   = useState(false);
+  const [showAdmin,   setShowAdmin]   = useState(false);
   const [notifs, setNotifs]           = useState(INIT_NOTIFS);
 
   const notifCount  = notifs.filter(n => !n.read).length;
@@ -85,6 +87,7 @@ export default function App() {
       setShowPricing(false);
       setShowPrivacy(false);
       setShowTerms(false);
+      setShowAdmin(false);
       if (screen === "profile") setShowProfile(true);
       else if (screen === "explore") setShowExplore(true);
       else if (screen === "chat") setShowChat(true);
@@ -95,6 +98,7 @@ export default function App() {
       else if (screen === "pricing") setShowPricing(true);
       else if (screen === "privacy") setShowPrivacy(true);
       else if (screen === "terms")   setShowTerms(true);
+      else if (screen === "admin")   setShowAdmin(true);
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -136,6 +140,7 @@ export default function App() {
     setShowPricing(false);
     setShowPrivacy(false);
     setShowTerms(false);
+    setShowAdmin(false);
     if (screen === "profile") setShowProfile(true);
     else if (screen === "explore") setShowExplore(true);
     else if (screen === "chat") setShowChat(true);
@@ -146,7 +151,10 @@ export default function App() {
     else if (screen === "pricing") setShowPricing(true);
     else if (screen === "privacy") setShowPrivacy(true);
     else if (screen === "terms")   setShowTerms(true);
+    else if (screen === "admin")   setShowAdmin(true);
   };
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   const nav = {
     onNotif:   () => goTo("notif"),
@@ -161,7 +169,12 @@ export default function App() {
     onPrivacy:  () => goTo("privacy"),
     onTerms:    () => goTo("terms"),
     onSignOut:  () => signOut(auth),
+    ...(isAdmin ? { onAdmin: () => goTo("admin") } : {}),
   };
+
+  if (showAdmin && user) {
+    return <AdminDashboard user={user} onBack={() => window.history.back()} />;
+  }
 
   if (showPrivacy) {
     return <Privacy onBack={() => window.history.back()} />;

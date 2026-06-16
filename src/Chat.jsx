@@ -372,6 +372,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
+            {user && <button className="bell-btn ch-desktop" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
             <button className="ch-nav-btn ch-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
             {user && <button className="ch-nav-btn ch-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
             {user && <button className="ch-nav-btn ch-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}

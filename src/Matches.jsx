@@ -326,6 +326,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
+            <button className="bell-btn mx-desktop" onClick={onSettings} title={t("nav.settings")}>⚙</button>
             <button className="mx-nav-btn mx-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>
             <button className="mx-nav-btn mx-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
             <button className="mx-nav-btn mx-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>

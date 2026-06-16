@@ -591,6 +591,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
             </button>
           )}
           {onPricing && <button className="pr-top-btn gold" onClick={onPricing}>{t("nav.plans")}</button>}
+          {onSettings && <button className="bell-btn" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
         </div>
 
         {/* cover */}

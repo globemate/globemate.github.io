@@ -330,6 +330,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
+            {user && <button className="bell-btn ex-desktop" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
             {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
             <button className="ex-nav-btn ex-desktop" onClick={onPricing}>{t("nav.plans")}</button>
             {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}

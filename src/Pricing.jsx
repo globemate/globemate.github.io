@@ -386,6 +386,7 @@ export default function Pricing({
                 🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
               </button>
             )}
+            {user && <button className="bell-btn pxd" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
             <button className="px-nav-btn pxd" onClick={onExplore}>{t("nav.explore")}</button>
             <button className="px-nav-btn pxd" onClick={onProfile}>{t("nav.myProfile")}</button>
             <button className="px-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
