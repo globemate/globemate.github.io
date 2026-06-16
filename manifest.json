@@ -1,8 +1,10 @@
 {
+  "id": "/",
   "name": "GlobeMate",
   "short_name": "GlobeMate",
   "description": "Connect with passionate travelers who share your destinations and your way of seeing the world.",
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0f0e0a",
