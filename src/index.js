@@ -5,10 +5,10 @@ import './i18n';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
-// Unregister any previously installed service workers so users always get fresh code
+// Register minimal service worker for PWA installability (network-only, no cache)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => r.unregister());
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }
 

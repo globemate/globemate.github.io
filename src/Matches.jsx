@@ -292,6 +292,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
       <div className={`mob-nav${menuOpen ? " open" : ""}`}>
         <div className="mob-nav-top">
           <div className="mob-nav-logo">Globe<span>Mate</span></div>
+          <LangButton align="right" />
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
         <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>

@@ -524,16 +524,16 @@ const style = `
     position: fixed; inset: 0; z-index: 300;
     background: rgba(10,9,5,0.98);
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 0; opacity: 0; visibility: hidden;
+    overflow-y: auto;
+    opacity: 0; visibility: hidden;
     transition: opacity 0.28s, visibility 0.28s;
   }
   .mobile-nav.open { opacity: 1; visibility: visible; }
   .mobile-nav-top {
-    position: absolute; top: 0; left: 0; right: 0;
     display: flex; align-items: center; justify-content: space-between;
     padding: 22px 28px;
     border-bottom: 1px solid rgba(201,168,76,0.1);
+    flex-shrink: 0;
   }
   .mobile-nav-logo {
     font-family: var(--serif); font-size: 1.4rem; font-weight: 300;
@@ -549,16 +549,16 @@ const style = `
   }
   .mobile-nav-close:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
   .mobile-nav-link {
-    font-family: var(--serif); font-size: 1.8rem; font-weight: 300;
+    font-family: var(--serif); font-size: 1.6rem; font-weight: 300;
     color: var(--cream-dim); text-decoration: none;
     background: none; border: none; cursor: pointer;
-    padding: 14px 48px; letter-spacing: 0.04em;
+    padding: 15px 28px; letter-spacing: 0.04em;
     transition: color 0.25s; text-align: center; width: 100%; line-height: 1.2; display: block;
   }
   .mobile-nav-link:hover { color: var(--gold-light); }
   .mobile-nav-link.gold { color: var(--gold); }
   .mobile-nav-link.gold:hover { color: var(--gold-light); }
-  .mobile-nav-divider { width: 44px; height: 1px; background: rgba(201,168,76,0.2); margin: 10px 0; }
+  .mobile-nav-divider { width: 44px; height: 1px; background: rgba(201,168,76,0.2); margin: 8px auto; }
 
   /* ── Responsive breakpoints ── */
   @media (max-width: 860px) {
@@ -812,6 +812,7 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
       <div className={`mobile-nav${menuOpen ? " open" : ""}`}>
         <div className="mobile-nav-top">
           <div className="mobile-nav-logo">Globe<span>Mate</span></div>
+          <LangButton align="right" />
           <button className="mobile-nav-close" onClick={() => setMenuOpen(false)} aria-label={t("common.close")}>✕</button>
         </div>
         <a href="#how" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.howItWorks")}</a>
@@ -826,10 +827,6 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
             <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
           </>
         )}
-        <div className="mobile-nav-divider" />
-        <div style={{ padding: "10px 24px" }}>
-          <LangButton align="left" />
-        </div>
         <div className="mobile-nav-divider" />
         {user ? (
           <>
