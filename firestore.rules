@@ -2,12 +2,38 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users collection — only the owner can read/write their own profile
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // ── Helper ─────────────────────────────────────────────────────────────
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.token.email == "iamrosa.soto18@gmail.com";
     }
 
-    // Products + prices — public read so the app can list plans
+    // ── Users ───────────────────────────────────────────────────────────────
+    // Explore y Matches leen perfiles de otros usuarios → read abierto a auth.
+    // El admin puede escribir cualquier campo (aprobar/rechazar verificación).
+    // El dueño puede crear/actualizar su perfil con dos restricciones:
+    //   1. No puede auto-asignarse isVerified = true.
+    //   2. verificationStatus solo puede dejarse como "pending" si lo cambia
+    //      (no puede poner "approved" ni "rejected" él mismo).
+    match /users/{uid} {
+      allow read: if request.auth != null;
+
+      allow write: if isAdmin();
+
+      allow create: if request.auth != null
+          && request.auth.uid == uid
+          && !request.resource.data.isVerified;
+
+      allow update: if request.auth != null
+          && request.auth.uid == uid
+          && request.resource.data.isVerified == resource.data.isVerified
+          && (
+               request.resource.data.verificationStatus == resource.data.verificationStatus
+            || request.resource.data.verificationStatus == "pending"
+          );
+    }
+
+    // ── Products / Prices / Tax rates (Stripe) — lectura pública ───────────
     match /products/{id} {
       allow read: if true;
       match /prices/{id} {
@@ -18,7 +44,7 @@ service cloud.firestore {
       }
     }
 
-    // Customers — each user can only read/write their own data
+    // ── Customers (extensión Stripe) — cada usuario solo ve lo suyo ─────────
     match /customers/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
 
@@ -33,7 +59,16 @@ service cloud.firestore {
       }
     }
 
-    // configuration — only the extension writes here; no client access needed
+    // ── Admin: leer TODAS las subscriptions (collectionGroup query) ─────────
+    // Necesario para el panel de AdminDashboard que usa collectionGroup("subscriptions").
+    // No entra en conflicto con la regla de customers/{uid}/subscriptions:
+    // Firestore aplica OR entre reglas — con la de arriba el dueño lee la suya;
+    // con esta el admin lee todas.
+    match /{path=**}/subscriptions/{id} {
+      allow read: if isAdmin();
+    }
+
+    // ── Configuration (uso interno de la extensión Stripe) ──────────────────
     match /configuration/{id} {
       allow read: if false;
     }
