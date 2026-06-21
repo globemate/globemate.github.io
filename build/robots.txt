@@ -1,6 +1,0 @@
-# GlobeMate — https://globemate.app
-User-agent: *
-Allow: /
-Disallow: /static/
-
-Sitemap: https://globemate.app/sitemap.xml
