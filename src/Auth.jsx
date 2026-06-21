@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
-import { auth, googleProvider, facebookProvider, db } from "./firebase";
+import { auth, googleProvider, facebookProvider, twitterProvider, db } from "./firebase";
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -333,8 +333,10 @@ const AUTH_ERRORS = {
   "auth/too-many-requests":                         "Demasiados intentos. Espera un momento.",
   "auth/popup-closed-by-user":                      "Ventana cerrada. Inténtalo de nuevo.",
   "auth/cancelled-popup-request":                   "Solicitud cancelada.",
-  "auth/account-exists-with-different-credential":  "Ya existe una cuenta con ese email usando otro método.",
+  "auth/account-exists-with-different-credential":  "Ya existe una cuenta con ese email usando otro método de inicio de sesión.",
   "auth/popup-blocked":                             "El navegador bloqueó el popup. Permite popups para este sitio.",
+  "auth/credential-already-in-use":                "Esta cuenta de X ya está vinculada a otro usuario.",
+  "auth/invalid-credential":                        "Credencial inválida. Vuelve a intentarlo.",
 };
 
 const PHONE_ERRORS = {
@@ -371,6 +373,12 @@ const GoogleIcon = () => (
 const FacebookIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
     <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+  </svg>
+);
+
+const XIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.25 2.25h6.906l4.256 5.637 4.832-5.637zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
   </svg>
 );
 
@@ -652,6 +660,9 @@ export default function Auth({ onAuthSuccess }) {
                 </button>
                 <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(facebookProvider)}>
                   <FacebookIcon /> {t("auth.continueFacebook")}
+                </button>
+                <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(twitterProvider)}>
+                  <XIcon /> Continuar con X
                 </button>
                 <div className="auth-divider">{t("auth.orEmail")}</div>
 

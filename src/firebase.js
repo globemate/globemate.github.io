@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, FacebookAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, FacebookAuthProvider, TwitterAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -22,6 +22,7 @@ export const storage = getStorage(app);
 
 export const googleProvider   = new GoogleAuthProvider();
 export const facebookProvider = new FacebookAuthProvider();
+export const twitterProvider  = new TwitterAuthProvider();
 
 googleProvider.setCustomParameters({ prompt: "select_account" });
 facebookProvider.addScope("email");
