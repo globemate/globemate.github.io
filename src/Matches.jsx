@@ -209,7 +209,7 @@ function MatchCard({ m, onMessage }) {
         <div>
           <div className="mx-card-name">
             {m.displayName}
-            <span className="mx-verified">✓</span>
+            {m.isVerified && <span className="mx-verified">✓</span>}
           </div>
           <div className="mx-location">📍 {m.location}</div>
           <div className="mx-matched-at">{t("matches.matchedAgo", { time: ago(m.matchedAt, t) })}</div>

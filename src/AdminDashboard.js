@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collectionGroup, onSnapshot, query } from "firebase/firestore";
+import { collectionGroup, onSnapshot, query, collection, where, updateDoc, doc } from "firebase/firestore";
 
 // ── ADMIN CONFIG ──────────────────────────────────────────────────────────────
 // Pon aquí tu email de Firebase Auth (el mismo con el que inicias sesión):
@@ -166,14 +166,78 @@ const css = `
     text-transform:uppercase; cursor:pointer; transition:all 0.22s; margin-top:8px;
   }
   .adm-denied-btn:hover { background:rgba(201,168,76,0.1); }
+
+  /* ── tabs ── */
+  .adm-tabs { display:flex; border-bottom:1px solid rgba(201,168,76,0.12); margin-bottom:40px; gap:0; }
+  .adm-tab {
+    background:none; border:none; border-bottom:2px solid transparent;
+    color:var(--muted); font-family:var(--sans); font-size:0.68rem;
+    letter-spacing:0.14em; text-transform:uppercase;
+    padding:13px 24px; cursor:pointer; transition:all 0.2s; margin-bottom:-1px;
+  }
+  .adm-tab:hover { color:var(--cream-dim); }
+  .adm-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+  .adm-tab-badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    background:var(--gold); color:#0a0905;
+    font-size:0.55rem; font-weight:600; min-width:16px; height:16px;
+    border-radius:8px; padding:0 4px; margin-left:7px;
+  }
+
+  /* ── verif cards ── */
+  .adm-verif-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; }
+  .adm-verif-card {
+    background:var(--card); border:1px solid rgba(201,168,76,0.12);
+    padding:18px; display:flex; flex-direction:column; gap:14px;
+  }
+  .adm-verif-imgs { display:flex; gap:10px; }
+  .adm-verif-col  { flex:1; display:flex; flex-direction:column; gap:6px; }
+  .adm-verif-img-label { font-size:0.54rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); }
+  .adm-verif-img { width:100%; aspect-ratio:1; object-fit:cover; border:1px solid rgba(201,168,76,0.1); background:#0a0905; }
+  .adm-verif-name { font-size:0.8rem; letter-spacing:0.06em; color:var(--cream-dim); }
+  .adm-verif-uid  { font-size:0.6rem; color:var(--muted); word-break:break-all; }
+  .adm-verif-actions { display:flex; gap:8px; }
+  .adm-approve {
+    flex:1; padding:9px 0; background:rgba(109,191,103,0.1);
+    border:1px solid rgba(109,191,103,0.28); color:#6dbf67;
+    font-family:var(--sans); font-size:0.64rem; letter-spacing:0.1em;
+    text-transform:uppercase; cursor:pointer; transition:all 0.2s;
+  }
+  .adm-approve:hover { background:rgba(109,191,103,0.2); }
+  .adm-reject {
+    flex:1; padding:9px 0; background:rgba(201,112,106,0.08);
+    border:1px solid rgba(201,112,106,0.25); color:#c9706a;
+    font-family:var(--sans); font-size:0.64rem; letter-spacing:0.1em;
+    text-transform:uppercase; cursor:pointer; transition:all 0.2s;
+  }
+  .adm-reject:hover { background:rgba(201,112,106,0.18); }
 `;
 
 export default function AdminDashboard({ user, onBack }) {
   const [subs, setSubs]       = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [activeTab, setActiveTab]     = useState("subs");
+  const [pendingVerifs, setPendingVerifs] = useState([]);
+  const [verifLoading, setVerifLoading]   = useState(true);
 
   const isAdmin = user?.email === ADMIN_EMAIL;
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const q = query(collection(db, "users"), where("verificationStatus", "==", "pending"));
+    const unsub = onSnapshot(q,
+      snap => { setPendingVerifs(snap.docs.map(d => ({ uid: d.id, ...d.data() }))); setVerifLoading(false); },
+      ()   => setVerifLoading(false)
+    );
+    return unsub;
+  }, [isAdmin]);
+
+  const approveVerif = (uid) =>
+    updateDoc(doc(db, "users", uid), { verificationStatus: "approved", isVerified: true });
+
+  const rejectVerif = (uid) =>
+    updateDoc(doc(db, "users", uid), { verificationStatus: "rejected", isVerified: false });
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -262,19 +326,72 @@ export default function AdminDashboard({ user, onBack }) {
         <div className="adm-body">
           <h1 className="adm-title">Panel de Administrador</h1>
           <p className="adm-subtitle">
-            Métricas de suscripciones ·{" "}
             {now.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
           </p>
 
-          {loading && <div className="adm-loading">Cargando datos…</div>}
+          {/* ── Tabs ── */}
+          <div className="adm-tabs">
+            <button className={`adm-tab${activeTab === "subs" ? " active" : ""}`} onClick={() => setActiveTab("subs")}>
+              📊 Suscripciones
+            </button>
+            <button className={`adm-tab${activeTab === "verifs" ? " active" : ""}`} onClick={() => setActiveTab("verifs")}>
+              📸 Verificaciones
+              {pendingVerifs.length > 0 && <span className="adm-tab-badge">{pendingVerifs.length}</span>}
+            </button>
+          </div>
 
-          {error && (
-            <div className="adm-error">
-              ⚠️ {error}
-            </div>
+          {/* ── VERIFICACIONES TAB ── */}
+          {activeTab === "verifs" && (
+            <>
+              <div className="adm-sec">Verificaciones pendientes</div>
+              {verifLoading ? (
+                <div className="adm-loading">Cargando…</div>
+              ) : pendingVerifs.length === 0 ? (
+                <div className="adm-empty">
+                  <div className="adm-empty-ico">✓</div>
+                  <div className="adm-empty-msg">No hay verificaciones pendientes.</div>
+                </div>
+              ) : (
+                <div className="adm-verif-grid">
+                  {pendingVerifs.map(u => (
+                    <div className="adm-verif-card" key={u.uid}>
+                      <div className="adm-verif-imgs">
+                        <div className="adm-verif-col">
+                          <div className="adm-verif-img-label">Selfie enviada</div>
+                          {u.verificationSelfieUrl
+                            ? <img className="adm-verif-img" src={u.verificationSelfieUrl} alt="selfie" />
+                            : <div className="adm-verif-img" style={{ display:"flex", alignItems:"center", justifyContent:"center", color:"var(--muted)", fontSize:"0.65rem" }}>Sin imagen</div>
+                          }
+                        </div>
+                        <div className="adm-verif-col">
+                          <div className="adm-verif-img-label">Foto de perfil</div>
+                          {u.photoURL
+                            ? <img className="adm-verif-img" src={u.photoURL} alt="perfil" />
+                            : <div className="adm-verif-img" style={{ display:"flex", alignItems:"center", justifyContent:"center", fontSize:"2rem" }}>👤</div>
+                          }
+                        </div>
+                      </div>
+                      <div>
+                        <div className="adm-verif-name">{u.displayName || "Sin nombre"}</div>
+                        <div className="adm-verif-uid">{u.uid}</div>
+                      </div>
+                      <div className="adm-verif-actions">
+                        <button className="adm-approve" onClick={() => approveVerif(u.uid)}>Aprobar ✓</button>
+                        <button className="adm-reject"  onClick={() => rejectVerif(u.uid)}>Rechazar ✗</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
-          {!loading && !error && (
+          {/* ── SUSCRIPCIONES TAB ── */}
+          {activeTab === "subs" && loading && <div className="adm-loading">Cargando datos…</div>}
+          {activeTab === "subs" && error && (
+            <div className="adm-error">⚠️ {error}</div>
+          )}
+          {activeTab === "subs" && !loading && !error && (
             <>
               {/* ── Stat cards ── */}
               <div className="adm-cards">

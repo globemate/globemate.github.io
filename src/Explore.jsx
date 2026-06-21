@@ -184,7 +184,7 @@ function TravelerCard({ traveler, connected, onConnect }) {
         <div>
           <div className="ex-card-name">
             {traveler.displayName || "Traveler"}
-            <span className="ex-card-verified">✓</span>
+            {traveler.isVerified && <span className="ex-card-verified">✓</span>}
           </div>
           {traveler.location && (
             <div className="ex-card-location">

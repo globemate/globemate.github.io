@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage } from "./firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
@@ -206,6 +206,8 @@ const DEF = {
   travelStyles: [],
   languages: [],
   socials: { instagram: "", twitter: "", linkedin: "" },
+  verificationStatus: "",
+  isVerified: false,
 };
 
 const css = `
@@ -411,6 +413,50 @@ const css = `
   .mob-nav-link:hover { color:var(--cream); }
   .mob-nav-link.gold { color:var(--gold); }
   .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
+
+  /* ── verification section ── */
+  .pr-verif-section { margin-top:16px; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+  .pr-verif-btn {
+    background:none; border:1px solid rgba(201,168,76,0.3); color:var(--gold);
+    font-family:var(--sans); font-size:0.66rem; letter-spacing:0.14em;
+    text-transform:uppercase; padding:7px 16px; cursor:pointer; transition:all 0.22s;
+  }
+  .pr-verif-btn:hover { background:rgba(201,168,76,0.08); border-color:var(--gold); }
+  .pr-verif-status { font-size:0.68rem; letter-spacing:0.08em; padding:5px 12px; line-height:1.5; }
+  .pr-verif-status.pending  { color:#e8c97a; background:rgba(232,201,122,0.07); border:1px solid rgba(232,201,122,0.2); }
+  .pr-verif-status.approved { color:#6dbf67; background:rgba(109,191,103,0.07); border:1px solid rgba(109,191,103,0.2); }
+  .pr-verif-status.rejected { color:#c9706a; background:rgba(201,112,106,0.07); border:1px solid rgba(201,112,106,0.2); }
+
+  /* ── selfie modal ── */
+  .pr-selfie-overlay {
+    position:fixed; inset:0; z-index:1000;
+    background:rgba(10,9,5,0.97); backdrop-filter:blur(10px);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .pr-selfie-modal {
+    width:100%; max-width:420px;
+    background:var(--card); border:1px solid rgba(201,168,76,0.22);
+    padding:26px; display:flex; flex-direction:column; gap:16px;
+  }
+  .pr-selfie-header { display:flex; align-items:center; justify-content:space-between; }
+  .pr-selfie-title { font-family:var(--serif); font-size:1.35rem; font-weight:300; color:var(--gold-light); letter-spacing:0.06em; }
+  .pr-selfie-close { background:none; border:none; color:var(--muted); font-size:1.3rem; cursor:pointer; padding:2px 8px; transition:color 0.2s; line-height:1; }
+  .pr-selfie-close:hover { color:var(--cream); }
+  .pr-selfie-hint { font-size:0.7rem; letter-spacing:0.08em; color:var(--muted); line-height:1.65; }
+  .pr-selfie-video {
+    width:100%; aspect-ratio:4/3; object-fit:cover;
+    background:#000; border:1px solid rgba(201,168,76,0.1);
+    transform:scaleX(-1);
+  }
+  .pr-selfie-waiting { width:100%; aspect-ratio:4/3; background:#0a0905; border:1px solid rgba(201,168,76,0.1); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:0.72rem; letter-spacing:0.1em; }
+  .pr-selfie-capture {
+    padding:13px; background:rgba(201,168,76,0.1);
+    border:1px solid rgba(201,168,76,0.35); color:var(--gold);
+    font-family:var(--sans); font-size:0.74rem; letter-spacing:0.14em;
+    text-transform:uppercase; cursor:pointer; transition:all 0.22s;
+  }
+  .pr-selfie-capture:hover:not(:disabled) { background:rgba(201,168,76,0.18); }
+  .pr-selfie-capture:disabled { opacity:0.4; cursor:not-allowed; }
 `;
 
 export default function Profile({ user, onBack, onNotif, notifCount, onExplore, onMatches, onChat, onMap, onSignOut, onSettings, onPricing, subscription }) {
@@ -435,6 +481,62 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
   const photoRef = useRef();
   const coverRef = useRef();
+  const selfieVideoRef  = useRef();
+  const selfieCanvasRef = useRef();
+
+  const [selfieModal,     setSelfieModal]     = useState(false);
+  const [selfieStream,    setSelfieStream]    = useState(null);
+  const [selfieUploading, setSelfieUploading] = useState(false);
+
+  useEffect(() => {
+    if (selfieVideoRef.current && selfieStream) {
+      selfieVideoRef.current.srcObject = selfieStream;
+    }
+  }, [selfieStream]);
+
+  const openSelfie = async () => {
+    setSelfieModal(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+      setSelfieStream(stream);
+    } catch {
+      setSelfieModal(false);
+      setMsg({ text: "No se pudo acceder a la cámara. Permite el acceso en tu navegador.", type: "err" });
+    }
+  };
+
+  const closeSelfie = () => {
+    if (selfieStream) { selfieStream.getTracks().forEach(t => t.stop()); setSelfieStream(null); }
+    setSelfieModal(false);
+  };
+
+  const captureSelfie = async () => {
+    const video  = selfieVideoRef.current;
+    const canvas = selfieCanvasRef.current;
+    if (!video || !canvas) return;
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    setSelfieUploading(true);
+    try {
+      const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.85));
+      const r    = sRef(storage, `verifications/${user.uid}/selfie.jpg`);
+      await uploadBytes(r, blob, { contentType: "image/jpeg" });
+      const url  = await getDownloadURL(r);
+      await setDoc(doc(db, "users", user.uid), {
+        verificationStatus:        "pending",
+        verificationSelfieUrl:     url,
+        verificationRequestedAt:   serverTimestamp(),
+      }, { merge: true });
+      setProfile(p => ({ ...p, verificationStatus: "pending", verificationSelfieUrl: url }));
+      closeSelfie();
+      setMsg({ text: "Selfie enviada. Tu verificación está pendiente de revisión.", type: "ok" });
+      setTimeout(() => setMsg({ text: "", type: "" }), 5000);
+    } catch {
+      setMsg({ text: "Error al subir la selfie. Inténtalo de nuevo.", type: "err" });
+    }
+    setSelfieUploading(false);
+  };
 
   useEffect(() => {
     getDoc(doc(db, "users", user.uid))
@@ -637,7 +739,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
                 value={profile.location}
                 onChange={e => upd("location", e.target.value)}
               />
-              <span className="pr-badge">{t("profile.verifiedTraveler")}</span>
+              {profile.isVerified && <span className="pr-badge">{t("profile.verifiedTraveler")}</span>}
             </div>
             <div className="pr-stats">
               <div>
@@ -652,6 +754,24 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
                 <div className="pr-stat-n">{profile.interests.length}</div>
                 <div className="pr-stat-l">{t("profile.interests")}</div>
               </div>
+            </div>
+
+            {/* ── verification ── */}
+            <div className="pr-verif-section">
+              {profile.verificationStatus === "pending" && (
+                <div className="pr-verif-status pending">⏳ Verificación pendiente de revisión</div>
+              )}
+              {profile.verificationStatus === "approved" && (
+                <div className="pr-verif-status approved">✓ Perfil verificado</div>
+              )}
+              {profile.verificationStatus === "rejected" && (
+                <div className="pr-verif-status rejected">✗ Verificación rechazada — puedes intentarlo de nuevo</div>
+              )}
+              {(!profile.verificationStatus || profile.verificationStatus === "rejected") && (
+                <button className="pr-verif-btn" onClick={openSelfie}>
+                  Verificar mi perfil 📸
+                </button>
+              )}
             </div>
           </div>
           <button className="pr-back" onClick={onBack}>{t("nav.back")}</button>
@@ -879,6 +999,33 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
         )}
 
       </div>
+
+      {/* ── selfie verification modal ── */}
+      {selfieModal && (
+        <div className="pr-selfie-overlay">
+          <div className="pr-selfie-modal">
+            <div className="pr-selfie-header">
+              <span className="pr-selfie-title">Verificar identidad</span>
+              <button className="pr-selfie-close" onClick={closeSelfie}>✕</button>
+            </div>
+            <p className="pr-selfie-hint">
+              Se usará la cámara frontal en vivo. Asegúrate de que tu rostro sea claramente visible y con buena iluminación. No se permite subir fotos desde la galería.
+            </p>
+            {selfieStream
+              ? <video ref={selfieVideoRef} className="pr-selfie-video" autoPlay playsInline muted />
+              : <div className="pr-selfie-waiting">Iniciando cámara…</div>
+            }
+            <canvas ref={selfieCanvasRef} style={{ display: "none" }} />
+            <button
+              className="pr-selfie-capture"
+              onClick={captureSelfie}
+              disabled={!selfieStream || selfieUploading}
+            >
+              {selfieUploading ? "Enviando…" : "📸 Tomar selfie y enviar"}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
