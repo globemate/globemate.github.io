@@ -10,7 +10,7 @@ export const ADMIN_EMAIL = "iamrosa.soto18@gmail.com";
 //
 //   match /{path=**}/subscriptions/{subId} {
 //     allow read: if request.auth != null
-//                 && request.auth.token.email == "danielaj1446@gmail.com";
+//                 && request.auth.token.email == "iamrosa.soto18@gmail.com";
 //   }
 // ─────────────────────────────────────────────────────────────────────────────
 

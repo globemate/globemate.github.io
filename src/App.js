@@ -172,7 +172,7 @@ export default function App() {
     ...(isAdmin ? { onAdmin: () => goTo("admin") } : {}),
   };
 
-  if (showAdmin && user) {
+  if (showAdmin && user && isAdmin) {
     return <AdminDashboard user={user} onBack={() => window.history.back()} />;
   }
 
