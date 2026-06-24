@@ -386,6 +386,9 @@ const XIcon = () => (
    Component
 ───────────────────────────────────────── */
 export default function Auth({ onAuthSuccess }) {
+  // Cambiar a true cuando el plan de X Developer permita OAuth 1.0a con Firebase
+  const showTwitterLogin = false;
+
   const { t } = useTranslation();
   const [mode, setMode]         = useState("login"); // login | register | reset | phone | phone-code
 
@@ -661,9 +664,11 @@ export default function Auth({ onAuthSuccess }) {
                 <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(facebookProvider)}>
                   <FacebookIcon /> {t("auth.continueFacebook")}
                 </button>
-                <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(twitterProvider)}>
-                  <XIcon /> Continuar con X
-                </button>
+                {showTwitterLogin && (
+                  <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(twitterProvider)}>
+                    <XIcon /> Continuar con X
+                  </button>
+                )}
                 <div className="auth-divider">{t("auth.orEmail")}</div>
 
                 {error && <div className="auth-error">{error}</div>}
