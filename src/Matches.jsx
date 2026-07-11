@@ -1,43 +1,37 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
 
-/* ── mock matches ── */
-const MOCK_MATCHES = [
-  { uid:"m1",  displayName:"Sofia Chen",     location:"Barcelona, Spain",  emoji:"🌸", matchedAt: new Date(Date.now()-3600000),    visitedCountries:["JP","FR","IT","ES","PT","GR","TR","MA"], interests:["🏛️ History","🍜 Food","📸 Photography","🍷 Wine"],       travelStyles:["✨ Luxury","🏨 Boutique hotels"], upcoming:[{name:"Kyoto, Japan",status:"confirmed"},{name:"Lisbon",status:"planning"}],   languages:[{lang:"Spanish",level:"Native"},{lang:"English",level:"Fluent"}],   isNew:true  },
-  { uid:"m5",  displayName:"James Mitchell", location:"London, UK",        emoji:"🗺️", matchedAt: new Date(Date.now()-7200000),    visitedCountries:["US","JP","IN","AU","ZA","BR","MX","EG","MA","TR"], interests:["🏛️ History","🌆 Cities","📸 Photography","🎭 Culture"], travelStyles:["⚡ Fast-paced","🏨 Boutique hotels"], upcoming:[{name:"Seoul",status:"confirmed"},{name:"Marrakech",status:"planning"}], languages:[{lang:"English",level:"Native"},{lang:"French",level:"Conversational"}], isNew:true },
-  { uid:"m3",  displayName:"Yuki Tanaka",    location:"Tokyo, Japan",      emoji:"🌊", matchedAt: new Date(Date.now()-86400000),   visitedCountries:["NZ","IS","NO","CA","AU","NL","SE"],        interests:["🌿 Nature","🏔️ Mountains","🧘 Wellness","📸 Photography"], travelStyles:["🌱 Eco-travel","🏕️ Camping"],     upcoming:[{name:"Iceland",status:"confirmed"},{name:"New Zealand",status:"planning"}], languages:[{lang:"Japanese",level:"Native"},{lang:"English",level:"Fluent"}],   isNew:true },
-  { uid:"m8",  displayName:"Nina Schmidt",   location:"Berlin, Germany",   emoji:"🎨", matchedAt: new Date(Date.now()-172800000),  visitedCountries:["PL","CZ","HU","HR","GR","IT","FR","ES","PT","IS"], interests:["🎨 Art","🎵 Music","🎭 Culture","🚂 Train travel"],   travelStyles:["🚐 Road trips","🎒 Backpacker"],  upcoming:[{name:"Porto, Portugal",status:"planning"}],                           languages:[{lang:"German",level:"Native"},{lang:"English",level:"Fluent"}],    isNew:false },
-  { uid:"m9",  displayName:"Priya Sharma",   location:"Mumbai, India",     emoji:"🌺", matchedAt: new Date(Date.now()-259200000),  visitedCountries:["TH","SG","JP","FR","IT","GB","US","AU"],   interests:["🍜 Food","🏛️ History","🎭 Culture","🧘 Wellness"],        travelStyles:["🏨 Boutique hotels","✨ Luxury"],  upcoming:[{name:"Kyoto, Japan",status:"confirmed"},{name:"Amalfi",status:"planning"}], languages:[{lang:"Hindi",level:"Native"},{lang:"English",level:"Fluent"}],     isNew:false },
-  { uid:"m6",  displayName:"Amara Diallo",   location:"Paris, France",     emoji:"✨", matchedAt: new Date(Date.now()-345600000),  visitedCountries:["SN","MA","IT","ES","PT","GR","US","BR"],   interests:["🎨 Art","🎪 Festivals","🍜 Food","🌆 Cities"],            travelStyles:["✨ Luxury","🏨 Boutique hotels"],  upcoming:[{name:"Florence, Italy",status:"confirmed"}],                          languages:[{lang:"French",level:"Native"},{lang:"English",level:"Fluent"}],   isNew:false },
-  { uid:"m12", displayName:"Kai Nakamura",   location:"Osaka, Japan",      emoji:"🎋", matchedAt: new Date(Date.now()-432000000),  visitedCountries:["NZ","AU","IS","NO","CH","AT","NL","DE"],   interests:["🌿 Nature","🧘 Wellness","🍜 Food","🏔️ Mountains"],       travelStyles:["🌱 Eco-travel","🏕️ Camping"],     upcoming:[{name:"Patagonia, Chile",status:"planning"}],                          languages:[{lang:"Japanese",level:"Native"},{lang:"English",level:"Fluent"}],  isNew:false },
-  { uid:"m10", displayName:"Alex Rivera",    location:"Singapore",         emoji:"📸", matchedAt: new Date(Date.now()-518400000),  visitedCountries:["KR","JP","TH","VN","ID","AU","NZ","US","GB","FR"], interests:["📸 Photography","🌆 Cities","🍜 Food"],                   travelStyles:["⚡ Fast-paced","🏨 Boutique hotels"], upcoming:[{name:"Seoul",status:"confirmed"},{name:"Tokyo",status:"planning"}], languages:[{lang:"English",level:"Native"},{lang:"Mandarin",level:"Conversational"}], isNew:false },
-];
-
-/* my mock profile for compatibility calculation */
-const MY_PROFILE = {
-  interests:    ["🏛️ History","📸 Photography","🌿 Nature","🍜 Food","🎭 Culture"],
-  travelStyles: ["🏨 Boutique hotels","✨ Luxury"],
-  upcoming:     [{name:"Kyoto, Japan"},{name:"Iceland"},{name:"Lisbon"}],
-};
-
-function compatibility(match) {
-  const sharedInterests  = (match.interests || []).filter(i => MY_PROFILE.interests.includes(i)).length;
-  const sharedStyles     = (match.travelStyles || []).filter(s => MY_PROFILE.travelStyles.includes(s)).length;
-  const myDests          = MY_PROFILE.upcoming.map(d => d.name.toLowerCase());
-  const sharedDests      = (match.upcoming || []).filter(d => myDests.some(m => d.name.toLowerCase().includes(m) || m.includes(d.name.toLowerCase())));
-  const score = Math.min(99, sharedInterests * 14 + sharedStyles * 12 + sharedDests.length * 18 + 20);
-  return { score, sharedInterests, sharedDests };
+function toDate(raw) {
+  if (!raw) return null;
+  if (raw?.toDate) return raw.toDate();
+  return new Date(raw);
 }
 
-function ago(d, t) {
+function ago(raw, t) {
+  const d = toDate(raw);
+  if (!d || isNaN(d)) return t("matches.matchedRecently") || "Nuevo";
   const s = Math.floor((Date.now() - d) / 1000);
-  if (s < 3600)   return t("matches.minutesAgo", { n: Math.floor(s/60) });
-  if (s < 86400)  return t("matches.hoursAgo",   { n: Math.floor(s/3600) });
-  if (s < 604800) return t("matches.daysAgo",    { n: Math.floor(s/86400) });
-  return d.toLocaleDateString([], { month:"short", day:"numeric" });
+  if (s < 3600)   return t("matches.minutesAgo", { n: Math.floor(s / 60) });
+  if (s < 86400)  return t("matches.hoursAgo",   { n: Math.floor(s / 3600) });
+  if (s < 604800) return t("matches.daysAgo",    { n: Math.floor(s / 86400) });
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function compatibility(match, myProfile) {
+  if (!myProfile) return null;
+  const myInterests = myProfile.interests    || [];
+  const myStyles    = myProfile.travelStyles || [];
+  const myDests     = (myProfile.upcoming    || []).map(d => (d.name || "").toLowerCase());
+  const sharedInterests = (match.interests    || []).filter(i => myInterests.includes(i)).length;
+  const sharedStyles    = (match.travelStyles || []).filter(s => myStyles.includes(s)).length;
+  const sharedDests     = (match.upcoming     || []).filter(d =>
+    myDests.some(m => (d.name || "").toLowerCase().includes(m) || m.includes((d.name || "").toLowerCase()))
+  );
+  const score = Math.min(99, sharedInterests * 14 + sharedStyles * 12 + sharedDests.length * 18 + 20);
+  return { score, sharedDests };
 }
 
 const STYLE_GRADIENT = {
@@ -184,41 +178,48 @@ const css = `
 `;
 
 
-function MatchCard({ m, onMessage }) {
+function MatchCard({ m, myProfile, onMessage }) {
   const { t } = useTranslation();
-  const { score, sharedInterests, sharedDests } = compatibility(m);
+  const compat = compatibility(m, myProfile);
   const gradient = m.travelStyles?.[0] ? (STYLE_GRADIENT[m.travelStyles[0]] || DEF_GRADIENT) : DEF_GRADIENT;
-  const sharedInterestList = (m.interests || []).filter(i => MY_PROFILE.interests.includes(i));
-  const otherInterests     = (m.interests || []).filter(i => !MY_PROFILE.interests.includes(i)).slice(0, 2);
+  const myInterests        = myProfile?.interests || [];
+  const sharedInterestList = (m.interests || []).filter(i => myInterests.includes(i));
+  const otherInterests     = (m.interests || []).filter(i => !myInterests.includes(i)).slice(0, 2);
+  const isNew              = toDate(m.matchedAt) && (Date.now() - toDate(m.matchedAt)) < 172800000;
 
   return (
     <div className="mx-card">
       <div className="mx-card-banner" style={{ background: gradient }}>
         <div className="mx-card-banner-overlay" />
-        {m.isNew && <span className="mx-new-badge">New</span>}
-        <div className="mx-compat">
-          <span className="mx-compat-score">{score}%</span>
-          <span className="mx-compat-label">match</span>
-        </div>
+        {isNew && <span className="mx-new-badge">New</span>}
+        {compat && (
+          <div className="mx-compat">
+            <span className="mx-compat-score">{compat.score}%</span>
+            <span className="mx-compat-label">match</span>
+          </div>
+        )}
         <div className="mx-card-avatar">
-          {m.photoURL ? <img src={m.photoURL} alt={m.displayName} /> : m.emoji}
+          {m.photoURL
+            ? <img src={m.photoURL} alt={m.displayName || "Traveler"} />
+            : <span>{m.emoji || "👤"}</span>
+          }
         </div>
       </div>
 
       <div className="mx-card-body">
         <div>
           <div className="mx-card-name">
-            {m.displayName}
+            {m.displayName || "Traveler"}
             {m.isVerified && <span className="mx-verified">✓</span>}
           </div>
-          <div className="mx-location">📍 {m.location}</div>
+          {m.location && <div className="mx-location">📍 {m.location}</div>}
           <div className="mx-matched-at">{t("matches.matchedAgo", { time: ago(m.matchedAt, t) })}</div>
         </div>
 
-        {sharedDests.length > 0 && (
+        {compat?.sharedDests?.length > 0 && (
           <div className="mx-shared">
             <span className="mx-shared-label">✈️ {t("map.goingTo")}</span>
-            <span className="mx-shared-text">{sharedDests.map(d => d.name).join(" · ")}</span>
+            <span className="mx-shared-text">{compat.sharedDests.map(d => d.name).join(" · ")}</span>
           </div>
         )}
 
@@ -232,9 +233,13 @@ function MatchCard({ m, onMessage }) {
           </div>
         )}
 
-        <div style={{ fontSize:"0.72rem", color:"var(--muted)" }}>
-          🌍 {(m.visitedCountries||[]).length} countries · 🗣️ {(m.languages||[]).map(l=>l.lang).slice(0,2).join(", ")}
-        </div>
+        {((m.visitedCountries||[]).length > 0 || (m.languages||[]).length > 0) && (
+          <div style={{ fontSize:"0.72rem", color:"var(--muted)" }}>
+            {(m.visitedCountries||[]).length > 0 && <>🌍 {m.visitedCountries.length} countries</>}
+            {(m.visitedCountries||[]).length > 0 && (m.languages||[]).length > 0 && " · "}
+            {(m.languages||[]).length > 0 && <>🗣️ {m.languages.map(l => l.lang).slice(0,2).join(", ")}</>}
+          </div>
+        )}
 
         <div className="mx-card-footer">
           <button className="mx-msg-btn" onClick={onMessage}>{t("matches.message")}</button>
@@ -254,6 +259,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
     { key:"countries",label: t("matches.sortCountries") },
   ];
   const [matches, setMatches]     = useState([]);
+  const [myProfile, setMyProfile] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [sort, setSort]           = useState("recent");
   const [newOnly, setNewOnly]     = useState(false);
@@ -262,27 +268,54 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
   useEffect(() => {
     const load = async () => {
       try {
-        const snap = await getDocs(collection(db, "matches"));
-        const real = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(m => m.uid !== user?.uid);
-        setMatches(real.length >= 2 ? real : [...real, ...MOCK_MATCHES.slice(0, 8 - real.length)]);
-      } catch {
-        setMatches(MOCK_MATCHES);
+        // Fetch my profile for compatibility calculation
+        const mySnap = await getDoc(doc(db, "users", user.uid));
+        const myData = mySnap.exists() ? mySnap.data() : null;
+        setMyProfile(myData);
+
+        // Fetch my matches
+        const q    = query(collection(db, "matches"), where("users", "array-contains", user.uid));
+        const snap = await getDocs(q);
+
+        // For each match, fetch the other user's profile
+        const enriched = await Promise.all(snap.docs.map(async d => {
+          const matchData = d.data();
+          const otherUid  = (matchData.users || []).find(uid => uid !== user.uid);
+          let otherProfile = {};
+          if (otherUid) {
+            const otherSnap = await getDoc(doc(db, "users", otherUid));
+            if (otherSnap.exists()) otherProfile = otherSnap.data();
+          }
+          return {
+            matchId:   d.id,
+            uid:       otherUid || d.id,
+            matchedAt: matchData.createdAt,
+            ...otherProfile,
+          };
+        }));
+
+        setMatches(enriched);
+      } catch (err) {
+        console.error("Error loading matches:", err);
+        setMatches([]);
       }
       setLoading(false);
     };
     load();
   }, [user]);
 
-  const sorted = [...(newOnly ? matches.filter(m => m.isNew) : matches)].sort((a, b) => {
-    if (sort === "recent")    return new Date(b.matchedAt) - new Date(a.matchedAt);
-    if (sort === "compat")    return compatibility(b).score - compatibility(a).score;
-    if (sort === "shared")    return compatibility(b).sharedDests.length - compatibility(a).sharedDests.length;
+  const isNew = m => toDate(m.matchedAt) && (Date.now() - toDate(m.matchedAt)) < 172800000;
+
+  const sorted = [...(newOnly ? matches.filter(isNew) : matches)].sort((a, b) => {
+    if (sort === "recent")    return (toDate(b.matchedAt) || 0) - (toDate(a.matchedAt) || 0);
+    if (sort === "compat")    return (compatibility(b, myProfile)?.score || 0) - (compatibility(a, myProfile)?.score || 0);
+    if (sort === "shared")    return (compatibility(b, myProfile)?.sharedDests?.length || 0) - (compatibility(a, myProfile)?.sharedDests?.length || 0);
     if (sort === "countries") return (b.visitedCountries||[]).length - (a.visitedCountries||[]).length;
     return 0;
   });
 
-  const newCount      = matches.filter(m => m.isNew).length;
-  const sharedDestAll = matches.reduce((acc, m) => acc + compatibility(m).sharedDests.length, 0);
+  const newCount      = matches.filter(isNew).length;
+  const sharedDestAll = myProfile ? matches.reduce((acc, m) => acc + (compatibility(m, myProfile)?.sharedDests?.length || 0), 0) : 0;
 
   return (
     <>
@@ -385,7 +418,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
             <div className="mx-empty-icon">💫</div>
             <div className="mx-empty-txt">{newOnly ? t("matches.noNewMatches") : t("matches.noMatches")}</div>
             <div className="mx-empty-sub">
-              {newOnly ? t("matches.noNewMatchesHint") : t("matches.noMatchesHint")}
+              {newOnly ? t("matches.noNewMatchesHint") : "Aún no tienes matches — explora perfiles para conectar."}
             </div>
             {!newOnly && (
               <button className="mx-explore-btn" onClick={onExplore}>{t("matches.exploreTravelers")}</button>
@@ -394,7 +427,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
         ) : (
           <div className="mx-grid">
             {sorted.map(m => (
-              <MatchCard key={m.uid} m={m} onMessage={onChat} />
+              <MatchCard key={m.matchId || m.uid} m={m} myProfile={myProfile} onMessage={onChat} />
             ))}
           </div>
         )}

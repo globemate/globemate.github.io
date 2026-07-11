@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
 
@@ -258,6 +258,64 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
     load();
   }, [user]);
 
+  const handleConnect = async (traveler) => {
+    const fromUid = user?.uid;
+    const toUid   = traveler.uid;
+    if (!fromUid || !toUid) return;
+
+    // Optimistic UI update
+    setConnected(prev => ({ ...prev, [toUid]: true }));
+
+    try {
+      // 1. Write our like
+      await setDoc(doc(db, "likes", `${fromUid}_${toUid}`), {
+        fromUid,
+        toUid,
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+
+      // 2. Check for mutual like
+      const inverseSnap = await getDoc(doc(db, "likes", `${toUid}_${fromUid}`));
+      if (inverseSnap.exists()) {
+        // 3. Create match — ID uses alphabetically sorted UIDs for idempotency
+        const [uidA, uidB] = [fromUid, toUid].sort();
+        const matchId = `${uidA}_${uidB}`;
+
+        await setDoc(doc(db, "matches", matchId), {
+          users: [uidA, uidB],
+          createdAt: serverTimestamp(),
+        }, { merge: true });
+
+        // 4. Create conversation linked to this match
+        await setDoc(doc(db, "conversations", matchId), {
+          participants: [uidA, uidB],
+          participantProfiles: {
+            [fromUid]: {
+              uid: fromUid,
+              displayName: user.displayName || "Traveler",
+              photoURL: user.photoURL || null,
+            },
+            [toUid]: {
+              uid: toUid,
+              displayName: traveler.displayName || "Traveler",
+              photoURL: traveler.photoURL || null,
+              emoji: traveler.emoji || null,
+              location: traveler.location || null,
+            },
+          },
+          lastMessage: "",
+          lastMessageAt: serverTimestamp(),
+          lastMessageBy: null,
+          matchId,
+        }, { merge: true });
+      }
+    } catch (err) {
+      // Revert optimistic update on error
+      setConnected(prev => ({ ...prev, [toUid]: false }));
+      console.error("Like error:", err);
+    }
+  };
+
   const toggleStyle = s => setStyleFilters(prev =>
     prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
   );
@@ -417,7 +475,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
                 key={tr.uid}
                 traveler={tr}
                 connected={!!connected[tr.uid]}
-                onConnect={() => setConnected(prev => ({ ...prev, [tr.uid]: true }))}
+                onConnect={() => handleConnect(tr)}
               />
             ))}
           </div>

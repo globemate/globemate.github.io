@@ -72,5 +72,53 @@ service cloud.firestore {
     match /configuration/{id} {
       allow read: if false;
     }
+
+    // ── Likes ────────────────────────────────────────────────────────────────
+    // El ID del documento es `{fromUid}_{toUid}`.
+    // Solo el dueño puede crear su propio like.
+    // Solo los implicados (fromUid o toUid) pueden leerlo (necesario para detectar like mutuo).
+    match /likes/{likeId} {
+      allow create: if request.auth != null
+          && request.resource.data.fromUid == request.auth.uid;
+
+      allow update: if request.auth != null
+          && resource.data.fromUid == request.auth.uid;
+
+      allow read: if request.auth != null
+          && (resource.data.fromUid == request.auth.uid
+           || resource.data.toUid   == request.auth.uid);
+    }
+
+    // ── Matches ──────────────────────────────────────────────────────────────
+    // El ID es `{uidA}_{uidB}` (UIDs ordenados alfabéticamente).
+    // Solo los participantes pueden leer o crear su propio match.
+    match /matches/{matchId} {
+      allow read: if request.auth != null
+          && request.auth.uid in resource.data.users;
+
+      allow create: if request.auth != null
+          && request.auth.uid in request.resource.data.users;
+    }
+
+    // ── Conversations ────────────────────────────────────────────────────────
+    // Solo los participantes pueden leer/escribir la conversación.
+    match /conversations/{convId} {
+      allow read, update: if request.auth != null
+          && request.auth.uid in resource.data.participants;
+
+      allow create: if request.auth != null
+          && request.auth.uid in request.resource.data.participants;
+
+      match /messages/{msgId} {
+        allow read: if request.auth != null
+            && request.auth.uid in
+               get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+
+        allow create: if request.auth != null
+            && request.auth.uid in
+               get(/databases/$(database)/documents/conversations/$(convId)).data.participants
+            && request.resource.data.senderId == request.auth.uid;
+      }
+    }
   }
 }
