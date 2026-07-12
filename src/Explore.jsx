@@ -1,24 +1,9 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collection, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc, serverTimestamp, query, where, onSnapshot } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { LangButton } from "./LanguageSelector";
+import PublicProfile from "./PublicProfile";
 
-/* ── mock travelers (shown when Firestore has few real users) ── */
-const MOCK = [
-  { uid:"m1", displayName:"Sofia Chen",      location:"Barcelona, Spain",    emoji:"🌸", visitedCountries:["JP","FR","IT","ES","PT","GR","TR","MA"], interests:["🏛️ History","🍜 Food","📸 Photography","🍷 Wine"],          travelStyles:["✨ Luxury","🏨 Boutique hotels"],  languages:[{lang:"Spanish",level:"Native"},{lang:"English",level:"Fluent"}],   upcoming:[{name:"Kyoto, Japan",status:"confirmed"},{name:"Lisbon",status:"planning"}] },
-  { uid:"m2", displayName:"Marco Rossi",      location:"Milan, Italy",        emoji:"🎸", visitedCountries:["FR","ES","GR","HR","PT","JP","US"],        interests:["🎨 Art","🎪 Festivals","🍷 Wine","🎭 Culture"],           travelStyles:["🏨 Boutique hotels","✨ Luxury"],  languages:[{lang:"Italian",level:"Native"},{lang:"English",level:"Fluent"},{lang:"French",level:"Conversational"}], upcoming:[{name:"Tokyo, Japan",status:"confirmed"},{name:"Lisbon",status:"planning"}] },
-  { uid:"m3", displayName:"Yuki Tanaka",      location:"Tokyo, Japan",        emoji:"🌊", visitedCountries:["NZ","IS","NO","CA","AU","NL","SE"],         interests:["🌿 Nature","🏔️ Mountains","🧘 Wellness","📸 Photography"],travelStyles:["🌱 Eco-travel","🏕️ Camping"],      languages:[{lang:"Japanese",level:"Native"},{lang:"English",level:"Fluent"}],   upcoming:[{name:"Iceland",status:"confirmed"},{name:"New Zealand",status:"planning"}] },
-  { uid:"m4", displayName:"Elena Vasquez",    location:"Buenos Aires, AR",    emoji:"💃", visitedCountries:["ES","PT","IT","FR","CL","PE","CO","MX"],    interests:["🎭 Culture","🎵 Music","🍜 Food","🎪 Festivals"],         travelStyles:["🎒 Backpacker","🚐 Road trips"],  languages:[{lang:"Spanish",level:"Native"},{lang:"English",level:"Conversational"},{lang:"Portuguese",level:"Basic"}], upcoming:[{name:"Barcelona, Spain",status:"confirmed"}] },
-  { uid:"m5", displayName:"James Mitchell",   location:"London, UK",          emoji:"🗺️", visitedCountries:["US","JP","IN","AU","ZA","BR","MX","EG","MA","TR"], interests:["🏛️ History","🌆 Cities","📸 Photography","🎭 Culture"], travelStyles:["⚡ Fast-paced","🏨 Boutique hotels"], languages:[{lang:"English",level:"Native"},{lang:"French",level:"Conversational"}], upcoming:[{name:"Seoul, South Korea",status:"confirmed"},{name:"Marrakech",status:"planning"}] },
-  { uid:"m6", displayName:"Amara Diallo",     location:"Paris, France",       emoji:"✨", visitedCountries:["SN","MA","IT","ES","PT","GR","US","BR"],   interests:["🎨 Art","🎪 Festivals","🍜 Food","🌆 Cities"],           travelStyles:["✨ Luxury","🏨 Boutique hotels"],  languages:[{lang:"French",level:"Native"},{lang:"English",level:"Fluent"},{lang:"Arabic",level:"Conversational"}], upcoming:[{name:"Florence, Italy",status:"confirmed"},{name:"São Paulo",status:"planning"}] },
-  { uid:"m7", displayName:"Lucas Oliveira",   location:"São Paulo, Brazil",   emoji:"🏄", visitedCountries:["AR","CL","PE","CO","MX","US","PT","ES"],   interests:["🏖️ Beaches","🏄 Adventure","🎵 Music","🌿 Nature"],      travelStyles:["🎒 Backpacker","🏄 Adventure"],   languages:[{lang:"Portuguese",level:"Native"},{lang:"Spanish",level:"Fluent"},{lang:"English",level:"Conversational"}], upcoming:[{name:"Bali, Indonesia",status:"confirmed"}] },
-  { uid:"m8", displayName:"Nina Schmidt",     location:"Berlin, Germany",     emoji:"🎨", visitedCountries:["PL","CZ","HU","HR","GR","IT","FR","ES","PT","IS"], interests:["🎨 Art","🎵 Music","🎭 Culture","🚂 Train travel"],  travelStyles:["🚐 Road trips","🎒 Backpacker"],  languages:[{lang:"German",level:"Native"},{lang:"English",level:"Fluent"},{lang:"French",level:"Basic"}], upcoming:[{name:"Porto, Portugal",status:"planning"},{name:"Tallinn, Estonia",status:"planning"}] },
-  { uid:"m9", displayName:"Priya Sharma",     location:"Mumbai, India",       emoji:"🌺", visitedCountries:["TH","SG","JP","FR","IT","GB","US","AU"],   interests:["🍜 Food","🏛️ History","🎭 Culture","🧘 Wellness"],       travelStyles:["🏨 Boutique hotels","✨ Luxury"],  languages:[{lang:"Hindi",level:"Native"},{lang:"English",level:"Fluent"}], upcoming:[{name:"Kyoto, Japan",status:"confirmed"},{name:"Amalfi, Italy",status:"planning"}] },
-  { uid:"m10",displayName:"Alex Rivera",      location:"Singapore",           emoji:"📸", visitedCountries:["KR","JP","TH","VN","ID","AU","NZ","US","GB","FR"], interests:["📸 Photography","🌆 Cities","🍜 Food","⚡ Adventure"], travelStyles:["⚡ Fast-paced","🏨 Boutique hotels"], languages:[{lang:"English",level:"Native"},{lang:"Mandarin",level:"Conversational"}], upcoming:[{name:"Seoul, South Korea",status:"confirmed"},{name:"Tokyo",status:"planning"}] },
-  { uid:"m11",displayName:"Isabella Torres",  location:"Mexico City, Mexico", emoji:"🌮", visitedCountries:["ES","PT","IT","FR","GR","CU","CO","PE"],   interests:["🍜 Food","🏛️ History","🎭 Culture","🎪 Festivals"],     travelStyles:["🎒 Backpacker","🌱 Eco-travel"],  languages:[{lang:"Spanish",level:"Native"},{lang:"English",level:"Fluent"},{lang:"Italian",level:"Basic"}], upcoming:[{name:"Oaxaca, Mexico",status:"confirmed"},{name:"Barcelona",status:"planning"}] },
-  { uid:"m12",displayName:"Kai Nakamura",     location:"Osaka, Japan",        emoji:"🎋", visitedCountries:["NZ","AU","IS","NO","CH","AT","NL","DE"],   interests:["🌿 Nature","🧘 Wellness","🍜 Food","🏔️ Mountains"],      travelStyles:["🌱 Eco-travel","🏕️ Camping"],      languages:[{lang:"Japanese",level:"Native"},{lang:"English",level:"Fluent"}], upcoming:[{name:"Patagonia, Chile",status:"planning"},{name:"Faroe Islands",status:"planning"}] },
-];
 
 const STYLE_GRADIENT = {
   "🎒 Backpacker":      "linear-gradient(135deg,#2a1c08,#1a1205)",
@@ -159,7 +144,7 @@ const css = `
   .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
 `;
 
-function TravelerCard({ traveler, connected, onConnect }) {
+function TravelerCard({ traveler, connected, onConnect, onViewProfile }) {
   const { t } = useTranslation();
   const gradient = traveler.travelStyles?.[0] ? (STYLE_GRADIENT[traveler.travelStyles[0]] || DEF_GRADIENT) : DEF_GRADIENT;
   const shownInterests = (traveler.interests || []).slice(0, 3);
@@ -221,7 +206,7 @@ function TravelerCard({ traveler, connected, onConnect }) {
           >
             {connected ? "✓" : t("explore.connect")}
           </button>
-          <button className="ex-view-btn">{t("common.viewProfile")}</button>
+          <button className="ex-view-btn" onClick={onViewProfile}>{t("common.viewProfile")}</button>
         </div>
       </div>
     </div>
@@ -237,7 +222,8 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
   const [styleFilters, setStyleFilters] = useState([]);
   const [langFilter, setLangFilter]     = useState("");
   const [sort, setSort]           = useState("countries");
-  const [menuOpen, setMenuOpen]   = useState(false);
+  const [viewUid, setViewUid]     = useState(null);
+  const [blockedIds, setBlockedIds] = useState(new Set());
 
   useEffect(() => {
     const load = async () => {
@@ -246,17 +232,25 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         const real = snap.docs
           .map(d => ({ uid: d.id, ...d.data() }))
           .filter(u => u.uid !== user?.uid && u.displayName);
-        const combined = real.length >= 4
-          ? real
-          : [...real, ...MOCK.filter(m => !real.find(r => r.displayName === m.displayName))];
-        setTravelers(combined);
-      } catch {
-        setTravelers(MOCK);
+        setTravelers(real);
+      } catch (err) {
+        console.error("Error loading travelers:", err);
+        setTravelers([]);
       }
       setLoading(false);
     };
     load();
   }, [user]);
+
+  /* ── subscribe to blocks to keep blocked list up to date ── */
+  useEffect(() => {
+    if (!user?.uid) return;
+    const q = query(collection(db, "blocks"), where("blockerId", "==", user.uid));
+    const unsub = onSnapshot(q, snap => {
+      setBlockedIds(new Set(snap.docs.map(d => d.data().blockedId)));
+    }, () => {});
+    return () => unsub();
+  }, [user?.uid]);
 
   const handleConnect = async (traveler) => {
     const fromUid = user?.uid;
@@ -322,6 +316,8 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
 
   const filtered = travelers
     .filter(tr => {
+      if (blockedIds.has(tr.uid)) return false;
+      if (tr.suspended) return false;
       if (search) {
         const q = search.toLowerCase();
         const matchName = (tr.displayName || "").toLowerCase().includes(q);
@@ -352,52 +348,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
     <>
       <style>{css}</style>
 
-      {/* mobile nav overlay */}
-      <div className={`mob-nav${menuOpen ? " open" : ""}`}>
-        <div className="mob-nav-top">
-          <div className="mob-nav-logo">Globe<span>Mate</span></div>
-          <LangButton align="right" />
-          <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
-        </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
-        </button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
-      </div>
-
       <div className="ex-root">
-
-        {/* navbar */}
-        <nav className="ex-nav">
-          <button className="ex-logo" onClick={onBack}>Globe<span>Mate</span></button>
-          <div className="ex-nav-actions">
-            <LangButton align="right" />
-            {user && (
-              <button className="bell-btn" onClick={onNotif}>
-                🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
-              </button>
-            )}
-            {user && <button className="bell-btn ex-desktop" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
-            {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
-            <button className="ex-nav-btn ex-desktop" onClick={onPricing}>{t("nav.plans")}</button>
-            {user && <button className="ex-nav-btn ghost ex-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}
-            <button className="ex-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
-              <span /><span /><span />
-            </button>
-          </div>
-        </nav>
 
         {/* hero */}
         <div className="ex-hero">
@@ -466,7 +417,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         ) : filtered.length === 0 ? (
           <div className="ex-empty">
             <div className="ex-empty-icon">🌍</div>
-            <div className="ex-empty-text">{t("explore.noResults")}</div>
+            <div className="ex-empty-text">{hasFilters ? t("explore.noResults") : "Aún no hay viajeros — vuelve pronto."}</div>
           </div>
         ) : (
           <div className="ex-grid">
@@ -476,12 +427,22 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
                 traveler={tr}
                 connected={!!connected[tr.uid]}
                 onConnect={() => handleConnect(tr)}
+                onViewProfile={() => setViewUid(tr.uid)}
               />
             ))}
           </div>
         )}
 
       </div>
+
+      {viewUid && user && (
+        <PublicProfile
+          uid={viewUid}
+          currentUser={user}
+          onClose={() => setViewUid(null)}
+          onBlockDone={() => setViewUid(null)}
+        />
+      )}
     </>
   );
 }

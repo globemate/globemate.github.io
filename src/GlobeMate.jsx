@@ -808,72 +808,40 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
     <>
       <style>{style}</style>
 
-      {/* ── Mobile nav overlay ── */}
-      <div className={`mobile-nav${menuOpen ? " open" : ""}`}>
-        <div className="mobile-nav-top">
-          <div className="mobile-nav-logo">Globe<span>Mate</span></div>
-          <LangButton align="right" />
-          <button className="mobile-nav-close" onClick={() => setMenuOpen(false)} aria-label={t("common.close")}>✕</button>
-        </div>
-        <a href="#how" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.howItWorks")}</a>
-        <a href="#destinations" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.destinations")}</a>
-        <a href="#stories" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.stories")}</a>
-        {user && (
-          <>
+      {/* ── Local nav: only for unauthenticated visitors; authenticated users use the shared Navbar from App.js ── */}
+      {!user && (
+        <>
+          <div className={`mobile-nav${menuOpen ? " open" : ""}`}>
+            <div className="mobile-nav-top">
+              <div className="mobile-nav-logo">Globe<span>Mate</span></div>
+              <LangButton align="right" />
+              <button className="mobile-nav-close" onClick={() => setMenuOpen(false)} aria-label={t("common.close")}>✕</button>
+            </div>
+            <a href="#how" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.howItWorks")}</a>
+            <a href="#destinations" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.destinations")}</a>
+            <a href="#stories" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>{t("landing.stories")}</a>
             <div className="mobile-nav-divider" />
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
-          </>
-        )}
-        <div className="mobile-nav-divider" />
-        {user ? (
-          <>
-            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
-            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
-            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
-            {onAdmin && <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onAdmin(); }} style={{ color:"var(--gold)", opacity:0.7 }}>◆ Admin</button>}
-            <button className="mobile-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
-          </>
-        ) : (
-          <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onSignIn(); }}>{t("nav.signIn")}</button>
-        )}
-      </div>
+            <button className="mobile-nav-link gold" onClick={() => { setMenuOpen(false); onSignIn(); }}>{t("nav.signIn")}</button>
+          </div>
 
-      <nav className="nav">
-        <div className="nav-logo">Globe<span>Mate</span></div>
-        <ul className="nav-links">
-          <li><a href="#how">{t("landing.howItWorks")}</a></li>
-          <li><a href="#destinations">{t("landing.destinations")}</a></li>
-          <li><a href="#stories">{t("landing.stories")}</a></li>
-          {user && <li><a href="#explore"  onClick={e => { e.preventDefault(); onExplore(); }}  style={{ color: "var(--gold-light)" }}>{t("nav.explore")}</a></li>}
-          {user && <li><a href="#matches"  onClick={e => { e.preventDefault(); onMatches(); }} style={{ color: "var(--gold-light)" }}>{t("nav.matches")}</a></li>}
-          {user && <li><a href="#messages" onClick={e => { e.preventDefault(); onChat(); }}    style={{ color: "var(--gold-light)" }}>{t("nav.messages")}</a></li>}
-          {user && <li><a href="#map"      onClick={e => { e.preventDefault(); onMap(); }}     style={{ color: "var(--gold-light)" }}>{t("nav.map")}</a></li>}
-        </ul>
-        <div className="nav-actions">
-          <LangButton align="right" />
-          {user && (
-            <button className="bell-btn" onClick={onNotif}>
-              🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
-            </button>
-          )}
-          {user && <button className="bell-btn nav-desktop-only" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
-          <button className="nav-cta nav-desktop-only" onClick={onPricing}>{t("nav.plans")}</button>
-          {user ? (
-            <>
-              <button className="nav-cta nav-desktop-only" onClick={onProfile}>{t("nav.myProfile")}</button>
-              <button className="nav-cta nav-desktop-only" onClick={onSignOut}>{t("nav.signOut")}</button>
-            </>
-          ) : (
-            <button className="nav-cta nav-desktop-only" onClick={onSignIn}>{t("nav.signIn")}</button>
-          )}
-          <button className="nav-hamburger" onClick={() => setMenuOpen(true)} aria-label={t("common.search")}>
-            <span /><span /><span />
-          </button>
-        </div>
-      </nav>
+          <nav className="nav">
+            <div className="nav-logo">Globe<span>Mate</span></div>
+            <ul className="nav-links">
+              <li><a href="#how">{t("landing.howItWorks")}</a></li>
+              <li><a href="#destinations">{t("landing.destinations")}</a></li>
+              <li><a href="#stories">{t("landing.stories")}</a></li>
+            </ul>
+            <div className="nav-actions">
+              <LangButton align="right" />
+              <button className="nav-cta nav-desktop-only" onClick={onPricing}>{t("nav.plans")}</button>
+              <button className="nav-cta nav-desktop-only" onClick={onSignIn}>{t("nav.signIn")}</button>
+              <button className="nav-hamburger" onClick={() => setMenuOpen(true)} aria-label={t("common.search")}>
+                <span /><span /><span />
+              </button>
+            </div>
+          </nav>
+        </>
+      )}
 
       <section className="hero">
         <div className="hero-text">

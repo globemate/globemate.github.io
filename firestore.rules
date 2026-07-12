@@ -22,14 +22,14 @@ service cloud.firestore {
 
       allow create: if request.auth != null
           && request.auth.uid == uid
-          && !request.resource.data.isVerified;
+          && !(request.resource.data.isVerified == true);
 
       allow update: if request.auth != null
           && request.auth.uid == uid
-          && request.resource.data.isVerified == resource.data.isVerified
+          && request.resource.data.get('isVerified', false) == resource.data.get('isVerified', false)
           && (
-               request.resource.data.verificationStatus == resource.data.verificationStatus
-            || request.resource.data.verificationStatus == "pending"
+               request.resource.data.get('verificationStatus', null) == resource.data.get('verificationStatus', null)
+            || request.resource.data.get('verificationStatus', null) == "pending"
           );
     }
 
@@ -71,6 +71,26 @@ service cloud.firestore {
     // ── Configuration (uso interno de la extensión Stripe) ──────────────────
     match /configuration/{id} {
       allow read: if false;
+    }
+
+    // ── Blocks ───────────────────────────────────────────────────────────────
+    // Doc ID: {blockerId}_{blockedId}. Solo el blocker crea y lee sus propios blocks.
+    match /blocks/{blockId} {
+      allow create: if request.auth != null
+          && request.resource.data.blockerId == request.auth.uid;
+
+      allow read: if request.auth != null
+          && (resource == null || resource.data.blockerId == request.auth.uid);
+    }
+
+    // ── Reports ──────────────────────────────────────────────────────────────
+    // Cualquier usuario autenticado puede crear un reporte sobre otro.
+    // Solo el admin puede leer y actualizar reportes.
+    match /reports/{reportId} {
+      allow create: if request.auth != null
+          && request.resource.data.reporterId == request.auth.uid;
+
+      allow read, update: if isAdmin();
     }
 
     // ── Likes ────────────────────────────────────────────────────────────────
@@ -115,9 +135,11 @@ service cloud.firestore {
                get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
 
         allow create: if request.auth != null
+            && request.resource.data.senderId == request.auth.uid
             && request.auth.uid in
                get(/databases/$(database)/documents/conversations/$(convId)).data.participants
-            && request.resource.data.senderId == request.auth.uid;
+            && !(request.auth.uid in
+               get(/databases/$(database)/documents/conversations/$(convId)).data.get("hiddenFor", []));
       }
     }
   }

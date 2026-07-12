@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { LangButton } from "./LanguageSelector";
+import PublicProfile from "./PublicProfile";
 
 function toDate(raw) {
   if (!raw) return null;
@@ -178,7 +178,7 @@ const css = `
 `;
 
 
-function MatchCard({ m, myProfile, onMessage }) {
+function MatchCard({ m, myProfile, onMessage, onViewProfile }) {
   const { t } = useTranslation();
   const compat = compatibility(m, myProfile);
   const gradient = m.travelStyles?.[0] ? (STYLE_GRADIENT[m.travelStyles[0]] || DEF_GRADIENT) : DEF_GRADIENT;
@@ -243,7 +243,7 @@ function MatchCard({ m, myProfile, onMessage }) {
 
         <div className="mx-card-footer">
           <button className="mx-msg-btn" onClick={onMessage}>{t("matches.message")}</button>
-          <button className="mx-view-btn">{t("common.viewProfile")}</button>
+          <button className="mx-view-btn" onClick={onViewProfile}>{t("common.viewProfile")}</button>
         </div>
       </div>
     </div>
@@ -263,7 +263,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
   const [loading, setLoading]     = useState(true);
   const [sort, setSort]           = useState("recent");
   const [newOnly, setNewOnly]     = useState(false);
-  const [menuOpen, setMenuOpen]   = useState(false);
+  const [viewUid, setViewUid]     = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -284,7 +284,22 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
           let otherProfile = {};
           if (otherUid) {
             const otherSnap = await getDoc(doc(db, "users", otherUid));
-            if (otherSnap.exists()) otherProfile = otherSnap.data();
+            if (otherSnap.exists()) {
+              const data = otherSnap.data();
+              // Explicit field pick — never read "photo" (legacy empty field)
+              otherProfile = {
+                displayName:      data.displayName      || null,
+                photoURL:         data.photoURL         || null,
+                location:         data.location         || null,
+                emoji:            data.emoji            || null,
+                interests:        data.interests        || [],
+                travelStyles:     data.travelStyles     || [],
+                upcoming:         data.upcoming         || [],
+                visitedCountries: data.visitedCountries || [],
+                languages:        data.languages        || [],
+                isVerified:       data.isVerified       || false,
+              };
+            }
           }
           return {
             matchId:   d.id,
@@ -321,54 +336,7 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
     <>
       <style>{css}</style>
 
-      {/* mobile nav overlay */}
-      <div className={`mob-nav${menuOpen ? " open" : ""}`}>
-        <div className="mob-nav-top">
-          <div className="mob-nav-logo">Globe<span>Mate</span></div>
-          <LangButton align="right" />
-          <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
-        </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
-        </button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
-      </div>
-
       <div className="mx-root">
-
-        {/* navbar */}
-        <nav className="mx-nav">
-          <button className="mx-logo" onClick={onBack}>Globe<span>Mate</span></button>
-          <div className="mx-nav-actions">
-            <button className="mx-nav-btn mx-desktop" onClick={onExplore}>{t("nav.explore")}</button>
-            <button className="mx-nav-btn mx-desktop" onClick={onChat}>{t("nav.messages")}</button>
-            <LangButton align="right" />
-            {onNotif && (
-              <button className="bell-btn" onClick={onNotif}>
-                🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
-              </button>
-            )}
-            <button className="bell-btn mx-desktop" onClick={onSettings} title={t("nav.settings")}>⚙</button>
-            <button className="mx-nav-btn mx-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>
-            <button className="mx-nav-btn mx-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
-            <button className="mx-nav-btn mx-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>
-            <button className="mx-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
-              <span /><span /><span />
-            </button>
-          </div>
-        </nav>
 
         {/* hero */}
         <div className="mx-hero">
@@ -427,12 +395,14 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
         ) : (
           <div className="mx-grid">
             {sorted.map(m => (
-              <MatchCard key={m.matchId || m.uid} m={m} myProfile={myProfile} onMessage={onChat} />
+              <MatchCard key={m.matchId || m.uid} m={m} myProfile={myProfile} onMessage={onChat} onViewProfile={() => setViewUid(m.uid)} />
             ))}
           </div>
         )}
 
       </div>
+
+      {viewUid && <PublicProfile uid={viewUid} onClose={() => setViewUid(null)} />}
     </>
   );
 }

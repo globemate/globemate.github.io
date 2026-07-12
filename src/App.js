@@ -17,17 +17,9 @@ import Pricing from "./Pricing.jsx";
 import Privacy from "./Privacy.jsx";
 import Terms from "./Terms.jsx";
 import AdminDashboard, { ADMIN_EMAIL } from "./AdminDashboard.js";
+import Navbar from "./Navbar.jsx";
+import BottomNav from "./BottomNav.jsx";
 
-const t = (ms) => new Date(Date.now() - ms);
-const INIT_NOTIFS = [
-  { id:"n1", type:"message",  read:false, icon:"🌸", title:"Sofia Chen sent you a message",          body:"\"Maybe we could explore Kyoto together?\"",                    createdAt:t(3600000),   action:"Reply",            actionType:"chat"    },
-  { id:"n2", type:"connect",  read:false, icon:"🗺️", title:"James Mitchell wants to connect",        body:"James is heading to Marrakech. You share 4 travel interests.",  createdAt:t(7200000),   action:"View profile",     actionType:"profile" },
-  { id:"n3", type:"nearby",   read:false, icon:"✈️", title:"3 travelers are going to Kyoto in March",body:"Check who's visiting your next destination.",                   createdAt:t(18000000),  action:"Explore travelers", actionType:"explore"  },
-  { id:"n4", type:"view",     read:true,  icon:"👀", title:"Your profile was viewed 12 times",        body:"Complete your bio to attract more connections.",                 createdAt:t(86400000),  action:"Edit profile",     actionType:"profile" },
-  { id:"n5", type:"message",  read:true,  icon:"🎨", title:"Nina Schmidt replied to your message",   body:"\"Porto is underrated — best food in Europe honestly.\"",       createdAt:t(172800000), action:"Reply",            actionType:"chat"    },
-  { id:"n6", type:"connect",  read:true,  icon:"🏄", title:"Lucas Oliveira accepted your connection", body:"Lucas is based in São Paulo and heading to Bali.",              createdAt:t(259200000), action:"Send message",     actionType:"chat"    },
-  { id:"n7", type:"system",   read:true,  icon:"🌍", title:"Welcome to GlobeMate!",                  body:"Complete your profile to get better matches with travelers.",   createdAt:t(604800000), action:"Complete profile",  actionType:"profile" },
-];
 
 export default function App() {
   const { i18n } = useTranslation();
@@ -52,7 +44,7 @@ export default function App() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms,   setShowTerms]   = useState(false);
   const [showAdmin,   setShowAdmin]   = useState(false);
-  const [notifs, setNotifs]           = useState(INIT_NOTIFS);
+  const [notifs, setNotifs]           = useState([]);
 
   const notifCount  = notifs.filter(n => !n.read).length;
   const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
@@ -157,6 +149,7 @@ export default function App() {
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   const nav = {
+    onHome:     () => goTo("home"),
     onNotif:   () => goTo("notif"),
     notifCount,
     onProfile:  () => goTo("profile"),
@@ -172,28 +165,31 @@ export default function App() {
     ...(isAdmin ? { onAdmin: () => goTo("admin") } : {}),
   };
 
+  const activeScreen =
+    showExplore ? "explore" :
+    showMatches ? "matches" :
+    showChat    ? "chat"    :
+    showMap     ? "map"     :
+    showProfile ? "profile" :
+    "home";
+
+  const showBottomNav =
+    !showAdmin && !showPrivacy && !showTerms &&
+    !showPricing && !showSettings && !showNotif;
+
+  let pageContent;
   if (showAdmin && user && isAdmin) {
-    return <AdminDashboard user={user} onBack={() => window.history.back()} />;
-  }
-
-  if (showPrivacy) {
-    return <Privacy onBack={() => window.history.back()} />;
-  }
-
-  if (showTerms) {
-    return <Terms onBack={() => window.history.back()} />;
-  }
-
-  if (showPricing) {
-    return <Pricing user={user} onBack={() => window.history.back()} subscription={subscription} {...nav} />;
-  }
-
-  if (showSettings && user) {
-    return <Settings user={user} onBack={() => window.history.back()} {...nav} />;
-  }
-
-  if (showNotif && user) {
-    return (
+    pageContent = <AdminDashboard user={user} onBack={() => window.history.back()} />;
+  } else if (showPrivacy) {
+    pageContent = <Privacy onBack={() => window.history.back()} />;
+  } else if (showTerms) {
+    pageContent = <Terms onBack={() => window.history.back()} />;
+  } else if (showPricing) {
+    pageContent = <Pricing user={user} onBack={() => window.history.back()} subscription={subscription} {...nav} />;
+  } else if (showSettings && user) {
+    pageContent = <Settings user={user} onBack={() => window.history.back()} {...nav} />;
+  } else if (showNotif && user) {
+    pageContent = (
       <Notifications
         notifications={notifs}
         onBack={() => window.history.back()}
@@ -202,33 +198,41 @@ export default function App() {
         {...nav}
       />
     );
-  }
-
-  if (showProfile && user) {
-    return <Profile user={user} onBack={() => window.history.back()} subscription={subscription} {...nav} />;
-  }
-
-  if (showExplore) {
-    return <Explore user={user} onBack={() => window.history.back()} {...nav} />;
-  }
-
-  if (showChat && user) {
-    return <Chat user={user} onBack={() => window.history.back()} {...nav} />;
-  }
-
-  if (showMatches && user) {
-    return <Matches user={user} onBack={() => window.history.back()} {...nav} />;
-  }
-
-  if (showMap && user) {
-    return <Map user={user} onBack={() => window.history.back()} {...nav} />;
+  } else if (showProfile && user) {
+    pageContent = <Profile user={user} onBack={() => window.history.back()} subscription={subscription} {...nav} />;
+  } else if (showExplore) {
+    pageContent = <Explore user={user} onBack={() => window.history.back()} {...nav} />;
+  } else if (showChat && user) {
+    pageContent = <Chat user={user} onBack={() => window.history.back()} {...nav} />;
+  } else if (showMatches && user) {
+    pageContent = <Matches user={user} onBack={() => window.history.back()} {...nav} />;
+  } else if (showMap && user) {
+    pageContent = <Map user={user} onBack={() => window.history.back()} {...nav} />;
+  } else {
+    pageContent = <GlobeMate user={user} onSignIn={() => setShowAuth(true)} {...nav} />;
   }
 
   return (
-    <GlobeMate
-      user={user}
-      onSignIn={() => setShowAuth(true)}
-      {...nav}
-    />
+    <>
+      {user && !showAdmin && (
+        <Navbar
+          user={user}
+          active={activeScreen}
+          onBack={() => window.history.back()}
+          {...nav}
+        />
+      )}
+      {pageContent}
+      {user && !showAdmin && showBottomNav && (
+        <BottomNav
+          active={activeScreen}
+          onExplore={nav.onExplore}
+          onMatches={nav.onMatches}
+          onChat={nav.onChat}
+          onMap={nav.onMap}
+          onProfile={nav.onProfile}
+        />
+      )}
+    </>
   );
 }

@@ -4,12 +4,13 @@ import { LangButton } from "./LanguageSelector";
 import { auth, googleProvider, facebookProvider, twitterProvider, db } from "./firebase";
 import {
   signInWithPopup,
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   RecaptchaVerifier,
   signInWithPhoneNumber,
+  linkWithPhoneNumber,
   PhoneAuthProvider,
-  EmailAuthProvider,
   linkWithCredential,
   getAdditionalUserInfo,
 } from "firebase/auth";
@@ -452,9 +453,16 @@ export default function Auth({ onAuthSuccess }) {
       }
       setLoading(false);
     } else {
-      setPendingEmail(email);
-      setPendingPassword(password);
-      setMode("phone");
+      setLoading(true);
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        setPendingEmail(email);
+        setPendingPassword(password);
+        setMode("phone");
+      } catch (err) {
+        setError(getAuthError(err));
+      }
+      setLoading(false);
     }
   };
 
@@ -496,7 +504,9 @@ export default function Auth({ onAuthSuccess }) {
     setPhoneError("");
     try {
       const verifier = getOrCreateVerifier();
-      const result   = await signInWithPhoneNumber(auth, fullPhone, verifier);
+      const result   = auth.currentUser
+        ? await linkWithPhoneNumber(auth.currentUser, fullPhone, verifier)
+        : await signInWithPhoneNumber(auth, fullPhone, verifier);
       setConfirmResult(result);
       setMode("phone-code");
     } catch (err) {
@@ -516,8 +526,7 @@ export default function Auth({ onAuthSuccess }) {
       let uid;
       if (pendingEmail) {
         await confirmResult.confirm(code);
-        const emailCred = EmailAuthProvider.credential(pendingEmail, pendingPassword);
-        await linkWithCredential(auth.currentUser, emailCred);
+        await auth.currentUser.getIdToken(true);
         uid = auth.currentUser.uid;
       } else {
         if (!auth.currentUser) { setPhoneError("Sesión expirada. Vuelve a intentarlo."); setPhoneLoading(false); return; }
@@ -528,6 +537,7 @@ export default function Auth({ onAuthSuccess }) {
       await setDoc(doc(db, "users", uid), {
         phone: countryCode + phoneNumber.replace(/\D/g, ""),
         phoneVerified: true,
+        isVerified: false,
       }, { merge: true });
       onAuthSuccess();
     } catch (err) {

@@ -2,71 +2,18 @@ import { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
 import {
   collection, query, where, orderBy, onSnapshot,
-  addDoc, doc, updateDoc, serverTimestamp,
+  addDoc, doc, getDoc, updateDoc, setDoc, arrayUnion, serverTimestamp,
 } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { LangButton } from "./LanguageSelector";
-
-/* ── mock conversations shown when Firestore has none ── */
-const t = (offset) => new Date(Date.now() - offset);
-const MOCK_CONVS = [
-  {
-    id: "mc1", real: false,
-    otherUser: { uid: "m1", displayName: "Sofia Chen", emoji: "🌸", location: "Barcelona, Spain" },
-    lastMessage: "Maybe we could explore Kyoto together?",
-    lastMessageAt: t(3600000), lastMessageBy: "m1",
-    mockMessages: [
-      { id: "a1", senderId: "m1",  text: "Hey! I saw you're also planning Kyoto. When are you going?",         createdAt: t(7200000) },
-      { id: "a2", senderId: "me",  text: "Late March — cherry blossom season. You?",                          createdAt: t(5400000) },
-      { id: "a3", senderId: "m1",  text: "Same! I'm going the last week of March.",                           createdAt: t(3800000) },
-      { id: "a4", senderId: "m1",  text: "Maybe we could explore Kyoto together?",                            createdAt: t(3600000) },
-    ],
-  },
-  {
-    id: "mc2", real: false,
-    otherUser: { uid: "m5", displayName: "James Mitchell", emoji: "🗺️", location: "London, UK" },
-    lastMessage: "Marrakech in October is unreal. You'll love it.",
-    lastMessageAt: t(86400000), lastMessageBy: "m5",
-    mockMessages: [
-      { id: "b1", senderId: "m5",  text: "I noticed Morocco on your list — have you been to Marrakech?",      createdAt: t(90000000) },
-      { id: "b2", senderId: "me",  text: "Not yet! It's on my list for this year. Any tips?",                 createdAt: t(88000000) },
-      { id: "b3", senderId: "m5",  text: "Go in October — perfect weather, fewer crowds. Stay in the Medina.", createdAt: t(87000000) },
-      { id: "b4", senderId: "m5",  text: "Marrakech in October is unreal. You'll love it.",                   createdAt: t(86400000) },
-    ],
-  },
-  {
-    id: "mc3", real: false,
-    otherUser: { uid: "m3", displayName: "Yuki Tanaka", emoji: "🌊", location: "Tokyo, Japan" },
-    lastMessage: "The Westfjords are totally worth it.",
-    lastMessageAt: t(172800000), lastMessageBy: "m3",
-    mockMessages: [
-      { id: "c1", senderId: "me",  text: "I see Iceland is on your confirmed list! I'm going too in June.",    createdAt: t(180000000) },
-      { id: "c2", senderId: "m3",  text: "Amazing! June is perfect — almost 24 hours of daylight.",           createdAt: t(175000000) },
-      { id: "c3", senderId: "me",  text: "Are you doing the ring road?",                                      createdAt: t(174000000) },
-      { id: "c4", senderId: "m3",  text: "Yes, plus the Westfjords. A bit off the beaten path but stunning.", createdAt: t(173000000) },
-      { id: "c5", senderId: "m3",  text: "The Westfjords are totally worth it.",                              createdAt: t(172800000) },
-    ],
-  },
-  {
-    id: "mc4", real: false,
-    otherUser: { uid: "m8", displayName: "Nina Schmidt", emoji: "🎨", location: "Berlin, Germany" },
-    lastMessage: "Porto is underrated — best food in Europe honestly.",
-    lastMessageAt: t(259200000), lastMessageBy: "m8",
-    mockMessages: [
-      { id: "d1", senderId: "m8",  text: "I love that you have Porto on your list. It's my favourite city.",  createdAt: t(262000000) },
-      { id: "d2", senderId: "me",  text: "Really? What makes it special for you?",                           createdAt: t(260000000) },
-      { id: "d3", senderId: "m8",  text: "The light, the tiles, the people… and the food is incredible.",    createdAt: t(259500000) },
-      { id: "d4", senderId: "m8",  text: "Porto is underrated — best food in Europe honestly.",              createdAt: t(259200000) },
-    ],
-  },
-];
+import PublicProfile from "./PublicProfile";
+import ReportModal from "./ReportModal";
 
 /* ── helpers ── */
 function fmtTime(raw) {
   if (!raw) return "";
   const d = raw?.toDate ? raw.toDate() : new Date(raw);
   const diff = Date.now() - d;
-  if (diff < 60000)      return "Just now";
+  if (diff < 60000)      return "Ahora";
   if (diff < 3600000)    return `${Math.floor(diff / 60000)}m`;
   if (diff < 86400000)   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   if (diff < 604800000)  return d.toLocaleDateString([], { weekday: "short" });
@@ -142,12 +89,26 @@ const css = `
 
   /* ── thread ── */
   .ch-thread { flex:1; display:flex; flex-direction:column; min-width:0; }
-  .ch-thread-head { flex-shrink:0; padding:0 24px; height:64px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--border); background:rgba(10,9,5,0.6); backdrop-filter:blur(6px); }
+  .ch-thread-head { flex-shrink:0; padding:0 16px 0 24px; height:64px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--border); background:rgba(10,9,5,0.6); backdrop-filter:blur(6px); }
   .ch-thread-avatar { width:38px; height:38px; border-radius:50%; border:1.5px solid rgba(201,168,76,0.35); background:rgba(10,9,5,0.8); display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0; overflow:hidden; }
   .ch-thread-avatar img { width:100%; height:100%; object-fit:cover; }
   .ch-thread-name { font-family:var(--serif); font-size:1.05rem; font-weight:300; color:var(--cream); }
   .ch-thread-loc { font-size:0.72rem; color:var(--muted); margin-top:1px; }
   .ch-back-btn { display:none; background:none; border:none; color:var(--gold); cursor:pointer; padding:6px 0; font-size:1rem; margin-right:4px; }
+
+  /* thread action buttons */
+  .ch-thread-actions { margin-left:auto; display:flex; gap:6px; flex-shrink:0; }
+  .ch-act-btn {
+    background: transparent; border: 1px solid rgba(245,240,232,0.18);
+    color: rgba(245,240,232,0.48); padding: 5px 11px;
+    font-family: var(--sans); font-size: 0.62rem; letter-spacing: 0.1em;
+    text-transform: uppercase; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .ch-act-btn:hover { border-color: rgba(201,112,106,0.5); color: #e07070; }
+  .ch-act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ch-act-btn.danger { border-color: rgba(201,112,106,0.25); color: rgba(224,112,112,0.65); }
+  .ch-act-btn.danger:hover { background: rgba(201,112,106,0.1); border-color: rgba(201,112,106,0.55); color: #e07070; }
+  @media(max-width:480px){ .ch-act-btn { font-size: 0.58rem; padding: 4px 8px; } }
 
   /* messages */
   .ch-messages { flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:6px; }
@@ -216,51 +177,67 @@ const css = `
 export default function Chat({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
   const { t } = useTranslation();
   const [convs, setConvs]           = useState([]);
+  const [profilesMap, setProfilesMap] = useState({});
   const [activeId, setActiveId]     = useState(null);
-  const [msgMap, setMsgMap]         = useState({});   // { convId: [msgs] }
+  const [msgMap, setMsgMap]         = useState({});
   const [input, setInput]           = useState("");
   const [search, setSearch]         = useState("");
   const [sending, setSending]       = useState(false);
   const [loading, setLoading]       = useState(true);
-  const [mobileView, setMobileView] = useState("list"); // "list" | "chat"
+  const [mobileView, setMobileView] = useState("list");
   const [unread, setUnread]         = useState({});
-  const [menuOpen, setMenuOpen]     = useState(false);
+  const [viewUid, setViewUid]       = useState(null);
+  const [blockingChat, setBlockingChat] = useState(false);
+  const [chatReporting, setChatReporting] = useState(false);
 
-  const bottomRef = useRef();
+  const bottomRef   = useRef();
   const textareaRef = useRef();
 
-  /* ── pre-load mock messages ── */
+  /* ── load conversations ── */
   useEffect(() => {
-    const init = {};
-    MOCK_CONVS.forEach(c => { init[c.id] = c.mockMessages; });
-    setMsgMap(init);
-  }, []);
-
-  /* ── load conversations from Firestore ── */
-  useEffect(() => {
+    if (!user?.uid) { setLoading(false); return; }
     const q = query(
       collection(db, "conversations"),
-      where("participants", "array-contains", user.uid),
-      orderBy("lastMessageAt", "desc")
+      where("participants", "array-contains", user.uid)
     );
     const unsub = onSnapshot(q,
       snap => {
-        const real = snap.docs.map(d => ({ id: d.id, real: true, ...d.data() }));
-        const combined = real.length >= 2
-          ? real
-          : [...real, ...MOCK_CONVS.filter(m => !real.find(r => r.id === m.id))];
-        setConvs(combined);
+        const sorted = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => {
+            const ta = a.lastMessageAt?.toDate?.() ?? new Date(0);
+            const tb = b.lastMessageAt?.toDate?.() ?? new Date(0);
+            return tb - ta;
+          });
+        setConvs(sorted);
         setLoading(false);
       },
-      () => { setConvs(MOCK_CONVS); setLoading(false); }
+      err => {
+        console.error("[Chat] onSnapshot error:", err);
+        setConvs([]);
+        setLoading(false);
+      }
     );
     return () => unsub();
-  }, [user.uid]);
+  }, [user?.uid]);
 
-  /* ── real-time messages for active real conversation ── */
+  /* ── fetch fresh profiles ── */
   useEffect(() => {
-    const conv = convs.find(c => c.id === activeId);
-    if (!conv?.real) return;
+    if (!convs.length || !user?.uid) return;
+    const otherUids = [...new Set(
+      convs.map(c => (c.participants || []).find(p => p !== user.uid)).filter(Boolean)
+    )];
+    Promise.all(otherUids.map(async uid => {
+      const snap = await getDoc(doc(db, "users", uid));
+      return [uid, snap.exists() ? snap.data() : {}];
+    })).then(entries => {
+      setProfilesMap(Object.fromEntries(entries));
+    }).catch(err => console.error("[Chat] profiles fetch error:", err));
+  }, [convs, user?.uid]);
+
+  /* ── real-time messages ── */
+  useEffect(() => {
+    if (!activeId) return;
     const q = query(
       collection(db, "conversations", activeId, "messages"),
       orderBy("createdAt", "asc")
@@ -271,12 +248,11 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
     return () => unsub();
   }, [activeId, convs]);
 
-  /* ── scroll to bottom on new messages ── */
+  /* ── scroll to bottom ── */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgMap, activeId]);
 
-  /* ── mark read when opening conversation ── */
   const openConv = (id) => {
     setActiveId(id);
     setUnread(prev => ({ ...prev, [id]: false }));
@@ -290,18 +266,6 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
     setInput("");
     textareaRef.current?.focus();
 
-    const conv = convs.find(c => c.id === activeId);
-    const newMsg = { id: `local-${Date.now()}`, senderId: user.uid, text, createdAt: new Date() };
-
-    if (!conv?.real) {
-      setMsgMap(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), newMsg] }));
-      setConvs(prev => prev.map(c => c.id === activeId
-        ? { ...c, lastMessage: text, lastMessageAt: new Date(), lastMessageBy: user.uid }
-        : c
-      ));
-      return;
-    }
-
     setSending(true);
     try {
       await addDoc(collection(db, "conversations", activeId, "messages"), {
@@ -311,6 +275,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
         lastMessage: text, lastMessageAt: serverTimestamp(), lastMessageBy: user.uid,
       });
     } catch {
+      const newMsg = { id: `local-${Date.now()}`, senderId: user.uid, text, createdAt: new Date() };
       setMsgMap(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), newMsg] }));
     } finally {
       setSending(false);
@@ -321,68 +286,70 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
+  /* ── block from chat header ── */
+  const handleBlockFromChat = async () => {
+    if (!activeConv || !user?.uid || blockingChat) return;
+    const blockedId = getOtherUid(activeConv, user.uid);
+    if (!blockedId) return;
+    setBlockingChat(true);
+    try {
+      await setDoc(doc(db, "blocks", `${user.uid}_${blockedId}`), {
+        blockerId: user.uid, blockedId, createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, "conversations", activeId), {
+        hiddenFor: arrayUnion(user.uid, blockedId),
+      });
+      setActiveId(null);
+      setMobileView("list");
+    } catch (err) {
+      console.error("Block error:", err);
+    } finally {
+      setBlockingChat(false);
+    }
+  };
+
   /* ── derived ── */
   const filtered = convs.filter(c => {
-    const name = (c.real ? c.participantProfiles?.[getOtherUid(c, user.uid)]?.displayName : c.otherUser?.displayName) || "";
+    if (c.hiddenFor?.includes(user.uid)) return false;
+    const name = c.participantProfiles?.[getOtherUid(c, user.uid)]?.displayName || "";
     return name.toLowerCase().includes(search.toLowerCase());
   });
 
-  const activeConv = convs.find(c => c.id === activeId);
-  const activeOther = getOtherProfile(activeConv, user.uid);
+  const activeConv  = convs.find(c => c.id === activeId);
+  const activeOther = getOtherProfile(activeConv, user.uid, profilesMap);
   const activeMsgs  = msgMap[activeId] || [];
 
   return (
     <>
       <style>{css}</style>
 
-      {/* mobile nav overlay */}
-      <div className={`mob-nav${menuOpen ? " open" : ""}`}>
-        <div className="mob-nav-top">
-          <div className="mob-nav-logo">Globe<span>Mate</span></div>
-          <LangButton align="right" />
-          <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
-        </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
-        </button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
-      </div>
+      {viewUid && (
+        <PublicProfile
+          uid={viewUid}
+          currentUser={user}
+          onClose={() => setViewUid(null)}
+          onBlockDone={() => {
+            setViewUid(null);
+            setActiveId(null);
+            setMobileView("list");
+          }}
+        />
+      )}
+
+      {chatReporting && activeConv && (
+        <ReportModal
+          reportedUid={getOtherUid(activeConv, user.uid)}
+          currentUser={user}
+          onClose={() => setChatReporting(false)}
+          onBlockDone={() => {
+            setChatReporting(false);
+            setActiveId(null);
+            setMobileView("list");
+          }}
+        />
+      )}
 
       <div className="ch-root">
-
-        {/* navbar */}
-        <nav className="ch-nav">
-          <button className="ch-nav-logo" onClick={onBack}>Globe<span>Mate</span></button>
-          <div className="ch-nav-links">
-            {user && <button className="ch-nav-btn ch-desktop" onClick={onExplore}>{t("nav.explore")}</button>}
-            <LangButton align="right" />
-            {user && (
-              <button className="bell-btn" onClick={onNotif}>
-                🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
-              </button>
-            )}
-            {user && <button className="bell-btn ch-desktop" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
-            <button className="ch-nav-btn ch-desktop" style={{borderColor:"#c9a84c",color:"#c9a84c"}} onClick={onPricing}>{t("nav.plans")}</button>
-            {user && <button className="ch-nav-btn ch-desktop" onClick={onProfile}>{t("nav.myProfile")}</button>}
-            {user && <button className="ch-nav-btn ch-desktop" onClick={onSignOut}>{t("nav.signOut")}</button>}
-            <button className="ch-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
-              <span /><span /><span />
-            </button>
-          </div>
-        </nav>
-
         <div className="ch-layout">
 
           {/* sidebar */}
@@ -399,10 +366,10 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
             <div className="ch-conv-list">
               {loading && <div className="ch-no-convs">{t("common.loading")}</div>}
               {!loading && filtered.length === 0 && (
-                <div className="ch-no-convs">{t("chat.noConversations")}<br />{t("chat.noConversationsHint")}</div>
+                <div className="ch-no-convs">Aún no tienes conversaciones — consigue un match para empezar a chatear.</div>
               )}
               {filtered.map(c => {
-                const other = getOtherProfile(c, user.uid);
+                const other = getOtherProfile(c, user.uid, profilesMap);
                 const isMe  = c.lastMessageBy === user.uid;
                 return (
                   <div
@@ -419,7 +386,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                     <div className="ch-conv-info">
                       <div className="ch-conv-name">{other.displayName}</div>
                       <div className="ch-conv-preview">
-                        {isMe ? "You: " : ""}{c.lastMessage || "Say hello!"}
+                        {isMe ? "Tú: " : ""}{c.lastMessage || "¡Di hola!"}
                       </div>
                     </div>
                     <div className="ch-conv-meta">
@@ -444,15 +411,37 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
               <>
                 <div className="ch-thread-head">
                   <button className="ch-back-btn" onClick={() => setMobileView("list")}>←</button>
-                  <div className="ch-thread-avatar">
-                    {activeOther.photoURL
-                      ? <img src={activeOther.photoURL} alt={activeOther.displayName} />
-                      : activeOther.emoji || "👤"
-                    }
+                  <div
+                    style={{ display:"flex", alignItems:"center", gap:"14px", cursor:"pointer" }}
+                    onClick={() => setViewUid(getOtherUid(activeConv, user.uid))}
+                    title="Ver perfil"
+                  >
+                    <div className="ch-thread-avatar">
+                      {activeOther.photoURL
+                        ? <img src={activeOther.photoURL} alt={activeOther.displayName} />
+                        : activeOther.emoji || "👤"
+                      }
+                    </div>
+                    <div>
+                      <div className="ch-thread-name">{activeOther.displayName}</div>
+                      {activeOther.location && <div className="ch-thread-loc">📍 {activeOther.location}</div>}
+                    </div>
                   </div>
-                  <div>
-                    <div className="ch-thread-name">{activeOther.displayName}</div>
-                    {activeOther.location && <div className="ch-thread-loc">📍 {activeOther.location}</div>}
+
+                  <div className="ch-thread-actions">
+                    <button
+                      className="ch-act-btn"
+                      onClick={handleBlockFromChat}
+                      disabled={blockingChat}
+                    >
+                      {blockingChat ? "…" : "Bloquear"}
+                    </button>
+                    <button
+                      className="ch-act-btn danger"
+                      onClick={() => setChatReporting(true)}
+                    >
+                      Reportar
+                    </button>
                   </div>
                 </div>
 
@@ -512,27 +501,39 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
   );
 }
 
-/* ── helpers to extract the "other" participant from a conversation ── */
+/* ── helpers ── */
 function getOtherUid(conv, myUid) {
   return (conv.participants || []).find(id => id !== myUid) || "";
 }
 
-function getOtherProfile(conv, myUid) {
+function getOtherProfile(conv, myUid, profilesMap) {
   if (!conv) return {};
-  if (!conv.real) return conv.otherUser || {};
   const otherUid = getOtherUid(conv, myUid);
-  return conv.participantProfiles?.[otherUid] || { displayName: "Traveler" };
+  const fresh = profilesMap?.[otherUid];
+  if (fresh) return {
+    displayName: fresh.displayName || "Viajero",
+    photoURL:    fresh.photoURL    || null,
+    location:    fresh.location    || null,
+    emoji:       fresh.emoji       || null,
+  };
+  const stored = conv.participantProfiles?.[otherUid] || {};
+  return {
+    displayName: stored.displayName || "Viajero",
+    photoURL:    stored.photoURL    || null,
+    location:    stored.location    || null,
+    emoji:       stored.emoji       || null,
+  };
 }
 
 function sameDay(a, b) {
-  const da = (a?.toDate ? a.toDate() : new Date(a));
+  const da  = (a?.toDate ? a.toDate() : new Date(a));
   const db2 = (b?.toDate ? b.toDate() : new Date(b));
   return da.toDateString() === db2.toDateString();
 }
 
 function dayLabel(raw, todayStr, yesterdayStr) {
   const d = (raw?.toDate ? raw.toDate() : new Date(raw));
-  const today = new Date();
+  const today     = new Date();
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
   if (d.toDateString() === today.toDateString())     return todayStr;
   if (d.toDateString() === yesterday.toDateString()) return yesterdayStr;

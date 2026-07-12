@@ -5,7 +5,6 @@ import "leaflet/dist/leaflet.css";
 import { db } from "./firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { LangButton } from "./LanguageSelector";
 
 /* ── known destinations with coordinates ── */
 const KNOWN_DESTS = [
@@ -29,22 +28,6 @@ const KNOWN_DESTS = [
   { id:"santorini",  label:"Santorini",    country:"Greece",      lat:36.3932,  lng:25.4615,   searchKeys:["santorini","greece"] },
   { id:"maldives",   label:"Maldives",     country:"Maldives",    lat:3.2028,   lng:73.2207,   searchKeys:["maldives"] },
   { id:"capetown",   label:"Cape Town",    country:"South Africa",lat:-33.9249, lng:18.4241,   searchKeys:["cape town","south africa"] },
-];
-
-/* ── mock travelers (same dataset as Explore/Matches) ── */
-const MOCK_TRAVELERS = [
-  { uid:"m1",  displayName:"Sofia Chen",     emoji:"🌸", interests:["🏛️ History","🍜 Food","📸 Photography"],  upcoming:[{name:"Kyoto, Japan",status:"confirmed"},{name:"Lisbon",status:"planning"}] },
-  { uid:"m2",  displayName:"Marco Rossi",    emoji:"🎸", interests:["🎨 Art","🎪 Festivals","🍷 Wine"],          upcoming:[{name:"Tokyo, Japan",status:"confirmed"},{name:"Lisbon",status:"planning"}] },
-  { uid:"m3",  displayName:"Yuki Tanaka",    emoji:"🌊", interests:["🌿 Nature","🏔️ Mountains","🧘 Wellness"],   upcoming:[{name:"Iceland",status:"confirmed"},{name:"New Zealand",status:"planning"}] },
-  { uid:"m4",  displayName:"Elena Vasquez",  emoji:"💃", interests:["🎭 Culture","🎵 Music","🍜 Food"],           upcoming:[{name:"Barcelona, Spain",status:"confirmed"}] },
-  { uid:"m5",  displayName:"James Mitchell", emoji:"🗺️", interests:["🏛️ History","🌆 Cities","📸 Photography"], upcoming:[{name:"Seoul, South Korea",status:"confirmed"},{name:"Marrakech",status:"planning"}] },
-  { uid:"m6",  displayName:"Amara Diallo",   emoji:"✨", interests:["🎨 Art","🎪 Festivals","🌆 Cities"],         upcoming:[{name:"Florence, Italy",status:"confirmed"},{name:"São Paulo",status:"planning"}] },
-  { uid:"m7",  displayName:"Lucas Oliveira", emoji:"🏄", interests:["🏖️ Beaches","🏄 Adventure","🎵 Music"],     upcoming:[{name:"Bali, Indonesia",status:"confirmed"}] },
-  { uid:"m8",  displayName:"Nina Schmidt",   emoji:"🎨", interests:["🎨 Art","🎵 Music","🚂 Train travel"],       upcoming:[{name:"Porto, Portugal",status:"planning"},{name:"Tallinn, Estonia",status:"planning"}] },
-  { uid:"m9",  displayName:"Priya Sharma",   emoji:"🌺", interests:["🍜 Food","🏛️ History","🧘 Wellness"],        upcoming:[{name:"Kyoto, Japan",status:"confirmed"},{name:"Amalfi, Italy",status:"planning"}] },
-  { uid:"m10", displayName:"Alex Rivera",    emoji:"📸", interests:["📸 Photography","🌆 Cities","🍜 Food"],       upcoming:[{name:"Seoul, South Korea",status:"confirmed"},{name:"Tokyo",status:"planning"}] },
-  { uid:"m11", displayName:"Isabella Torres",emoji:"🌮", interests:["🍜 Food","🏛️ History","🎪 Festivals"],       upcoming:[{name:"Oaxaca, Mexico",status:"confirmed"},{name:"Barcelona",status:"planning"}] },
-  { uid:"m12", displayName:"Kai Nakamura",   emoji:"🎋", interests:["🌿 Nature","🧘 Wellness","🏔️ Mountains"],    upcoming:[{name:"Patagonia, Chile",status:"planning"},{name:"Faroe Islands",status:"planning"}] },
 ];
 
 /* ── build destination clusters from traveler data ── */
@@ -99,17 +82,16 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
   const [connected, setConnected]   = useState({});
   const [filterNew, setFilterNew]   = useState(false);
   const [suggestions, setSuggestions] = useState([]);
-  const [menuOpen, setMenuOpen]     = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
         const snap = await getDocs(collection(db, "users"));
         const real = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== user?.uid);
-        const travelers = real.length >= 3 ? real : [...real, ...MOCK_TRAVELERS];
-        setClusters(buildClusters(travelers));
-      } catch {
-        setClusters(buildClusters(MOCK_TRAVELERS));
+        setClusters(buildClusters(real));
+      } catch (err) {
+        console.error("Error loading map travelers:", err);
+        setClusters([]);
       }
     };
     load();
@@ -216,60 +198,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
         .leaflet-container { background: #0d0c09 !important; }
       `}</style>
 
-      {/* mobile nav overlay */}
-      <div className={`mob-nav${menuOpen ? " open" : ""}`}>
-        <div className="mob-nav-top">
-          <div className="mob-nav-logo">Globe<span>Mate</span></div>
-          <LangButton align="right" />
-          <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
-        </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif(); }}>
-          {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
-        </button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
-      </div>
-
-      <div style={{ position:"fixed", inset:0, display:"flex", flexDirection:"column", background:"#0a0905", fontFamily:"'DM Sans',sans-serif" }}>
-
-        {/* ── navbar ── */}
-        <nav style={{
-          height:56, flexShrink:0, display:"flex", alignItems:"center",
-          justifyContent:"space-between", padding:"0 28px",
-          background:"rgba(10,9,5,0.98)", borderBottom:"1px solid rgba(201,168,76,0.12)",
-          zIndex:500, gap:8,
-        }}>
-          <button onClick={onBack} style={btnStyle("logo")}>Globe<em style={{fontStyle:"italic"}}>Mate</em></button>
-          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <button style={btnStyle("ghost")} onClick={onExplore}  className="mp-hide-xs">{t("nav.explore")}</button>
-            <button style={btnStyle("ghost")} onClick={onMatches}  className="mp-hide-xs">{t("nav.matches")}</button>
-            <button style={btnStyle("ghost")} onClick={onChat}     className="mp-hide-xs">{t("nav.messages")}</button>
-            <LangButton align="right" />
-            {onNotif && (
-              <button onClick={onNotif} style={{ position:"relative", background:"none", border:"1px solid rgba(201,168,76,0.25)", color:"#c9a84c", padding:"6px 10px", cursor:"pointer", fontSize:"1rem", display:"inline-flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                🔔{notifCount > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:"#d32f2f", color:"#fff", borderRadius:"50%", minWidth:17, height:17, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.58rem", fontWeight:700, border:"1.5px solid #0a0905", padding:"0 2px" }}>{notifCount > 9 ? "9+" : notifCount}</span>}
-              </button>
-            )}
-            <button onClick={onSettings} className="mp-hide-xs" title={t("nav.settings")} style={{ position:"relative", background:"none", border:"1px solid rgba(201,168,76,0.25)", color:"#c9a84c", padding:"6px 10px", cursor:"pointer", fontSize:"1rem", display:"inline-flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>⚙</button>
-            <button style={btnStyle("ghost")} onClick={onProfile}  className="mp-hide-xs">{t("nav.myProfile")}</button>
-            <button style={{...btnStyle("ghost"), borderColor:"#c9a84c", color:"#c9a84c"}} onClick={onPricing} className="mp-hide-xs">{t("nav.plans")}</button>
-            <button style={btnStyle("ghost")} onClick={onSignOut}  className="mp-hide-xs">{t("nav.signOut")}</button>
-            <button className="mp-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
-              <span /><span /><span />
-            </button>
-          </div>
-        </nav>
+      <div style={{ position:"fixed", inset:0, paddingTop:60, display:"flex", flexDirection:"column", background:"#0a0905", fontFamily:"'DM Sans',sans-serif" }}>
 
         {/* ── map area ── */}
         <div style={{ flex:1, position:"relative", overflow:"hidden" }}>

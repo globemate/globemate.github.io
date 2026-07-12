@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collectionGroup, onSnapshot, query, collection, where, updateDoc, doc } from "firebase/firestore";
+import { collectionGroup, onSnapshot, query, collection, where, updateDoc, doc, getDoc } from "firebase/firestore";
 
 // ── ADMIN CONFIG ──────────────────────────────────────────────────────────────
 // Pon aquí tu email de Firebase Auth (el mismo con el que inicias sesión):
@@ -183,6 +183,49 @@ const css = `
     font-size:0.55rem; font-weight:600; min-width:16px; height:16px;
     border-radius:8px; padding:0 4px; margin-left:7px;
   }
+  .adm-tab-badge.red { background:#c9706a; }
+
+  /* ── report cards ── */
+  .adm-report-list { display:flex; flex-direction:column; gap:14px; }
+  .adm-report-card {
+    background:var(--card); border:1px solid rgba(201,168,76,0.1);
+    padding:18px; display:flex; align-items:flex-start; gap:16px;
+  }
+  @media(max-width:540px){ .adm-report-card{ flex-direction:column; } }
+  .adm-report-avatar {
+    width:46px; height:46px; border-radius:50%;
+    border:1.5px solid rgba(201,168,76,0.28); background:rgba(10,9,5,0.8);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; flex-shrink:0; overflow:hidden;
+  }
+  .adm-report-avatar img { width:100%; height:100%; object-fit:cover; }
+  .adm-report-info { flex:1; min-width:0; }
+  .adm-report-name { font-size:0.86rem; color:var(--cream); margin-bottom:4px; }
+  .adm-report-uid { font-size:0.6rem; color:var(--muted); word-break:break-all; margin-bottom:8px; }
+  .adm-report-reason {
+    display:inline-block; font-size:0.58rem; letter-spacing:0.14em; text-transform:uppercase;
+    padding:2px 8px; border:1px solid rgba(201,112,106,0.35); color:#c9706a;
+    background:rgba(201,112,106,0.08); margin-bottom:8px;
+  }
+  .adm-report-details { font-size:0.76rem; color:rgba(245,240,232,0.5); line-height:1.55; margin-bottom:8px; }
+  .adm-report-date { font-size:0.62rem; color:rgba(245,240,232,0.25); }
+  .adm-report-suspended { font-size:0.6rem; letter-spacing:0.1em; text-transform:uppercase; color:#c9706a; margin-top:4px; }
+  .adm-report-actions { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+  .adm-btn-reviewed {
+    padding:8px 14px; background:rgba(245,240,232,0.04);
+    border:1px solid rgba(245,240,232,0.14); color:var(--muted);
+    font-family:var(--sans); font-size:0.6rem; letter-spacing:0.1em;
+    text-transform:uppercase; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+  }
+  .adm-btn-reviewed:hover { border-color:rgba(245,240,232,0.3); color:var(--cream-dim); }
+  .adm-btn-suspend {
+    padding:8px 14px; background:rgba(201,112,106,0.08);
+    border:1px solid rgba(201,112,106,0.3); color:#c9706a;
+    font-family:var(--sans); font-size:0.6rem; letter-spacing:0.1em;
+    text-transform:uppercase; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+  }
+  .adm-btn-suspend:hover { background:rgba(201,112,106,0.2); border-color:rgba(201,112,106,0.5); }
+  .adm-btn-suspend:disabled { opacity:0.5; cursor:default; }
 
   /* ── verif cards ── */
   .adm-verif-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; }
@@ -220,6 +263,9 @@ export default function AdminDashboard({ user, onBack }) {
   const [activeTab, setActiveTab]     = useState("subs");
   const [pendingVerifs, setPendingVerifs] = useState([]);
   const [verifLoading, setVerifLoading]   = useState(true);
+  const [reports, setReports]             = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportedProfiles, setReportedProfiles] = useState({});
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -238,6 +284,37 @@ export default function AdminDashboard({ user, onBack }) {
 
   const rejectVerif = (uid) =>
     updateDoc(doc(db, "users", uid), { verificationStatus: "rejected", isVerified: false });
+
+  /* ── reports ── */
+  useEffect(() => {
+    if (!isAdmin) return;
+    const q = query(collection(db, "reports"), where("status", "==", "pending"));
+    const unsub = onSnapshot(q, async snap => {
+      const docs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setReports(docs);
+      setReportsLoading(false);
+      const uids = [...new Set(docs.map(r => r.reportedId).filter(Boolean))];
+      const profiles = {};
+      await Promise.all(uids.map(async uid => {
+        try {
+          const snap2 = await getDoc(doc(db, "users", uid));
+          if (snap2.exists()) profiles[uid] = snap2.data();
+        } catch {}
+      }));
+      setReportedProfiles(prev => ({ ...prev, ...profiles }));
+    }, () => setReportsLoading(false));
+    return unsub;
+  }, [isAdmin]);
+
+  const markReviewed = (reportId) =>
+    updateDoc(doc(db, "reports", reportId), { status: "reviewed" });
+
+  const suspendUser = async (reportId, userId) => {
+    await updateDoc(doc(db, "users", userId), { suspended: true });
+    await updateDoc(doc(db, "reports", reportId), { status: "reviewed" });
+  };
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -338,7 +415,69 @@ export default function AdminDashboard({ user, onBack }) {
               📸 Verificaciones
               {pendingVerifs.length > 0 && <span className="adm-tab-badge">{pendingVerifs.length}</span>}
             </button>
+            <button className={`adm-tab${activeTab === "reports" ? " active" : ""}`} onClick={() => setActiveTab("reports")}>
+              ⚠️ Reportes
+              {reports.length > 0 && <span className="adm-tab-badge red">{reports.length}</span>}
+            </button>
           </div>
+
+          {/* ── REPORTES TAB ── */}
+          {activeTab === "reports" && (
+            <>
+              <div className="adm-sec">Reportes pendientes</div>
+              {reportsLoading ? (
+                <div className="adm-loading">Cargando…</div>
+              ) : reports.length === 0 ? (
+                <div className="adm-empty">
+                  <div className="adm-empty-ico">✓</div>
+                  <div className="adm-empty-msg">No hay reportes pendientes.</div>
+                </div>
+              ) : (
+                <div className="adm-report-list">
+                  {reports.map(r => {
+                    const p = reportedProfiles[r.reportedId] || {};
+                    const date = r.createdAt?.toDate ? r.createdAt.toDate() : null;
+                    return (
+                      <div className="adm-report-card" key={r.id}>
+                        <div className="adm-report-avatar">
+                          {p.photoURL
+                            ? <img src={p.photoURL} alt={p.displayName || ""} />
+                            : <span>{p.emoji || "👤"}</span>
+                          }
+                        </div>
+                        <div className="adm-report-info">
+                          <div className="adm-report-name">{p.displayName || "Sin nombre"}</div>
+                          <div className="adm-report-uid">{r.reportedId}</div>
+                          <span className="adm-report-reason">{r.reason}</span>
+                          {r.details && <div className="adm-report-details">"{r.details}"</div>}
+                          {date && (
+                            <div className="adm-report-date">
+                              {date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                            </div>
+                          )}
+                          {p.suspended && (
+                            <div className="adm-report-suspended">Cuenta suspendida</div>
+                          )}
+                        </div>
+                        <div className="adm-report-actions">
+                          <button className="adm-btn-reviewed" onClick={() => markReviewed(r.id)}>
+                            Marcar revisado
+                          </button>
+                          <button
+                            className="adm-btn-suspend"
+                            onClick={() => suspendUser(r.id, r.reportedId)}
+                            disabled={p.suspended}
+                          >
+                            {p.suspended ? "Suspendido" : "Suspender cuenta"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
 
           {/* ── VERIFICACIONES TAB ── */}
           {activeTab === "verifs" && (

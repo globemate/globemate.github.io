@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LangButton } from "./LanguageSelector";
 import { db } from "./firebase";
 import { addDoc, collection, onSnapshot } from "firebase/firestore";
 
@@ -319,7 +318,6 @@ export default function Pricing({
   subscription,
 }) {
   const { t } = useTranslation();
-  const [menuOpen,    setMenuOpen]    = useState(false);
   const [annual,      setAnnual]      = useState(false);
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [checkoutErr, setCheckoutErr] = useState("");
@@ -350,51 +348,7 @@ export default function Pricing({
     <>
       <style>{style}</style>
 
-      {/* ── mob nav ── */}
-      <div className={`mob-nav${menuOpen ? " open" : ""}`}>
-        <div className="mob-nav-top">
-          <div className="mob-nav-logo">Globe<span>Mate</span></div>
-          <LangButton align="right" />
-          <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
-        </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore?.(); }}>{t("nav.explore")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches?.(); }}>{t("nav.matches")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat?.(); }}>{t("nav.messages")}</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap?.(); }}>{t("nav.map")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile?.(); }}>{t("nav.myProfile")}</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onNotif?.(); }}>
-          🔔 {t("nav.notifications")}{notifCount > 0 ? ` (${notifCount})` : ""}
-        </button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
-        <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut?.(); }}>{t("nav.signOut")}</button>
-      </div>
-
       <div className="px-root">
-
-        {/* ── navbar ── */}
-        <nav className="px-nav">
-          <button className="px-logo" onClick={onBack}>Globe<span>Mate</span></button>
-          <div className="px-nav-actions">
-            <LangButton align="right" />
-            {user && (
-              <button className="bell-btn" onClick={onNotif}>
-                🔔{notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? "9+" : notifCount}</span>}
-              </button>
-            )}
-            {user && <button className="bell-btn pxd" onClick={onSettings} title={t("nav.settings")}>⚙</button>}
-            <button className="px-nav-btn pxd" onClick={onExplore}>{t("nav.explore")}</button>
-            <button className="px-nav-btn pxd" onClick={onProfile}>{t("nav.myProfile")}</button>
-            <button className="px-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
-              <span /><span /><span />
-            </button>
-          </div>
-        </nav>
 
         {/* ── hero ── */}
         <div className="px-hero">
