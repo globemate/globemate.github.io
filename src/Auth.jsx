@@ -354,6 +354,10 @@ const PHONE_ERRORS = {
   "auth/missing-verification-id":     "Error de sesión. Solicita un nuevo código.",
   "auth/network-request-failed":      "Error de red. Verifica tu conexión.",
   "auth/user-disabled":               "Esta cuenta ha sido deshabilitada.",
+  "auth/operation-not-allowed":       "El inicio de sesión con teléfono no está habilitado. Contacta con soporte.",
+  "auth/internal-error":              "Error interno de Firebase. Recarga la página e inténtalo de nuevo.",
+  "auth/missing-app-credential":      "Error de verificación de la app. Recarga la página e inténtalo de nuevo.",
+  "auth/requires-recent-login":       "Tu sesión ha expirado. Vuelve a iniciar sesión e inténtalo de nuevo.",
 };
 
 const getAuthError  = (err) => AUTH_ERRORS[err.code]  || `Error: ${err.message}`;
@@ -387,8 +391,7 @@ const XIcon = () => (
    Component
 ───────────────────────────────────────── */
 export default function Auth({ onAuthSuccess }) {
-  // Cambiar a true cuando el plan de X Developer permita OAuth 1.0a con Firebase
-  const showTwitterLogin = false;
+  const showTwitterLogin = true;
 
   const { t } = useTranslation();
   const [mode, setMode]         = useState("login"); // login | register | reset | phone | phone-code
@@ -507,9 +510,15 @@ export default function Auth({ onAuthSuccess }) {
       const result   = auth.currentUser
         ? await linkWithPhoneNumber(auth.currentUser, fullPhone, verifier)
         : await signInWithPhoneNumber(auth, fullPhone, verifier);
+      // Limpiar el verifier antes de que React re-renderice al cambiar de paso;
+      // si no, reCAPTCHA intenta limpiar sus nodos DOM de forma asíncrona y
+      // encuentra nulls → "Cannot read properties of null (reading 'style')"
+      try { recaptchaRef.current?.clear(); } catch (_) {}
+      recaptchaRef.current = null;
       setConfirmResult(result);
       setMode("phone-code");
     } catch (err) {
+      console.error("[sendSMS] err.code:", err.code, "| err.message:", err.message, err);
       try { recaptchaRef.current?.clear(); } catch (_) {}
       recaptchaRef.current = null;
       setPhoneError(getPhoneError(err.code));
@@ -541,6 +550,7 @@ export default function Auth({ onAuthSuccess }) {
       }, { merge: true });
       onAuthSuccess();
     } catch (err) {
+      console.error("[verifyCode] err.code:", err.code, "| err.message:", err.message, err);
       const phoneMsg = getPhoneError(err.code);
       setPhoneError(
         phoneMsg !== "Error inesperado. Inténtalo de nuevo." ? phoneMsg : getAuthError(err)
