@@ -53,9 +53,23 @@ export default function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      // Auth closes only when onAuthSuccess() is called explicitly —
-      // never on auth-state change, so the phone-verification step
-      // isn't skipped when Firebase creates the account mid-flow.
+      // On sign-out (u === null) reset every screen flag so the app lands on
+      // home/landing. showAuth is intentionally NOT touched here: during
+      // phone-verification Firebase fires with a real user, and showAuth is
+      // closed only via onAuthSuccess() — the !u branch never runs in that case.
+      if (!u) {
+        setShowProfile(false);
+        setShowExplore(false);
+        setShowChat(false);
+        setShowMatches(false);
+        setShowMap(false);
+        setShowNotif(false);
+        setShowSettings(false);
+        setShowPricing(false);
+        setShowPrivacy(false);
+        setShowTerms(false);
+        setShowAdmin(false);
+      }
     });
     return () => unsub();
   }, []);

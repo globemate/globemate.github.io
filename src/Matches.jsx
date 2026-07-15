@@ -180,6 +180,22 @@ const css = `
 
 function MatchCard({ m, myProfile, onMessage, onViewProfile }) {
   const { t } = useTranslation();
+
+  if (m.deleted) {
+    return (
+      <div className="mx-card" style={{ opacity: 0.45, pointerEvents: "none" }}>
+        <div className="mx-card-banner" style={{ background: DEF_GRADIENT }}>
+          <div className="mx-card-banner-overlay" />
+          <div className="mx-card-avatar"><span>👤</span></div>
+        </div>
+        <div className="mx-card-body">
+          <div className="mx-card-name" style={{ color: "var(--muted)" }}>Usuario eliminado</div>
+          <div className="mx-matched-at">{t("matches.matchedAgo", { time: ago(m.matchedAt, t) })}</div>
+        </div>
+      </div>
+    );
+  }
+
   const compat = compatibility(m, myProfile);
   const gradient = m.travelStyles?.[0] ? (STYLE_GRADIENT[m.travelStyles[0]] || DEF_GRADIENT) : DEF_GRADIENT;
   const myInterests        = myProfile?.interests || [];
@@ -299,6 +315,8 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
                 languages:        data.languages        || [],
                 isVerified:       data.isVerified       || false,
               };
+            } else {
+              otherProfile = { deleted: true };
             }
           }
           return {

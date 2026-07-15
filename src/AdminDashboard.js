@@ -266,6 +266,7 @@ export default function AdminDashboard({ user, onBack }) {
   const [reports, setReports]             = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportedProfiles, setReportedProfiles] = useState({});
+  const [reporterProfiles, setReporterProfiles] = useState({});
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -295,15 +296,26 @@ export default function AdminDashboard({ user, onBack }) {
         .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setReports(docs);
       setReportsLoading(false);
-      const uids = [...new Set(docs.map(r => r.reportedId).filter(Boolean))];
-      const profiles = {};
-      await Promise.all(uids.map(async uid => {
-        try {
-          const snap2 = await getDoc(doc(db, "users", uid));
-          if (snap2.exists()) profiles[uid] = snap2.data();
-        } catch {}
-      }));
-      setReportedProfiles(prev => ({ ...prev, ...profiles }));
+      const reportedUids = [...new Set(docs.map(r => r.reportedId).filter(Boolean))];
+      const reporterUids = [...new Set(docs.map(r => r.reporterId).filter(Boolean))];
+      const reported = {};
+      const reporters = {};
+      await Promise.all([
+        ...reportedUids.map(async uid => {
+          try {
+            const snap2 = await getDoc(doc(db, "users", uid));
+            reported[uid] = snap2.exists() ? snap2.data() : { deleted: true };
+          } catch {}
+        }),
+        ...reporterUids.map(async uid => {
+          try {
+            const snap2 = await getDoc(doc(db, "users", uid));
+            reporters[uid] = snap2.exists() ? snap2.data() : { deleted: true };
+          } catch {}
+        }),
+      ]);
+      setReportedProfiles(prev => ({ ...prev, ...reported }));
+      setReporterProfiles(prev => ({ ...prev, ...reporters }));
     }, () => setReportsLoading(false));
     return unsub;
   }, [isAdmin]);
@@ -435,8 +447,12 @@ export default function AdminDashboard({ user, onBack }) {
               ) : (
                 <div className="adm-report-list">
                   {reports.map(r => {
-                    const p = reportedProfiles[r.reportedId] || {};
+                    const p        = reportedProfiles[r.reportedId] || {};
+                    const reporter = reporterProfiles[r.reporterId]  || {};
                     const date = r.createdAt?.toDate ? r.createdAt.toDate() : null;
+                    const reporterName = reporter.deleted
+                      ? "Usuario eliminado"
+                      : (reporter.displayName || r.reporterId || "Desconocido");
                     return (
                       <div className="adm-report-card" key={r.id}>
                         <div className="adm-report-avatar">
@@ -450,6 +466,12 @@ export default function AdminDashboard({ user, onBack }) {
                           <div className="adm-report-uid">{r.reportedId}</div>
                           <span className="adm-report-reason">{r.reason}</span>
                           {r.details && <div className="adm-report-details">"{r.details}"</div>}
+                          <div className="adm-report-date" style={{ marginBottom: "4px" }}>
+                            Reportado por: <strong>{reporterName}</strong>
+                            {!reporter.deleted && r.reporterId && (
+                              <span style={{ marginLeft: "6px", opacity: 0.55 }}>({r.reporterId})</span>
+                            )}
+                          </div>
                           {date && (
                             <div className="adm-report-date">
                               {date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}

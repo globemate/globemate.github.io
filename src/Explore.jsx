@@ -213,6 +213,20 @@ function TravelerCard({ traveler, connected, onConnect, onViewProfile }) {
   );
 }
 
+function isVisibleTo(traveler, viewerLocation) {
+  const mode = traveler.visibilityMode || "all";
+  if (mode === "all") return true;
+  const countries = traveler.visibilityCountries || [];
+  if (!countries.length) return true;
+  console.log(`[isVisibleTo] uid=${traveler.uid} name="${traveler.displayName}" mode="${mode}" countries=${JSON.stringify(countries)} viewerLoc="${viewerLocation}"`);
+  if (!viewerLocation) return true;
+  const loc = viewerLocation.toLowerCase();
+  const hit = countries.some(c => loc.includes(c.toLowerCase()));
+  const result = mode === "except" ? !hit : hit;
+  console.log(`[isVisibleTo] → hit=${hit} result=${result}`);
+  return result;
+}
+
 export default function Explore({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
   const { t } = useTranslation();
   const [travelers, setTravelers] = useState([]);
@@ -224,14 +238,25 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
   const [sort, setSort]           = useState("countries");
   const [viewUid, setViewUid]     = useState(null);
   const [blockedIds, setBlockedIds] = useState(new Set());
+  const [myLocation, setMyLocation] = useState("");
 
   useEffect(() => {
+    if (!user?.uid) { setLoading(false); return; }
     const load = async () => {
       try {
-        const snap = await getDocs(collection(db, "users"));
+        // Load viewer profile and all travelers in parallel so myLocation is
+        // ready before the list renders — avoids the race condition where
+        // travelers arrive first with myLocation="" (→ isVisibleTo returns true for all)
+        const [mySnap, snap] = await Promise.all([
+          getDoc(doc(db, "users", user.uid)),
+          getDocs(collection(db, "users")),
+        ]);
+        const loc = mySnap.exists() ? (mySnap.data().location || "") : "";
+        console.log("[Explore] viewer location loaded:", JSON.stringify(loc));
+        setMyLocation(loc);
         const real = snap.docs
           .map(d => ({ uid: d.id, ...d.data() }))
-          .filter(u => u.uid !== user?.uid && u.displayName);
+          .filter(u => u.uid !== user.uid && u.displayName);
         setTravelers(real);
       } catch (err) {
         console.error("Error loading travelers:", err);
@@ -318,6 +343,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
     .filter(tr => {
       if (blockedIds.has(tr.uid)) return false;
       if (tr.suspended) return false;
+      if (!isVisibleTo(tr, myLocation)) return false;
       if (search) {
         const q = search.toLowerCase();
         const matchName = (tr.displayName || "").toLowerCase().includes(q);

@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from "rea
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { db } from "./firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 
 /* ── known destinations with coordinates ── */
@@ -74,24 +74,43 @@ function FlyTo({ target }) {
 }
 
 /* ── component ── */
+function isVisibleTo(traveler, viewerLocation) {
+  const mode = traveler.visibilityMode || "all";
+  if (mode === "all") return true;
+  const countries = traveler.visibilityCountries || [];
+  if (!countries.length) return true;
+  console.log(`[isVisibleTo/Map] uid=${traveler.uid} name="${traveler.displayName}" mode="${mode}" countries=${JSON.stringify(countries)} viewerLoc="${viewerLocation}"`);
+  if (!viewerLocation) return true;
+  const loc = viewerLocation.toLowerCase();
+  const hit = countries.some(c => loc.includes(c.toLowerCase()));
+  const result = mode === "except" ? !hit : hit;
+  console.log(`[isVisibleTo/Map] → hit=${hit} result=${result}`);
+  return result;
+}
+
 export default function Map({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
   const { t } = useTranslation();
-  const [clusters, setClusters]     = useState([]);
-  const [search, setSearch]         = useState("");
-  const [flyTarget, setFlyTarget]   = useState(null);
-  const [connected, setConnected]   = useState({});
-  const [filterNew, setFilterNew]   = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
+  const [allTravelers, setAllTravelers] = useState([]);
+  const [myLocation, setMyLocation]     = useState("");
+  const [search, setSearch]             = useState("");
+  const [flyTarget, setFlyTarget]       = useState(null);
+  const [connected, setConnected]       = useState({});
+  const [filterNew, setFilterNew]       = useState(false);
+  const [suggestions, setSuggestions]   = useState([]);
 
   useEffect(() => {
     const load = async () => {
       try {
+        if (user?.uid) {
+          const mySnap = await getDoc(doc(db, "users", user.uid));
+          if (mySnap.exists()) setMyLocation(mySnap.data().location || "");
+        }
         const snap = await getDocs(collection(db, "users"));
         const real = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== user?.uid);
-        setClusters(buildClusters(real));
+        setAllTravelers(real);
       } catch (err) {
         console.error("Error loading map travelers:", err);
-        setClusters([]);
+        setAllTravelers([]);
       }
     };
     load();
@@ -112,9 +131,10 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
     setSuggestions([]);
   };
 
+  const allClusters = buildClusters(allTravelers.filter(u => isVisibleTo(u, myLocation)));
   const visible = filterNew
-    ? clusters.filter(c => c.travelers.some(t => t.status === "confirmed"))
-    : clusters;
+    ? allClusters.filter(c => c.travelers.some(t => t.status === "confirmed"))
+    : allClusters;
 
   return (
     <>
@@ -253,12 +273,12 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
           }}>
             <div style={{ display:"flex", gap:20 }}>
               <div>
-                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{clusters.length}</div>
+                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{allClusters.length}</div>
                 <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.destinations")}</div>
               </div>
               <div>
                 <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>
-                  {clusters.reduce((n, c) => n + c.travelers.length, 0)}
+                  {allClusters.reduce((n, c) => n + c.travelers.length, 0)}
                 </div>
                 <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.travelers")}</div>
               </div>

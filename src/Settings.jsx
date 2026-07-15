@@ -10,6 +10,54 @@ import { LangButton, LangSelect } from "./LanguageSelector";
 
 const TABS_KEYS = ["account", "notifications", "privacy", "advanced"];
 
+const COUNTRY_NAMES = [
+  // Europa Occidental
+  "Austria","Bélgica","Francia","Alemania","Irlanda","Liechtenstein","Luxemburgo","Mónaco",
+  "Países Bajos","Suiza","Inglaterra","Escocia","Gales","Irlanda del Norte",
+  // Europa del Norte
+  "Dinamarca","Estonia","Finlandia","Islandia","Letonia","Lituania","Noruega","Suecia",
+  // Europa del Sur
+  "Albania","Andorra","Bosnia y Herzegovina","Croacia","Chipre","Grecia","Italia","Kosovo",
+  "Malta","Montenegro","Macedonia del Norte","Portugal","San Marino","Serbia","Eslovenia","España","Vaticano",
+  // Europa del Este
+  "Bielorrusia","Bulgaria","Rep. Checa","Hungría","Moldavia","Polonia","Rumania","Rusia","Eslovaquia","Ucrania",
+  // Asia del Este
+  "China","Hong Kong","Japón","Corea del Norte","Corea del Sur","Macao","Mongolia","Taiwán",
+  // Asia del Sudeste
+  "Brunéi","Camboya","Timor-Leste","Indonesia","Laos","Malasia","Myanmar","Filipinas","Singapur","Tailandia","Vietnam",
+  // Asia del Sur
+  "Afganistán","Bangladesh","Bután","India","Maldivas","Nepal","Pakistán","Sri Lanka",
+  // Asia Central
+  "Kazajistán","Kirguistán","Tayikistán","Turkmenistán","Uzbekistán",
+  // Oriente Medio
+  "Armenia","Azerbaiyán","Baréin","Georgia","Irak","Irán","Israel","Jordania","Kuwait","Líbano",
+  "Omán","Palestina","Qatar","Arabia Saudí","Siria","Turquía","Emiratos Árabes","Yemen",
+  // África del Norte
+  "Argelia","Egipto","Libia","Marruecos","Mauritania","Sudán","Túnez",
+  // África Occidental
+  "Benín","Burkina Faso","Cabo Verde","Costa de Marfil","Gambia","Ghana","Guinea","Guinea-Bissau",
+  "Liberia","Mali","Níger","Nigeria","Senegal","Sierra Leona","Santo Tomé y Príncipe","Togo",
+  // África Central
+  "Angola","Camerún","Rep. Centroafricana","Chad","Congo","Rep. Dem. del Congo","Guinea Ecuatorial","Gabón",
+  // África Oriental
+  "Burundi","Comoras","Djibouti","Eritrea","Etiopía","Kenia","Madagascar","Malaui","Mauricio",
+  "Mozambique","Ruanda","Seychelles","Somalia","Sudán del Sur","Tanzania","Uganda","Zambia","Zimbabue",
+  // África del Sur
+  "Botsuana","Eswatini","Lesoto","Namibia","Sudáfrica",
+  // América del Norte
+  "Canadá","Estados Unidos","México",
+  // Centroamérica
+  "Belice","Costa Rica","El Salvador","Guatemala","Honduras","Nicaragua","Panamá",
+  // El Caribe
+  "Antigua y Barbuda","Bahamas","Barbados","Cuba","Dominica","Granada","Haití","Jamaica",
+  "Rep. Dominicana","Santa Lucía","San Cristóbal y Nieves","San Vicente y Granadinas","Trinidad y Tobago",
+  // América del Sur
+  "Argentina","Bolivia","Brasil","Chile","Colombia","Ecuador","Guyana","Paraguay","Perú","Surinam","Uruguay","Venezuela",
+  // Oceanía
+  "Australia","Nueva Zelanda","Fiyi","Papúa Nueva Guinea","Islas Salomón","Vanuatu",
+  "Micronesia","Kiribati","Islas Marshall","Nauru","Palau","Samoa","Tonga","Tuvalu",
+];
+
 const DEF = {
   phone: "",
   notif: {
@@ -23,6 +71,47 @@ const DEF = {
   },
   accountPaused: false,
 };
+
+function CountryPicker({ selected, onChange }) {
+  const [search, setSearch] = useState("");
+  const suggestions = search.trim().length > 0
+    ? COUNTRY_NAMES.filter(c =>
+        c.toLowerCase().includes(search.toLowerCase()) && !selected.includes(c)
+      ).slice(0, 8)
+    : [];
+  const add    = (c) => { onChange([...selected, c]); setSearch(""); };
+  const remove = (c) => onChange(selected.filter(x => x !== c));
+  return (
+    <div className="sg-cpicker">
+      {selected.length > 0 && (
+        <div className="sg-cpicker-chips">
+          {selected.map(c => (
+            <span key={c} className="sg-cpicker-chip">
+              {c}
+              <button type="button" onClick={() => remove(c)}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="sg-cpicker-wrap">
+        <input
+          className="sg-inp"
+          placeholder="Buscar país…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onBlur={() => setTimeout(() => setSearch(""), 160)}
+        />
+        {suggestions.length > 0 && (
+          <div className="sg-cpicker-drop">
+            {suggestions.map(c => (
+              <button key={c} type="button" className="sg-cpicker-opt" onMouseDown={() => add(c)}>{c}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Toggle({ on, onChange }) {
   return (
@@ -162,6 +251,17 @@ const css = `
   .sg-save-btn:hover:not(:disabled) { background:var(--gold-light); }
   .sg-save-btn:disabled { opacity:0.45; cursor:not-allowed; }
 
+  /* country picker */
+  .sg-cpicker { display:flex; flex-direction:column; gap:10px; margin-top:10px; padding-left:26px; }
+  .sg-cpicker-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .sg-cpicker-chip { background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.28); color:var(--gold-light); padding:4px 6px 4px 10px; font-size:0.78rem; font-family:var(--sans); display:inline-flex; align-items:center; gap:6px; }
+  .sg-cpicker-chip button { background:none; border:none; color:rgba(201,168,76,0.5); cursor:pointer; font-size:1rem; line-height:1; padding:0 2px; transition:color 0.15s; }
+  .sg-cpicker-chip button:hover { color:var(--gold-light); }
+  .sg-cpicker-wrap { position:relative; }
+  .sg-cpicker-drop { position:absolute; top:100%; left:0; right:0; z-index:100; background:rgba(14,13,9,0.98); border:1px solid rgba(201,168,76,0.2); border-top:none; max-height:200px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
+  .sg-cpicker-opt { width:100%; background:none; border:none; border-bottom:1px solid rgba(201,168,76,0.06); color:rgba(245,240,232,0.75); padding:9px 14px; text-align:left; font-family:var(--sans); font-size:0.82rem; cursor:pointer; transition:background 0.12s; }
+  .sg-cpicker-opt:hover { background:rgba(201,168,76,0.09); color:var(--cream); }
+
   /* hamburger */
   .sg-hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:6px; flex-shrink:0; }
   @media(max-width:860px){ .sg-hamburger{ display:flex; } }
@@ -188,7 +288,9 @@ export default function Settings({
   const { t } = useTranslation();
   const [tab, setTab]           = useState("account");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [settings, setSettings] = useState(DEF);
+  const [settings, setSettings]                   = useState(DEF);
+  const [visibilityMode, setVisibilityMode]       = useState("all");
+  const [visibilityCountries, setVisibilityCountries] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [dirty, setDirty]       = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -217,13 +319,18 @@ export default function Settings({
 
   useEffect(() => {
     getDoc(doc(db, "users", user.uid)).then(snap => {
-      if (snap.exists() && snap.data().settings) {
-        const s = snap.data().settings;
-        setSettings({
-          ...DEF, ...s,
-          notif:   { ...DEF.notif,   ...(s.notif   || {}) },
-          privacy: { ...DEF.privacy, ...(s.privacy  || {}) },
-        });
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.settings) {
+          const s = data.settings;
+          setSettings({
+            ...DEF, ...s,
+            notif:   { ...DEF.notif,   ...(s.notif   || {}) },
+            privacy: { ...DEF.privacy, ...(s.privacy  || {}) },
+          });
+        }
+        setVisibilityMode(data.visibilityMode || "all");
+        setVisibilityCountries(data.visibilityCountries || []);
       }
     }).finally(() => setLoading(false));
   }, [user]);
@@ -235,7 +342,7 @@ export default function Settings({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, "users", user.uid), { settings }, { merge: true });
+      await setDoc(doc(db, "users", user.uid), { settings, visibilityMode, visibilityCountries }, { merge: true });
       setDirty(false);
       setSaveMsg({ text: t("settings.savedChanges"), type:"ok" });
       setTimeout(() => setSaveMsg({ text:"", type:"" }), 3000);
@@ -512,6 +619,42 @@ export default function Settings({
                   <div className="sg-row-lbl">{t("settings.privacyIncognito")}</div>
                 </div>
                 <Toggle on={settings.privacy.incognitoMode} onChange={v => updPrivacy("incognitoMode", v)} />
+              </div>
+            </div>
+
+            <div className="sg-section">
+              <div className="sg-sec-title">Visibilidad geográfica</div>
+              <div className="sg-field">
+                <div className="sg-row-sub" style={{ marginBottom:10 }}>
+                  Elige en qué países pueden descubrirte otros viajeros en Explorar y el Mapa.
+                </div>
+                <div className="sg-radios">
+                  {[
+                    { v:"all",    l:"🌍 Visible en todo el mundo" },
+                    { v:"except", l:"🚫 Visible en todo el mundo excepto en:" },
+                    { v:"only",   l:"✅ Visible solo en:" },
+                  ].map(({ v, l }) => (
+                    <div key={v}>
+                      <div
+                        className={`sg-radio${visibilityMode === v ? " on" : ""}`}
+                        onClick={() => {
+                          setVisibilityMode(v);
+                          if (v === "all") setVisibilityCountries([]);
+                          setDirty(true);
+                        }}
+                      >
+                        <div className="sg-radio-dot" />
+                        <span className="sg-radio-lbl">{l}</span>
+                      </div>
+                      {visibilityMode === v && v !== "all" && (
+                        <CountryPicker
+                          selected={visibilityCountries}
+                          onChange={c => { setVisibilityCountries(c); setDirty(true); }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </>)}

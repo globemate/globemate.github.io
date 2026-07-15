@@ -229,7 +229,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
     )];
     Promise.all(otherUids.map(async uid => {
       const snap = await getDoc(doc(db, "users", uid));
-      return [uid, snap.exists() ? snap.data() : {}];
+      return [uid, snap.exists() ? snap.data() : { deleted: true }];
     })).then(entries => {
       setProfilesMap(Object.fromEntries(entries));
     }).catch(err => console.error("[Chat] profiles fetch error:", err));
@@ -375,7 +375,8 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                   <div
                     key={c.id}
                     className={`ch-conv-item${activeId === c.id ? " active" : ""}`}
-                    onClick={() => openConv(c.id)}
+                    onClick={() => !other.deleted && openConv(c.id)}
+                    style={other.deleted ? { opacity: 0.45, cursor: "default" } : undefined}
                   >
                     <div className="ch-conv-avatar">
                       {other.photoURL
@@ -384,7 +385,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                       }
                     </div>
                     <div className="ch-conv-info">
-                      <div className="ch-conv-name">{other.displayName}</div>
+                      <div className="ch-conv-name" style={other.deleted ? { color: "var(--muted)" } : undefined}>{other.displayName}</div>
                       <div className="ch-conv-preview">
                         {isMe ? "Tú: " : ""}{c.lastMessage || "¡Di hola!"}
                       </div>
@@ -412,9 +413,9 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                 <div className="ch-thread-head">
                   <button className="ch-back-btn" onClick={() => setMobileView("list")}>←</button>
                   <div
-                    style={{ display:"flex", alignItems:"center", gap:"14px", cursor:"pointer" }}
-                    onClick={() => setViewUid(getOtherUid(activeConv, user.uid))}
-                    title="Ver perfil"
+                    style={{ display:"flex", alignItems:"center", gap:"14px", cursor: activeOther.deleted ? "default" : "pointer" }}
+                    onClick={() => !activeOther.deleted && setViewUid(getOtherUid(activeConv, user.uid))}
+                    title={activeOther.deleted ? undefined : "Ver perfil"}
                   >
                     <div className="ch-thread-avatar">
                       {activeOther.photoURL
@@ -423,11 +424,12 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                       }
                     </div>
                     <div>
-                      <div className="ch-thread-name">{activeOther.displayName}</div>
+                      <div className="ch-thread-name" style={activeOther.deleted ? { color: "var(--muted)" } : undefined}>{activeOther.displayName}</div>
                       {activeOther.location && <div className="ch-thread-loc">📍 {activeOther.location}</div>}
                     </div>
                   </div>
 
+                  {!activeOther.deleted && (
                   <div className="ch-thread-actions">
                     <button
                       className="ch-act-btn"
@@ -443,6 +445,7 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                       Reportar
                     </button>
                   </div>
+                  )}
                 </div>
 
                 <div className="ch-messages">
@@ -510,12 +513,15 @@ function getOtherProfile(conv, myUid, profilesMap) {
   if (!conv) return {};
   const otherUid = getOtherUid(conv, myUid);
   const fresh = profilesMap?.[otherUid];
-  if (fresh) return {
-    displayName: fresh.displayName || "Viajero",
-    photoURL:    fresh.photoURL    || null,
-    location:    fresh.location    || null,
-    emoji:       fresh.emoji       || null,
-  };
+  if (fresh) {
+    if (fresh.deleted) return { deleted: true, displayName: "Usuario eliminado", photoURL: null, emoji: null };
+    return {
+      displayName: fresh.displayName || "Viajero",
+      photoURL:    fresh.photoURL    || null,
+      location:    fresh.location    || null,
+      emoji:       fresh.emoji       || null,
+    };
+  }
   const stored = conv.participantProfiles?.[otherUid] || {};
   return {
     displayName: stored.displayName || "Viajero",
