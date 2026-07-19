@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collectionGroup, onSnapshot, query, collection, where, updateDoc, doc, getDoc } from "firebase/firestore";
+import { collectionGroup, onSnapshot, query, collection, where, updateDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
 
 // ── ADMIN CONFIG ──────────────────────────────────────────────────────────────
 // Pon aquí tu email de Firebase Auth (el mismo con el que inicias sesión):
@@ -210,6 +210,32 @@ const css = `
   .adm-report-details { font-size:0.76rem; color:rgba(245,240,232,0.5); line-height:1.55; margin-bottom:8px; }
   .adm-report-date { font-size:0.62rem; color:rgba(245,240,232,0.25); }
   .adm-report-suspended { font-size:0.6rem; letter-spacing:0.1em; text-transform:uppercase; color:#c9706a; margin-top:4px; }
+
+  /* ── report sub-tabs ── */
+  .adm-subtabs { display:flex; gap:6px; margin-bottom:24px; }
+  .adm-subtab {
+    background:none; border:1px solid rgba(245,240,232,0.1);
+    color:var(--muted); font-family:var(--sans); font-size:0.62rem;
+    letter-spacing:0.12em; text-transform:uppercase;
+    padding:6px 14px; cursor:pointer; transition:all 0.2s;
+  }
+  .adm-subtab:hover { border-color:rgba(245,240,232,0.25); color:var(--cream-dim); }
+  .adm-subtab.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,0.07); }
+
+  /* ── status badges ── */
+  .b-report-status { display:inline-block; font-size:0.55rem; letter-spacing:0.12em; text-transform:uppercase; padding:2px 7px; border:1px solid; margin-right:6px; }
+  .b-report-status.pending  { color:#e8c97a; border-color:rgba(232,201,122,0.35); background:rgba(232,201,122,0.07); }
+  .b-report-status.reviewed { color:rgba(245,240,232,0.35); border-color:rgba(245,240,232,0.1); }
+  .b-suspended { display:inline-block; font-size:0.55rem; letter-spacing:0.12em; text-transform:uppercase; padding:2px 7px; border:1px solid rgba(201,112,106,0.35); color:#c9706a; background:rgba(201,112,106,0.08); }
+
+  /* ── reactivate button ── */
+  .adm-btn-reactivate {
+    padding:8px 14px; background:rgba(109,191,103,0.07);
+    border:1px solid rgba(109,191,103,0.25); color:#6dbf67;
+    font-family:var(--sans); font-size:0.6rem; letter-spacing:0.1em;
+    text-transform:uppercase; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+  }
+  .adm-btn-reactivate:hover { background:rgba(109,191,103,0.18); }
   .adm-report-actions { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
   .adm-btn-reviewed {
     padding:8px 14px; background:rgba(245,240,232,0.04);
@@ -267,6 +293,7 @@ export default function AdminDashboard({ user, onBack }) {
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportedProfiles, setReportedProfiles] = useState({});
   const [reporterProfiles, setReporterProfiles] = useState({});
+  const [reportSubTab, setReportSubTab] = useState("pending");
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -289,7 +316,7 @@ export default function AdminDashboard({ user, onBack }) {
   /* ── reports ── */
   useEffect(() => {
     if (!isAdmin) return;
-    const q = query(collection(db, "reports"), where("status", "==", "pending"));
+    const q = query(collection(db, "reports"));
     const unsub = onSnapshot(q, async snap => {
       const docs = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
@@ -298,6 +325,10 @@ export default function AdminDashboard({ user, onBack }) {
       setReportsLoading(false);
       const reportedUids = [...new Set(docs.map(r => r.reportedId).filter(Boolean))];
       const reporterUids = [...new Set(docs.map(r => r.reporterId).filter(Boolean))];
+      if (docs.length > 0) {
+        console.log("[Admin reports] campos del primer reporte:", Object.keys(docs[0]));
+        console.log("[Admin reports] reporterUids encontrados:", reporterUids);
+      }
       const reported = {};
       const reporters = {};
       await Promise.all([
@@ -305,13 +336,17 @@ export default function AdminDashboard({ user, onBack }) {
           try {
             const snap2 = await getDoc(doc(db, "users", uid));
             reported[uid] = snap2.exists() ? snap2.data() : { deleted: true };
-          } catch {}
+          } catch (err) {
+            console.error("[Admin] error leyendo reported user", uid, err);
+          }
         }),
         ...reporterUids.map(async uid => {
           try {
             const snap2 = await getDoc(doc(db, "users", uid));
             reporters[uid] = snap2.exists() ? snap2.data() : { deleted: true };
-          } catch {}
+          } catch (err) {
+            console.error("[Admin] error leyendo reporter user", uid, err);
+          }
         }),
       ]);
       setReportedProfiles(prev => ({ ...prev, ...reported }));
@@ -321,11 +356,20 @@ export default function AdminDashboard({ user, onBack }) {
   }, [isAdmin]);
 
   const markReviewed = (reportId) =>
-    updateDoc(doc(db, "reports", reportId), { status: "reviewed" });
+    updateDoc(doc(db, "reports", reportId), { status: "reviewed", reviewedAt: serverTimestamp() });
 
   const suspendUser = async (reportId, userId) => {
     await updateDoc(doc(db, "users", userId), { suspended: true });
-    await updateDoc(doc(db, "reports", reportId), { status: "reviewed" });
+    await updateDoc(doc(db, "reports", reportId), { status: "reviewed", reviewedAt: serverTimestamp() });
+  };
+
+  const reactivateUser = async (userId) => {
+    if (!window.confirm("¿Reactivar la cuenta de este usuario? Se eliminará la suspensión.")) return;
+    await updateDoc(doc(db, "users", userId), { suspended: false });
+    setReportedProfiles(prev => ({
+      ...prev,
+      [userId]: { ...prev[userId], suspended: false },
+    }));
   };
 
   useEffect(() => {
@@ -429,77 +473,129 @@ export default function AdminDashboard({ user, onBack }) {
             </button>
             <button className={`adm-tab${activeTab === "reports" ? " active" : ""}`} onClick={() => setActiveTab("reports")}>
               ⚠️ Reportes
-              {reports.length > 0 && <span className="adm-tab-badge red">{reports.length}</span>}
+              {reports.filter(r => r.status === "pending").length > 0 && (
+                <span className="adm-tab-badge red">{reports.filter(r => r.status === "pending").length}</span>
+              )}
             </button>
           </div>
 
           {/* ── REPORTES TAB ── */}
-          {activeTab === "reports" && (
-            <>
-              <div className="adm-sec">Reportes pendientes</div>
-              {reportsLoading ? (
-                <div className="adm-loading">Cargando…</div>
-              ) : reports.length === 0 ? (
-                <div className="adm-empty">
-                  <div className="adm-empty-ico">✓</div>
-                  <div className="adm-empty-msg">No hay reportes pendientes.</div>
+          {activeTab === "reports" && (() => {
+            const filteredReports = reports.filter(r =>
+              reportSubTab === "all"      ? true :
+              reportSubTab === "pending"  ? r.status === "pending" :
+                                           r.status === "reviewed"
+            );
+            return (
+              <>
+                <div className="adm-sec">Historial de reportes</div>
+                <div className="adm-subtabs">
+                  {[
+                    { key: "pending",  label: "Pendientes" },
+                    { key: "reviewed", label: "Revisados"  },
+                    { key: "all",      label: "Todos"      },
+                  ].map(t => (
+                    <button
+                      key={t.key}
+                      className={`adm-subtab${reportSubTab === t.key ? " active" : ""}`}
+                      onClick={() => setReportSubTab(t.key)}
+                    >
+                      {t.label}
+                      {t.key === "pending" && reports.filter(r => r.status === "pending").length > 0 && (
+                        <span className="adm-tab-badge red" style={{ marginLeft: 6 }}>
+                          {reports.filter(r => r.status === "pending").length}
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <div className="adm-report-list">
-                  {reports.map(r => {
-                    const p        = reportedProfiles[r.reportedId] || {};
-                    const reporter = reporterProfiles[r.reporterId]  || {};
-                    const date = r.createdAt?.toDate ? r.createdAt.toDate() : null;
-                    const reporterName = reporter.deleted
-                      ? "Usuario eliminado"
-                      : (reporter.displayName || r.reporterId || "Desconocido");
-                    return (
-                      <div className="adm-report-card" key={r.id}>
-                        <div className="adm-report-avatar">
-                          {p.photoURL
-                            ? <img src={p.photoURL} alt={p.displayName || ""} />
-                            : <span>{p.emoji || "👤"}</span>
-                          }
-                        </div>
-                        <div className="adm-report-info">
-                          <div className="adm-report-name">{p.displayName || "Sin nombre"}</div>
-                          <div className="adm-report-uid">{r.reportedId}</div>
-                          <span className="adm-report-reason">{r.reason}</span>
-                          {r.details && <div className="adm-report-details">"{r.details}"</div>}
-                          <div className="adm-report-date" style={{ marginBottom: "4px" }}>
-                            Reportado por: <strong>{reporterName}</strong>
-                            {!reporter.deleted && r.reporterId && (
-                              <span style={{ marginLeft: "6px", opacity: 0.55 }}>({r.reporterId})</span>
+                {reportsLoading ? (
+                  <div className="adm-loading">Cargando…</div>
+                ) : filteredReports.length === 0 ? (
+                  <div className="adm-empty">
+                    <div className="adm-empty-ico">✓</div>
+                    <div className="adm-empty-msg">
+                      {reportSubTab === "pending" ? "No hay reportes pendientes." : "No hay reportes en esta categoría."}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="adm-report-list">
+                    {filteredReports.map(r => {
+                      const p        = reportedProfiles[r.reportedId] || {};
+                      const reporter = reporterProfiles[r.reporterId]  || {};
+                      const date       = r.createdAt?.toDate  ? r.createdAt.toDate()  : null;
+                      const reviewDate = r.reviewedAt?.toDate ? r.reviewedAt.toDate() : null;
+                      const reporterName = reporter.deleted
+                        ? "Usuario eliminado"
+                        : (reporter.displayName || r.reporterId || "Desconocido");
+                      return (
+                        <div className="adm-report-card" key={r.id}>
+                          <div className="adm-report-avatar">
+                            {p.photoURL
+                              ? <img src={p.photoURL} alt={p.displayName || ""} />
+                              : <span>{p.emoji || "👤"}</span>
+                            }
+                          </div>
+                          <div className="adm-report-info">
+                            <div style={{ marginBottom: 6 }}>
+                              <span className={`b-report-status ${r.status === "pending" ? "pending" : "reviewed"}`}>
+                                {r.status === "pending" ? "Pendiente" : "Revisado"}
+                              </span>
+                              {p.suspended && <span className="b-suspended">Suspendida</span>}
+                            </div>
+                            <div className="adm-report-name">{p.displayName || "Sin nombre"}</div>
+                            <div className="adm-report-uid">{r.reportedId}</div>
+                            <span className="adm-report-reason">{r.reason}</span>
+                            {r.details && <div className="adm-report-details">"{r.details}"</div>}
+                            <div className="adm-report-date" style={{ marginBottom: "4px" }}>
+                              Reportado por: <strong>{reporterName}</strong>
+                              {!reporter.deleted && r.reporterId && (
+                                <span style={{ marginLeft: "6px", opacity: 0.55 }}>({r.reporterId})</span>
+                              )}
+                            </div>
+                            {date && (
+                              <div className="adm-report-date">
+                                Fecha: {date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                              </div>
+                            )}
+                            {reviewDate && (
+                              <div className="adm-report-date">
+                                Revisado: {reviewDate.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                              </div>
                             )}
                           </div>
-                          {date && (
-                            <div className="adm-report-date">
-                              {date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-                            </div>
-                          )}
-                          {p.suspended && (
-                            <div className="adm-report-suspended">Cuenta suspendida</div>
-                          )}
+                          <div className="adm-report-actions">
+                            {r.status === "pending" && (
+                              <button className="adm-btn-reviewed" onClick={() => markReviewed(r.id)}>
+                                Marcar revisado
+                              </button>
+                            )}
+                            {r.status === "pending" && (
+                              <button
+                                className="adm-btn-suspend"
+                                onClick={() => suspendUser(r.id, r.reportedId)}
+                                disabled={p.suspended}
+                              >
+                                {p.suspended ? "Ya suspendido" : "Suspender cuenta"}
+                              </button>
+                            )}
+                            {p.suspended && (
+                              <button
+                                className="adm-btn-reactivate"
+                                onClick={() => reactivateUser(r.reportedId)}
+                              >
+                                Reactivar cuenta
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="adm-report-actions">
-                          <button className="adm-btn-reviewed" onClick={() => markReviewed(r.id)}>
-                            Marcar revisado
-                          </button>
-                          <button
-                            className="adm-btn-suspend"
-                            onClick={() => suspendUser(r.id, r.reportedId)}
-                            disabled={p.suspended}
-                          >
-                            {p.suspended ? "Suspendido" : "Suspender cuenta"}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* ── VERIFICACIONES TAB ── */}
           {activeTab === "verifs" && (
