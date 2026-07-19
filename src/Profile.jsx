@@ -465,6 +465,40 @@ const css = `
   }
   .pr-selfie-capture:hover:not(:disabled) { background:rgba(201,168,76,0.18); }
   .pr-selfie-capture:disabled { opacity:0.4; cursor:not-allowed; }
+
+  /* ── mobile ≤480px ─────────────────────────────────────────────────────── */
+  @media (max-width: 480px) {
+    /* grid items must not exceed track width */
+    .pr-body { padding: 0 12px; }
+    .pr-body > div { min-width: 0; }
+
+    /* reduce section side padding so content has room */
+    .pr-section { padding: 18px 14px; }
+
+    /* header alignment */
+    .pr-header { padding: 68px 12px 20px; }
+
+    /* stack add-row (destinos, idiomas) to column */
+    .pr-add-row { flex-direction: column; }
+    .pr-add-row > * { width: 100%; flex: none; box-sizing: border-box; }
+
+    /* chips: allow text to wrap so they don't overflow */
+    .pr-chip { white-space: normal; word-break: break-word; }
+
+    /* continent button: name can shrink, meta stays fixed */
+    .cv-cont-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cv-cont-meta { flex-shrink: 0; }
+
+    /* continent progress bar fills section width */
+    .cv-bar { margin: 6px 0 14px; }
+
+    /* lang row: allow wrap on very narrow screens */
+    .pr-lang-row { flex-wrap: wrap; }
+
+    /* dest row: status badge can wrap below */
+    .pr-dest-row { flex-wrap: wrap; }
+    .pr-dest-input { min-width: 0; }
+  }
 `;
 
 export default function Profile({ user, onBack, onNotif, notifCount, onExplore, onMatches, onChat, onMap, onSignOut, onSettings, onPricing, subscription }) {
