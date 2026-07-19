@@ -74,24 +74,20 @@ function FlyTo({ target }) {
 }
 
 /* ── component ── */
-function isVisibleTo(traveler, viewerLocation) {
+function isVisibleTo(traveler, viewerCountry) {
   const mode = traveler.visibilityMode || "all";
   if (mode === "all") return true;
   const countries = traveler.visibilityCountries || [];
   if (!countries.length) return true;
-  console.log(`[isVisibleTo/Map] uid=${traveler.uid} name="${traveler.displayName}" mode="${mode}" countries=${JSON.stringify(countries)} viewerLoc="${viewerLocation}"`);
-  if (!viewerLocation) return true;
-  const loc = viewerLocation.toLowerCase();
-  const hit = countries.some(c => loc.includes(c.toLowerCase()));
-  const result = mode === "except" ? !hit : hit;
-  console.log(`[isVisibleTo/Map] → hit=${hit} result=${result}`);
-  return result;
+  if (!viewerCountry) return true;
+  const hit = countries.includes(viewerCountry);
+  return mode === "except" ? !hit : hit;
 }
 
 export default function Map({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
   const { t } = useTranslation();
   const [allTravelers, setAllTravelers] = useState([]);
-  const [myLocation, setMyLocation]     = useState("");
+  const [myLocationCountry, setMyLocationCountry] = useState("");
   const [search, setSearch]             = useState("");
   const [flyTarget, setFlyTarget]       = useState(null);
   const [connected, setConnected]       = useState({});
@@ -103,7 +99,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
       try {
         if (user?.uid) {
           const mySnap = await getDoc(doc(db, "users", user.uid));
-          if (mySnap.exists()) setMyLocation(mySnap.data().location || "");
+          if (mySnap.exists()) setMyLocationCountry(mySnap.data().locationCountry || "");
         }
         const snap = await getDocs(collection(db, "users"));
         const real = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== user?.uid);
@@ -131,7 +127,7 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
     setSuggestions([]);
   };
 
-  const allClusters = buildClusters(allTravelers.filter(u => isVisibleTo(u, myLocation)));
+  const allClusters = buildClusters(allTravelers.filter(u => isVisibleTo(u, myLocationCountry)));
   const visible = filterNew
     ? allClusters.filter(c => c.travelers.some(t => t.status === "confirmed"))
     : allClusters;

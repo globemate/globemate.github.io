@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
+import { COUNTRY_NAMES } from "./countryData";
 
 const INTERESTS = [
   "🏔️ Mountains","🏖️ Beaches","🏛️ History","🍜 Food",
@@ -197,6 +198,7 @@ const TOTAL_COUNTRIES = CONTINENTS.reduce((s,c) => c.regions.reduce((rs,r) => rs
 const DEF = {
   displayName: "",
   location: "",
+  locationCountry: "",
   bio: "",
   photoURL: "",
   coverURL: "",
@@ -266,6 +268,12 @@ const css = `
   .pr-loc-input { background: transparent; border: none; border-bottom: 1px solid transparent; color: var(--cream-dim); font-family: var(--sans); font-size: 0.85rem; font-weight: 300; outline: none; transition: border-color 0.25s; padding: 2px 0; min-width: 160px; }
   .pr-loc-input:focus { border-bottom-color: var(--gold); }
   .pr-loc-input::placeholder { color: var(--muted); }
+
+  .pr-country-sel { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .pr-country-wrap { position: relative; flex: 1; }
+  .pr-country-drop { position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: rgba(14,13,9,0.98); border: 1px solid rgba(201,168,76,0.2); border-top: none; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  .pr-country-opt { width: 100%; background: none; border: none; border-bottom: 1px solid rgba(201,168,76,0.06); color: rgba(245,240,232,0.75); padding: 9px 14px; text-align: left; font-family: var(--sans); font-size: 0.82rem; cursor: pointer; transition: background 0.12s; }
+  .pr-country-opt:hover { background: rgba(201,168,76,0.09); color: var(--cream); }
 
   .pr-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); padding: 3px 10px; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; }
   .pr-plan-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase; font-family: var(--sans); font-weight: 500; margin-top: 7px; }
@@ -478,6 +486,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
   const [newLang, setNewLang]           = useState("");
   const [newLangLevel, setNewLangLevel] = useState("Conversational");
   const [menuOpen, setMenuOpen]         = useState(false);
+  const [countrySearch, setCountrySearch] = useState(null);
 
   const photoRef = useRef();
   const coverRef = useRef();
@@ -740,6 +749,34 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
                 onChange={e => upd("location", e.target.value)}
               />
               {profile.isVerified && <span className="pr-badge">{t("profile.verifiedTraveler")}</span>}
+            </div>
+            <div className="pr-country-sel">
+              <span style={{ color:"var(--muted)", fontSize:"0.9rem" }}>🌍</span>
+              <div className="pr-country-wrap">
+                <input
+                  className="pr-loc-input"
+                  placeholder="País de residencia…"
+                  value={countrySearch !== null ? countrySearch : (profile.locationCountry || "")}
+                  onFocus={() => setCountrySearch(profile.locationCountry || "")}
+                  onChange={e => setCountrySearch(e.target.value)}
+                  onBlur={() => setTimeout(() => setCountrySearch(null), 160)}
+                />
+                {countrySearch !== null && (() => {
+                  const opts = COUNTRY_NAMES.filter(c =>
+                    c.toLowerCase().includes(countrySearch.toLowerCase())
+                  ).slice(0, 8);
+                  return opts.length > 0 ? (
+                    <div className="pr-country-drop">
+                      {opts.map(c => (
+                        <button key={c} type="button" className="pr-country-opt"
+                          onMouseDown={() => { upd("locationCountry", c); setCountrySearch(null); }}>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
+              </div>
             </div>
             <div className="pr-stats">
               <div>

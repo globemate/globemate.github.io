@@ -213,18 +213,14 @@ function TravelerCard({ traveler, connected, onConnect, onViewProfile }) {
   );
 }
 
-function isVisibleTo(traveler, viewerLocation) {
+function isVisibleTo(traveler, viewerCountry) {
   const mode = traveler.visibilityMode || "all";
   if (mode === "all") return true;
   const countries = traveler.visibilityCountries || [];
   if (!countries.length) return true;
-  console.log(`[isVisibleTo] uid=${traveler.uid} name="${traveler.displayName}" mode="${mode}" countries=${JSON.stringify(countries)} viewerLoc="${viewerLocation}"`);
-  if (!viewerLocation) return true;
-  const loc = viewerLocation.toLowerCase();
-  const hit = countries.some(c => loc.includes(c.toLowerCase()));
-  const result = mode === "except" ? !hit : hit;
-  console.log(`[isVisibleTo] → hit=${hit} result=${result}`);
-  return result;
+  if (!viewerCountry) return true;
+  const hit = countries.includes(viewerCountry);
+  return mode === "except" ? !hit : hit;
 }
 
 export default function Explore({ user, onBack, onProfile, onExplore, onMatches, onChat, onMap, onSignOut, onNotif, notifCount, onSettings, onPricing }) {
@@ -238,7 +234,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
   const [sort, setSort]           = useState("countries");
   const [viewUid, setViewUid]     = useState(null);
   const [blockedIds, setBlockedIds] = useState(new Set());
-  const [myLocation, setMyLocation] = useState("");
+  const [myLocationCountry, setMyLocationCountry] = useState("");
 
   useEffect(() => {
     if (!user?.uid) { setLoading(false); return; }
@@ -251,9 +247,8 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
           getDoc(doc(db, "users", user.uid)),
           getDocs(collection(db, "users")),
         ]);
-        const loc = mySnap.exists() ? (mySnap.data().location || "") : "";
-        console.log("[Explore] viewer location loaded:", JSON.stringify(loc));
-        setMyLocation(loc);
+        const loc = mySnap.exists() ? (mySnap.data().locationCountry || "") : "";
+        setMyLocationCountry(loc);
         const real = snap.docs
           .map(d => ({ uid: d.id, ...d.data() }))
           .filter(u => u.uid !== user.uid && u.displayName);
@@ -343,7 +338,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
     .filter(tr => {
       if (blockedIds.has(tr.uid)) return false;
       if (tr.suspended) return false;
-      if (!isVisibleTo(tr, myLocation)) return false;
+      if (!isVisibleTo(tr, myLocationCountry)) return false;
       if (search) {
         const q = search.toLowerCase();
         const matchName = (tr.displayName || "").toLowerCase().includes(q);
