@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import {
-  updateEmail, updatePassword,
-  reauthenticateWithCredential, EmailAuthProvider, deleteUser,
+  updatePassword, verifyBeforeUpdateEmail,
+  reauthenticateWithCredential, reauthenticateWithPopup,
+  EmailAuthProvider, GoogleAuthProvider, deleteUser,
 } from "firebase/auth";
 import { useTranslation } from "react-i18next";
 import { LangButton, LangSelect } from "./LanguageSelector";
@@ -260,8 +261,11 @@ export default function Settings({
   const [pwdBusy, setPwdBusy]   = useState(false);
   const [showDel, setShowDel]   = useState(false);
   const [delText, setDelText]   = useState("");
+  const [delPwd, setDelPwd]     = useState("");
   const [delBusy, setDelBusy]   = useState(false);
   const [delErr, setDelErr]     = useState("");
+
+  const isEmailUser = user.providerData.some(p => p.providerId === "password");
 
   const TAB_LABELS = {
     account:       t("settings.account"),
@@ -311,31 +315,40 @@ export default function Settings({
     try {
       const cred = EmailAuthProvider.credential(user.email, emailPwd);
       await reauthenticateWithCredential(user, cred);
-      await updateEmail(user, newEmail);
-      setEmailMsg({ text:"Email updated ✓", type:"ok" });
+      await verifyBeforeUpdateEmail(user, newEmail);
+      setEmailMsg({ text: "Te enviamos un enlace de verificación al nuevo correo. Confírmalo para aplicar el cambio.", type:"ok" });
       setNewEmail(""); setEmailPwd("");
     } catch (e) {
-      const msg = e.code === "auth/wrong-password"       ? "Wrong password."
-                : e.code === "auth/email-already-in-use" ? "Email already in use."
-                : "Error updating email.";
+      const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
+                    ? "Contraseña actual incorrecta."
+                : e.code === "auth/email-already-in-use"
+                    ? "Ese email ya está en uso por otra cuenta."
+                : e.code === "auth/invalid-email"
+                    ? "El formato del email no es válido."
+                : "Error al cambiar el email. Inténtalo de nuevo.";
       setEmailMsg({ text: msg, type:"err" });
     }
     setEmailBusy(false);
   };
 
   const handleUpdatePassword = async () => {
-    if (!curPwd || !newPwd || !cfmPwd) { setPwdMsg({ text:"Please fill all fields.", type:"err" }); return; }
-    if (newPwd !== cfmPwd)             { setPwdMsg({ text:"Passwords do not match.", type:"err" }); return; }
-    if (newPwd.length < 6)             { setPwdMsg({ text:"Minimum 6 characters.", type:"err" }); return; }
+    if (!curPwd || !newPwd || !cfmPwd) { setPwdMsg({ text:"Rellena todos los campos.", type:"err" }); return; }
+    if (newPwd !== cfmPwd)             { setPwdMsg({ text:"Las contraseñas nuevas no coinciden.", type:"err" }); return; }
+    if (newPwd.length < 6)             { setPwdMsg({ text:"La nueva contraseña debe tener al menos 6 caracteres.", type:"err" }); return; }
     setPwdBusy(true); setPwdMsg({ text:"", type:"" });
     try {
       const cred = EmailAuthProvider.credential(user.email, curPwd);
       await reauthenticateWithCredential(user, cred);
       await updatePassword(user, newPwd);
-      setPwdMsg({ text:"Password updated ✓", type:"ok" });
+      setPwdMsg({ text:"Contraseña actualizada ✓", type:"ok" });
       setCurPwd(""); setNewPwd(""); setCfmPwd("");
     } catch (e) {
-      setPwdMsg({ text: e.code === "auth/wrong-password" ? "Wrong current password." : "Error updating.", type:"err" });
+      const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
+                    ? "Contraseña actual incorrecta."
+                : e.code === "auth/weak-password"
+                    ? "La nueva contraseña es demasiado débil."
+                : "Error al actualizar. Inténtalo de nuevo.";
+      setPwdMsg({ text: msg, type:"err" });
     }
     setPwdBusy(false);
   };
@@ -349,11 +362,48 @@ export default function Settings({
   const handleDeleteAccount = async () => {
     if (delText !== "ELIMINAR") return;
     setDelBusy(true); setDelErr("");
+    const uid = user.uid;
     try {
-      await deleteDoc(doc(db, "users", user.uid));
+      // 1. Reautenticar
+      if (isEmailUser) {
+        if (!delPwd) { setDelErr("Introduce tu contraseña para confirmar."); setDelBusy(false); return; }
+        const cred = EmailAuthProvider.credential(user.email, delPwd);
+        await reauthenticateWithCredential(user, cred);
+      } else {
+        const pid = user.providerData[0]?.providerId;
+        const provider = pid === "google.com" ? new GoogleAuthProvider() : null;
+        if (!provider) { setDelErr("No se pudo identificar tu proveedor. Cierra sesión, vuelve a entrar e inténtalo."); setDelBusy(false); return; }
+        await reauthenticateWithPopup(user, provider);
+      }
+
+      // 2. Borrar datos de Firestore (no se borran reports — se conservan para moderación)
+      const batch = writeBatch(db);
+      batch.delete(doc(db, "users", uid));
+
+      const [likesFrom, likesTo, matchSnap, convSnap, blockSnap] = await Promise.all([
+        getDocs(query(collection(db, "likes"),          where("fromUid",      "==",             uid))),
+        getDocs(query(collection(db, "likes"),          where("toUid",        "==",             uid))),
+        getDocs(query(collection(db, "matches"),        where("users",        "array-contains", uid))),
+        getDocs(query(collection(db, "conversations"),  where("participants", "array-contains", uid))),
+        getDocs(query(collection(db, "blocks"),         where("blockerId",    "==",             uid))),
+      ]);
+      [likesFrom, likesTo, matchSnap, convSnap, blockSnap].forEach(snap =>
+        snap.forEach(d => batch.delete(d.ref))
+      );
+      await batch.commit();
+
+      // 3. Borrar usuario de Auth
       await deleteUser(user);
-    } catch {
-      setDelErr("Error deleting account. Please sign in again and retry.");
+
+    } catch (e) {
+      const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
+                    ? "Contraseña incorrecta. No se eliminó la cuenta."
+                : e.code === "auth/popup-closed-by-user"
+                    ? "Cancelaste la autenticación. No se eliminó la cuenta."
+                : e.code === "auth/requires-recent-login"
+                    ? "Por seguridad, cierra sesión, vuelve a entrar e inténtalo de nuevo."
+                : `Error al eliminar la cuenta: ${e.message}`;
+      setDelErr(msg);
       setDelBusy(false);
     }
   };
@@ -369,12 +419,15 @@ export default function Settings({
       <style>{css}</style>
 
       {showDel && (
-        <div className="sg-overlay" onClick={() => { setShowDel(false); setDelText(""); setDelErr(""); }}>
+        <div className="sg-overlay" onClick={() => { setShowDel(false); setDelText(""); setDelPwd(""); setDelErr(""); }}>
           <div className="sg-modal" onClick={e => e.stopPropagation()}>
             <div className="sg-modal-icon">⚠️</div>
-            <div className="sg-modal-title">{t("settings.deleteAccount")}</div>
-            <div className="sg-modal-body">{t("settings.deleteWarning")}</div>
-            <div className="sg-modal-lbl">{t("settings.deleteTypeToConfirm")}</div>
+            <div className="sg-modal-title">Eliminar cuenta</div>
+            <div className="sg-modal-body">
+              Esta acción es <strong>irreversible</strong>. Se borrarán tu perfil, likes, matches y conversaciones.
+              Los reportes donde apareces se conservan para el historial de moderación.
+            </div>
+            <div className="sg-modal-lbl">Escribe <strong>ELIMINAR</strong> para confirmar:</div>
             <input
               className="sg-inp"
               placeholder="ELIMINAR"
@@ -382,17 +435,35 @@ export default function Settings({
               onChange={e => { setDelText(e.target.value); setDelErr(""); }}
               autoComplete="off"
             />
+            {isEmailUser && (
+              <>
+                <div className="sg-modal-lbl" style={{ marginTop:12 }}>Tu contraseña actual:</div>
+                <input
+                  className="sg-inp"
+                  type="password"
+                  placeholder="••••••••"
+                  value={delPwd}
+                  onChange={e => { setDelPwd(e.target.value); setDelErr(""); }}
+                  autoComplete="current-password"
+                />
+              </>
+            )}
+            {!isEmailUser && delText === "ELIMINAR" && (
+              <div className="sg-modal-lbl" style={{ marginTop:8, color:"rgba(245,240,232,0.45)" }}>
+                Se abrirá una ventana para confirmar tu identidad con {user.providerData[0]?.providerId?.replace(".com","") || "tu proveedor"}.
+              </div>
+            )}
             {delErr && <div className="sg-modal-err">{delErr}</div>}
             <div className="sg-modal-actions">
-              <button className="sg-btn-cancel" onClick={() => { setShowDel(false); setDelText(""); setDelErr(""); }}>
-                {t("common.cancel")}
+              <button className="sg-btn-cancel" onClick={() => { setShowDel(false); setDelText(""); setDelPwd(""); setDelErr(""); }}>
+                Cancelar
               </button>
               <button
                 className="sg-btn-confirm-del"
                 onClick={handleDeleteAccount}
-                disabled={delText !== "ELIMINAR" || delBusy}
+                disabled={delText !== "ELIMINAR" || delBusy || (isEmailUser && !delPwd)}
               >
-                {delBusy ? t("common.pleaseWait") : t("settings.confirmDelete")}
+                {delBusy ? "Eliminando…" : "Eliminar definitivamente"}
               </button>
             </div>
           </div>
@@ -458,39 +529,46 @@ export default function Settings({
 
           {/* ─── ACCOUNT ─────────────────────────── */}
           {tab === "account" && (<>
+
+            {/* Email actual (siempre visible) */}
             <div className="sg-section">
-              <div className="sg-sec-title">{t("settings.email")}</div>
+              <div className="sg-sec-title">Correo electrónico</div>
               <div className="sg-field">
-                <div className="sg-lbl">{t("settings.email")}</div>
+                <div className="sg-lbl">Correo actual</div>
                 <div className="sg-cur-val">{user.email}</div>
               </div>
-              <div className="sg-field">
-                <div className="sg-lbl">{t("settings.newEmail")}</div>
-                <input className="sg-inp" type="email" placeholder="new@email.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
-                <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.currentPassword")}</div>
-                <input className="sg-inp" type="password" placeholder="••••••••" value={emailPwd} onChange={e => setEmailPwd(e.target.value)} />
-                {emailMsg.text && <div className={`sg-note ${emailMsg.type}`}>{emailMsg.text}</div>}
-                <button className="sg-field-btn" onClick={handleUpdateEmail} disabled={emailBusy || !newEmail || !emailPwd}>
-                  {emailBusy ? t("settings.saving") : t("settings.changeEmail")}
-                </button>
-              </div>
+              {isEmailUser && (
+                <div className="sg-field">
+                  <div className="sg-lbl">Nuevo correo</div>
+                  <input className="sg-inp" type="email" placeholder="nuevo@correo.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                  <div className="sg-lbl" style={{ marginTop:6 }}>Contraseña actual (para confirmar)</div>
+                  <input className="sg-inp" type="password" placeholder="••••••••" value={emailPwd} onChange={e => setEmailPwd(e.target.value)} />
+                  {emailMsg.text && <div className={`sg-note ${emailMsg.type}`}>{emailMsg.text}</div>}
+                  <button className="sg-field-btn" onClick={handleUpdateEmail} disabled={emailBusy || !newEmail || !emailPwd}>
+                    {emailBusy ? "Enviando…" : "Cambiar email"}
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="sg-section">
-              <div className="sg-sec-title">{t("settings.password")}</div>
-              <div className="sg-field">
-                <div className="sg-lbl">{t("settings.currentPassword")}</div>
-                <input className="sg-inp" type="password" placeholder="••••••••" value={curPwd} onChange={e => setCurPwd(e.target.value)} />
-                <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.newPassword")}</div>
-                <input className="sg-inp" type="password" placeholder="••••••••" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-                <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.newPassword")}</div>
-                <input className="sg-inp" type="password" placeholder="••••••••" value={cfmPwd} onChange={e => setCfmPwd(e.target.value)} />
-                {pwdMsg.text && <div className={`sg-note ${pwdMsg.type}`}>{pwdMsg.text}</div>}
-                <button className="sg-field-btn" onClick={handleUpdatePassword} disabled={pwdBusy || !curPwd || !newPwd || !cfmPwd}>
-                  {pwdBusy ? t("settings.saving") : t("settings.changePassword")}
-                </button>
+            {/* Contraseña — solo usuarios email/contraseña */}
+            {isEmailUser && (
+              <div className="sg-section">
+                <div className="sg-sec-title">Contraseña</div>
+                <div className="sg-field">
+                  <div className="sg-lbl">Contraseña actual</div>
+                  <input className="sg-inp" type="password" placeholder="••••••••" value={curPwd} onChange={e => setCurPwd(e.target.value)} />
+                  <div className="sg-lbl" style={{ marginTop:6 }}>Nueva contraseña</div>
+                  <input className="sg-inp" type="password" placeholder="Mínimo 6 caracteres" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+                  <div className="sg-lbl" style={{ marginTop:6 }}>Confirmar nueva contraseña</div>
+                  <input className="sg-inp" type="password" placeholder="••••••••" value={cfmPwd} onChange={e => setCfmPwd(e.target.value)} />
+                  {pwdMsg.text && <div className={`sg-note ${pwdMsg.type}`}>{pwdMsg.text}</div>}
+                  <button className="sg-field-btn" onClick={handleUpdatePassword} disabled={pwdBusy || !curPwd || !newPwd || !cfmPwd}>
+                    {pwdBusy ? "Guardando…" : "Cambiar contraseña"}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="sg-section">
               <div className="sg-sec-title">{t("settings.phone")}</div>
@@ -507,6 +585,18 @@ export default function Settings({
                 <LangSelect className="sg-sel" />
               </div>
             </div>
+
+            {/* Cerrar sesión */}
+            <div className="sg-section">
+              <div className="sg-danger-row">
+                <div className="sg-row-info">
+                  <div className="sg-row-lbl">Cerrar sesión</div>
+                  <div className="sg-row-sub" style={{ marginTop:4 }}>Salir de tu cuenta en este dispositivo.</div>
+                </div>
+                <button className="sg-btn-pause" onClick={onSignOut}>Cerrar sesión</button>
+              </div>
+            </div>
+
           </>)}
 
           {/* ─── NOTIFICATIONS ─────────────────── */}
