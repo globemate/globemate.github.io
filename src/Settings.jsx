@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import {
   updatePassword, verifyBeforeUpdateEmail,
@@ -313,12 +313,14 @@ export default function Settings({
     if (!newEmail || !emailPwd) return;
     setEmailBusy(true); setEmailMsg({ text:"", type:"" });
     try {
-      const cred = EmailAuthProvider.credential(user.email, emailPwd);
-      await reauthenticateWithCredential(user, cred);
-      await verifyBeforeUpdateEmail(user, newEmail);
+      const currentUser = auth.currentUser;
+      const cred = EmailAuthProvider.credential(currentUser.email, emailPwd);
+      await reauthenticateWithCredential(currentUser, cred);
+      await verifyBeforeUpdateEmail(currentUser, newEmail);
       setEmailMsg({ text: "Te enviamos un enlace de verificación al nuevo correo. Confírmalo para aplicar el cambio.", type:"ok" });
       setNewEmail(""); setEmailPwd("");
     } catch (e) {
+      console.error("[Settings] handleUpdateEmail:", e.code, e.message);
       const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
                     ? "Contraseña actual incorrecta."
                 : e.code === "auth/email-already-in-use"
@@ -337,17 +339,25 @@ export default function Settings({
     if (newPwd.length < 6)             { setPwdMsg({ text:"La nueva contraseña debe tener al menos 6 caracteres.", type:"err" }); return; }
     setPwdBusy(true); setPwdMsg({ text:"", type:"" });
     try {
-      const cred = EmailAuthProvider.credential(user.email, curPwd);
-      await reauthenticateWithCredential(user, cred);
-      await updatePassword(user, newPwd);
-      setPwdMsg({ text:"Contraseña actualizada ✓", type:"ok" });
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error("No hay sesión activa.");
+      console.log("[Settings] reautenticando con email:", currentUser.email);
+      const cred = EmailAuthProvider.credential(currentUser.email, curPwd);
+      await reauthenticateWithCredential(currentUser, cred);
+      console.log("[Settings] reauth OK, actualizando contraseña…");
+      await updatePassword(currentUser, newPwd);
+      console.log("[Settings] updatePassword OK");
+      setPwdMsg({ text:"Contraseña actualizada correctamente. Cierra sesión y vuelve a entrar para confirmar.", type:"ok" });
       setCurPwd(""); setNewPwd(""); setCfmPwd("");
     } catch (e) {
+      console.error("[Settings] handleUpdatePassword:", e.code, e.message);
       const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
                     ? "Contraseña actual incorrecta."
                 : e.code === "auth/weak-password"
-                    ? "La nueva contraseña es demasiado débil."
-                : "Error al actualizar. Inténtalo de nuevo.";
+                    ? "La nueva contraseña es demasiado débil (mínimo 6 caracteres)."
+                : e.code === "auth/requires-recent-login"
+                    ? "Por seguridad, cierra sesión, vuelve a entrar e inténtalo de nuevo."
+                : `Error al actualizar: ${e.message}`;
       setPwdMsg({ text: msg, type:"err" });
     }
     setPwdBusy(false);
@@ -364,38 +374,68 @@ export default function Settings({
     setDelBusy(true); setDelErr("");
     const uid = user.uid;
     try {
-      // 1. Reautenticar
+      // 1. Reautenticar con auth.currentUser (no el prop React)
+      const currentUser = auth.currentUser;
       if (isEmailUser) {
         if (!delPwd) { setDelErr("Introduce tu contraseña para confirmar."); setDelBusy(false); return; }
-        const cred = EmailAuthProvider.credential(user.email, delPwd);
-        await reauthenticateWithCredential(user, cred);
+        const cred = EmailAuthProvider.credential(currentUser.email, delPwd);
+        await reauthenticateWithCredential(currentUser, cred);
       } else {
-        const pid = user.providerData[0]?.providerId;
+        const pid = currentUser.providerData[0]?.providerId;
         const provider = pid === "google.com" ? new GoogleAuthProvider() : null;
         if (!provider) { setDelErr("No se pudo identificar tu proveedor. Cierra sesión, vuelve a entrar e inténtalo."); setDelBusy(false); return; }
-        await reauthenticateWithPopup(user, provider);
+        await reauthenticateWithPopup(currentUser, provider);
       }
 
-      // 2. Borrar datos de Firestore (no se borran reports — se conservan para moderación)
-      const batch = writeBatch(db);
-      batch.delete(doc(db, "users", uid));
+      // 2. Recopilar todos los refs a borrar.
+      //    Orden: messages → conversaciones → resto → users/{uid}
+      //    (mensajes antes que su padre para que la regla get() los encuentre
+      //    aunque se dividan en lotes distintos)
+      const msgRefs  = [];
+      const convRefs = [];
+      const otherRefs = [];
 
       const [likesFrom, likesTo, matchSnap, convSnap, blockSnap] = await Promise.all([
-        getDocs(query(collection(db, "likes"),          where("fromUid",      "==",             uid))),
-        getDocs(query(collection(db, "likes"),          where("toUid",        "==",             uid))),
-        getDocs(query(collection(db, "matches"),        where("users",        "array-contains", uid))),
-        getDocs(query(collection(db, "conversations"),  where("participants", "array-contains", uid))),
-        getDocs(query(collection(db, "blocks"),         where("blockerId",    "==",             uid))),
+        getDocs(query(collection(db, "likes"),         where("fromUid",      "==",             uid))),
+        getDocs(query(collection(db, "likes"),         where("toUid",        "==",             uid))),
+        getDocs(query(collection(db, "matches"),       where("users",        "array-contains", uid))),
+        getDocs(query(collection(db, "conversations"), where("participants", "array-contains", uid))),
+        getDocs(query(collection(db, "blocks"),        where("blockerId",    "==",             uid))),
       ]);
-      [likesFrom, likesTo, matchSnap, convSnap, blockSnap].forEach(snap =>
-        snap.forEach(d => batch.delete(d.ref))
-      );
-      await batch.commit();
 
-      // 3. Borrar usuario de Auth
-      await deleteUser(user);
+      // mensajes de cada conversación (subcolección)
+      await Promise.all(convSnap.docs.map(async convDoc => {
+        const msgs = await getDocs(collection(db, "conversations", convDoc.id, "messages"));
+        msgs.forEach(m => msgRefs.push(m.ref));
+        convRefs.push(convDoc.ref);
+      }));
+
+      likesFrom.forEach(d => otherRefs.push(d.ref));
+      likesTo.forEach(d => otherRefs.push(d.ref));
+      matchSnap.forEach(d => otherRefs.push(d.ref));
+      blockSnap.forEach(d => otherRefs.push(d.ref));
+
+      // Orden final garantiza que messages se borran antes que su conversación
+      const allRefs = [
+        ...msgRefs,
+        ...convRefs,
+        ...otherRefs,
+        doc(db, "users", uid),
+      ];
+
+      // 3. Ejecutar en lotes de 450 (límite Firestore: 500)
+      const CHUNK = 450;
+      for (let i = 0; i < allRefs.length; i += CHUNK) {
+        const batch = writeBatch(db);
+        allRefs.slice(i, i + CHUNK).forEach(ref => batch.delete(ref));
+        await batch.commit();
+      }
+
+      // 4. Borrar usuario de Auth
+      await deleteUser(currentUser);
 
     } catch (e) {
+      console.error("[Settings] handleDeleteAccount:", e.code, e.message);
       const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
                     ? "Contraseña incorrecta. No se eliminó la cuenta."
                 : e.code === "auth/popup-closed-by-user"
