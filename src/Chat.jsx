@@ -92,7 +92,8 @@ const css = `
   .ch-thread-head { flex-shrink:0; padding:0 16px 0 24px; height:64px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--border); background:rgba(10,9,5,0.6); backdrop-filter:blur(6px); }
   .ch-thread-avatar { width:38px; height:38px; border-radius:50%; border:1.5px solid rgba(201,168,76,0.35); background:rgba(10,9,5,0.8); display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0; overflow:hidden; }
   .ch-thread-avatar img { width:100%; height:100%; object-fit:cover; }
-  .ch-thread-name { font-family:var(--serif); font-size:1.05rem; font-weight:300; color:var(--cream); }
+  .ch-thread-name { font-family:var(--serif); font-size:1.05rem; font-weight:300; color:var(--cream); display:flex; align-items:center; gap:6px; }
+  .ch-verified { width:14px; height:14px; background:#c9a84c; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:0.55rem; color:#0a0905; flex-shrink:0; }
   .ch-thread-loc { font-size:0.72rem; color:var(--muted); margin-top:1px; }
   .ch-back-btn { display:none; background:none; border:none; color:var(--gold); cursor:pointer; padding:6px 0; font-size:1rem; margin-right:4px; }
 
@@ -424,7 +425,10 @@ export default function Chat({ user, onBack, onProfile, onExplore, onMatches, on
                       }
                     </div>
                     <div>
-                      <div className="ch-thread-name" style={activeOther.deleted ? { color: "var(--muted)" } : undefined}>{activeOther.displayName}</div>
+                      <div className="ch-thread-name" style={activeOther.deleted ? { color: "var(--muted)" } : undefined}>
+                        {activeOther.displayName}
+                        {activeOther.isVerified && <span className="ch-verified" title="Viajero verificado">✓</span>}
+                      </div>
                       {activeOther.location && <div className="ch-thread-loc">📍 {activeOther.location}</div>}
                     </div>
                   </div>
@@ -520,6 +524,7 @@ function getOtherProfile(conv, myUid, profilesMap) {
       photoURL:    fresh.photoURL    || null,
       location:    fresh.location    || null,
       emoji:       fresh.emoji       || null,
+      isVerified:  fresh.isVerified  || false,
     };
   }
   const stored = conv.participantProfiles?.[otherUid] || {};
@@ -528,6 +533,7 @@ function getOtherProfile(conv, myUid, profilesMap) {
     photoURL:    stored.photoURL    || null,
     location:    stored.location    || null,
     emoji:       stored.emoji       || null,
+    isVerified:  stored.isVerified  || false,
   };
 }
 

@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Selfies de verificación ─────────────────────────────────────────────
+    // Solo el propio usuario puede subir su selfie.
+    // Cualquier usuario autenticado puede leerla (necesario para que el admin
+    // la vea en el AdminDashboard sin tener un token especial de Storage).
+    match /verifications/{uid}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read:  if request.auth != null;
+    }
+
+    // ── Fotos de perfil ─────────────────────────────────────────────────────
+    // Cada usuario sube su propia foto; cualquier autenticado puede leerla
+    // (necesario para mostrar avatares en Explorar, Chat, Mapa, etc.).
+    match /profile-photos/{uid} {
+      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read:  if request.auth != null;
+    }
+
+    // ── Fotos de portada ────────────────────────────────────────────────────
+    match /cover-photos/{uid} {
+      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read:  if request.auth != null;
+    }
+
+  }
+}
