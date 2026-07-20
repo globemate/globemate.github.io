@@ -131,7 +131,7 @@ export default function App() {
   }
 
   if (showAuth) {
-    return <Auth onAuthSuccess={() => setShowAuth(false)} />;
+    return <Auth onAuthSuccess={() => setShowAuth(false)} onBack={() => window.history.back()} />;
   }
 
   // navigate to a screen and push history state

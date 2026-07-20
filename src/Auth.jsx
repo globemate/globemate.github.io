@@ -97,7 +97,17 @@ const style = `
     font-family: 'DM Sans', sans-serif;
     font-weight: 300;
     color: #f5f0e8;
+    position: relative;
   }
+  .auth-back-btn {
+    position: absolute; top: 20px; left: 20px; z-index: 10;
+    background: none; border: none;
+    color: rgba(245,240,232,0.5); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
+    letter-spacing: 0.08em; display: flex; align-items: center;
+    gap: 5px; padding: 6px 8px; transition: color 0.2s;
+  }
+  .auth-back-btn:hover { color: #e8c97a; }
   @media (max-width: 760px) {
     .auth-root  { grid-template-columns: 1fr; }
     .auth-panel { display: none; }
@@ -390,7 +400,7 @@ const XIcon = () => (
 /* ─────────────────────────────────────────
    Component
 ───────────────────────────────────────── */
-export default function Auth({ onAuthSuccess }) {
+export default function Auth({ onAuthSuccess, onBack }) {
   const showTwitterLogin = true;
 
   const { t } = useTranslation();
@@ -612,6 +622,12 @@ export default function Auth({ onAuthSuccess }) {
       <div id="recaptcha-container" />
 
       <div className="auth-root">
+
+        {onBack && (
+          <button className="auth-back-btn" onClick={onBack}>
+            ← Volver
+          </button>
+        )}
 
         {/* ── Left decorative panel ── */}
         <div className="auth-panel">
