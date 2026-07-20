@@ -109,8 +109,9 @@ const css = `
   .ex-card-langs { font-size:0.72rem; color:var(--muted); }
   .ex-card-footer { margin-top:auto; padding-top:10px; display:flex; gap:8px; }
   .ex-connect-btn { flex:1; background:transparent; border:1px solid var(--gold); color:var(--gold); padding:10px 0; font-family:var(--sans); font-size:0.72rem; letter-spacing:0.15em; text-transform:uppercase; cursor:pointer; transition:all 0.25s; }
-  .ex-connect-btn:hover { background:var(--gold); color:var(--black); }
-  .ex-connect-btn.connected { background:rgba(111,207,151,0.12); border-color:rgba(111,207,151,0.4); color:#6fcf97; cursor:default; }
+  .ex-connect-btn:hover:not(:disabled) { background:var(--gold); color:var(--black); }
+  .ex-connect-btn.sent  { background:rgba(245,240,232,0.03); border-color:rgba(245,240,232,0.15); color:rgba(245,240,232,0.3); cursor:default; }
+  .ex-connect-btn.match { background:rgba(201,168,76,0.13); border-color:var(--gold); color:var(--gold-light); cursor:default; }
   .ex-view-btn { background:rgba(245,240,232,0.04); border:1px solid rgba(245,240,232,0.12); color:var(--cream-dim); padding:10px 14px; font-family:var(--sans); font-size:0.72rem; cursor:pointer; transition:all 0.25s; }
   .ex-view-btn:hover { border-color:rgba(201,168,76,0.3); color:var(--cream); }
 
@@ -144,7 +145,7 @@ const css = `
   .mob-nav-divider { height:1px; background:rgba(201,168,76,0.12); margin:8px 0; }
 `;
 
-function TravelerCard({ traveler, connected, onConnect, onViewProfile }) {
+function TravelerCard({ traveler, likeStatus, onConnect, onViewProfile }) {
   const { t } = useTranslation();
   const gradient = traveler.travelStyles?.[0] ? (STYLE_GRADIENT[traveler.travelStyles[0]] || DEF_GRADIENT) : DEF_GRADIENT;
   const shownInterests = (traveler.interests || []).slice(0, 3);
@@ -201,10 +202,11 @@ function TravelerCard({ traveler, connected, onConnect, onViewProfile }) {
 
         <div className="ex-card-footer">
           <button
-            className={`ex-connect-btn${connected ? " connected" : ""}`}
-            onClick={!connected ? onConnect : undefined}
+            className={`ex-connect-btn${likeStatus ? " " + likeStatus : ""}`}
+            onClick={likeStatus ? undefined : onConnect}
+            disabled={!!likeStatus}
           >
-            {connected ? "✓" : t("explore.connect")}
+            {likeStatus === "match" ? "Match ✓" : likeStatus === "sent" ? "Solicitud enviada" : t("explore.connect")}
           </button>
           <button className="ex-view-btn" onClick={onViewProfile}>{t("common.viewProfile")}</button>
         </div>
@@ -227,7 +229,8 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
   const { t } = useTranslation();
   const [travelers, setTravelers] = useState([]);
   const [loading, setLoading]     = useState(true);
-  const [connected, setConnected] = useState({});
+  const [myLikes,   setMyLikes]   = useState(new Set());
+  const [myMatches, setMyMatches] = useState(new Set());
   const [search, setSearch]       = useState("");
   const [styleFilters, setStyleFilters] = useState([]);
   const [langFilter, setLangFilter]     = useState("");
@@ -272,13 +275,35 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
     return () => unsub();
   }, [user?.uid]);
 
+  /* ── subscribe to my likes ── */
+  useEffect(() => {
+    if (!user?.uid) return;
+    const q = query(collection(db, "likes"), where("fromUid", "==", user.uid));
+    const unsub = onSnapshot(q, snap => {
+      setMyLikes(new Set(snap.docs.map(d => d.data().toUid)));
+    }, () => {});
+    return () => unsub();
+  }, [user?.uid]);
+
+  /* ── subscribe to my matches ── */
+  useEffect(() => {
+    if (!user?.uid) return;
+    const q = query(collection(db, "matches"), where("users", "array-contains", user.uid));
+    const unsub = onSnapshot(q, snap => {
+      setMyMatches(new Set(
+        snap.docs.flatMap(d => (d.data().users || []).filter(u => u !== user.uid))
+      ));
+    }, () => {});
+    return () => unsub();
+  }, [user?.uid]);
+
   const handleConnect = async (traveler) => {
     const fromUid = user?.uid;
     const toUid   = traveler.uid;
     if (!fromUid || !toUid) return;
 
     // Optimistic UI update
-    setConnected(prev => ({ ...prev, [toUid]: true }));
+    setMyLikes(prev => new Set([...prev, toUid]));
 
     try {
       // 1. Write our like
@@ -295,6 +320,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         const [uidA, uidB] = [fromUid, toUid].sort();
         const matchId = `${uidA}_${uidB}`;
 
+        setMyMatches(prev => new Set([...prev, toUid]));
         await setDoc(doc(db, "matches", matchId), {
           users: [uidA, uidB],
           createdAt: serverTimestamp(),
@@ -325,7 +351,8 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
       }
     } catch (err) {
       // Revert optimistic update on error
-      setConnected(prev => ({ ...prev, [toUid]: false }));
+      setMyLikes(prev => { const s = new Set(prev); s.delete(toUid); return s; });
+      setMyMatches(prev => { const s = new Set(prev); s.delete(toUid); return s; });
       console.error("Like error:", err);
     }
   };
@@ -446,7 +473,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
               <TravelerCard
                 key={tr.uid}
                 traveler={tr}
-                connected={!!connected[tr.uid]}
+                likeStatus={myMatches.has(tr.uid) ? "match" : myLikes.has(tr.uid) ? "sent" : null}
                 onConnect={() => handleConnect(tr)}
                 onViewProfile={() => setViewUid(tr.uid)}
               />

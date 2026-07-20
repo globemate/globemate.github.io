@@ -110,6 +110,17 @@ const css = `
     color: #e07070;
   }
   .pp-report-btn:hover { background: rgba(201,112,106,0.2); border-color: rgba(201,112,106,0.55); }
+
+  .pp-connect-row { margin-bottom: 8px; }
+  .pp-connect-main {
+    width: 100%; padding: 11px 0; font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.22s; border: 1px solid #c9a84c;
+    background: transparent; color: #c9a84c;
+  }
+  .pp-connect-main:hover:not(:disabled) { background: rgba(201,168,76,0.12); }
+  .pp-connect-main.sent  { border-color: rgba(245,240,232,0.15); color: rgba(245,240,232,0.3); cursor: default; background: rgba(245,240,232,0.02); }
+  .pp-connect-main.match { border-color: #c9a84c; color: #e8c97a; cursor: default; background: rgba(201,168,76,0.12); }
 `;
 
 export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }) {
@@ -119,6 +130,8 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
   const [blocking, setBlocking]         = useState(false);
   const [alreadyBlocked, setAlreadyBlocked] = useState(false);
   const [reporting, setReporting]       = useState(false);
+  const [likeStatus, setLikeStatus]     = useState(null); // null | "sent" | "match"
+  const [likeBusy,   setLikeBusy]       = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -155,6 +168,52 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
       .then(snap => setAlreadyBlocked(snap.exists()))
       .catch(() => {});
   }, [currentUser?.uid, uid]);
+
+  useEffect(() => {
+    if (!currentUser?.uid || !uid || currentUser.uid === uid) return;
+    const fromUid = currentUser.uid;
+    getDoc(doc(db, "likes", `${fromUid}_${uid}`)).then(snap => {
+      if (!snap.exists()) return;
+      const [uidA, uidB] = [fromUid, uid].sort();
+      getDoc(doc(db, "matches", `${uidA}_${uidB}`))
+        .then(m => setLikeStatus(m.exists() ? "match" : "sent"))
+        .catch(() => setLikeStatus("sent"));
+    }).catch(() => {});
+  }, [currentUser?.uid, uid]);
+
+  const handleConnect = async () => {
+    if (!currentUser?.uid || !uid || likeBusy || likeStatus) return;
+    const fromUid = currentUser.uid;
+    const toUid   = uid;
+    setLikeBusy(true);
+    try {
+      await setDoc(doc(db, "likes", `${fromUid}_${toUid}`), {
+        fromUid, toUid, createdAt: serverTimestamp(),
+      }, { merge: true });
+      const inverseSnap = await getDoc(doc(db, "likes", `${toUid}_${fromUid}`));
+      if (inverseSnap.exists()) {
+        const [uidA, uidB] = [fromUid, toUid].sort();
+        const matchId = `${uidA}_${uidB}`;
+        await setDoc(doc(db, "matches", matchId), {
+          users: [uidA, uidB], createdAt: serverTimestamp(),
+        }, { merge: true });
+        await setDoc(doc(db, "conversations", matchId), {
+          participants: [uidA, uidB],
+          participantProfiles: {
+            [fromUid]: { uid: fromUid, displayName: currentUser.displayName || "Traveler", photoURL: currentUser.photoURL || null },
+            [toUid]:   { uid: toUid,   displayName: profile.displayName || "Traveler",     photoURL: profile.photoURL || null, emoji: profile.emoji || null },
+          },
+          lastMessage: "", lastMessageAt: serverTimestamp(), lastMessageBy: null, matchId,
+        }, { merge: true });
+        setLikeStatus("match");
+      } else {
+        setLikeStatus("sent");
+      }
+    } catch (err) {
+      console.error("Connect error:", err);
+    }
+    setLikeBusy(false);
+  };
 
   const handleBlock = async () => {
     if (!currentUser?.uid || !uid || blocking) return;
@@ -326,10 +385,19 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
                   </>
                 )}
 
-                {/* block / report */}
+                {/* connect / block / report */}
                 {showActions && (
                   <>
                     <div className="pp-divider" />
+                    <div className="pp-connect-row">
+                      <button
+                        className={`pp-connect-main${likeStatus ? " " + likeStatus : ""}`}
+                        onClick={handleConnect}
+                        disabled={!!likeStatus || likeBusy}
+                      >
+                        {likeStatus === "match" ? "Match ✓" : likeStatus === "sent" ? "Solicitud enviada" : likeBusy ? "Conectando…" : "Conectar"}
+                      </button>
+                    </div>
                     <div className="pp-actions">
                       <button
                         className="pp-act-btn pp-block-btn"

@@ -412,6 +412,9 @@ export default function Auth({ onAuthSuccess, onBack }) {
   const [info, setInfo]         = useState("");
   const [loading, setLoading]   = useState(false);
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName,  setLastName]  = useState("");
+
   const [pendingEmail, setPendingEmail]       = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
 
@@ -443,7 +446,17 @@ export default function Auth({ onAuthSuccess, onBack }) {
       const result = await signInWithPopup(auth, provider);
       const info   = getAdditionalUserInfo(result);
       if (info?.isNewUser) {
-        setMode("phone");
+        const dn    = result.user.displayName || "";
+        const parts = dn.trim().split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+          setFirstName(parts[0]);
+          setLastName(parts.slice(1).join(" "));
+          setMode("phone");
+        } else {
+          setFirstName(parts[0] || "");
+          setLastName("");
+          setMode("name");
+        }
       } else {
         onAuthSuccess();
       }
@@ -466,6 +479,9 @@ export default function Auth({ onAuthSuccess, onBack }) {
       }
       setLoading(false);
     } else {
+      if (!firstName.trim() || !lastName.trim()) {
+        setError("El nombre y el apellido son obligatorios."); return;
+      }
       setLoading(true);
       try {
         await createUserWithEmailAndPassword(auth, email, password);
@@ -553,10 +569,17 @@ export default function Auth({ onAuthSuccess, onBack }) {
         await linkWithCredential(auth.currentUser, phoneCred);
         uid = auth.currentUser.uid;
       }
+      const fn = firstName.trim(), ln = lastName.trim();
+      const nameFields = fn ? {
+        firstName: fn,
+        lastName:  ln,
+        displayName: ln ? `${fn} ${ln[0].toUpperCase()}.` : fn,
+      } : {};
       await setDoc(doc(db, "users", uid), {
         phone: countryCode + phoneNumber.replace(/\D/g, ""),
         phoneVerified: true,
         isVerified: false,
+        ...nameFields,
       }, { merge: true });
       onAuthSuccess();
     } catch (err) {
@@ -615,6 +638,7 @@ export default function Auth({ onAuthSuccess, onBack }) {
   };
 
   const isPhoneStep = mode === "phone" || mode === "phone-code";
+  const isNameStep  = mode === "name";
 
   return (
     <>
@@ -682,6 +706,7 @@ export default function Auth({ onAuthSuccess, onBack }) {
               {mode === "reset"      && t("auth.resetPassword")}
               {mode === "phone"      && t("auth.verifyPhone")}
               {mode === "phone-code" && t("auth.enterCode")}
+              {mode === "name"       && "¿Cómo te llamas?"}
             </h2>
             <p className="auth-subtitle">
               {mode === "login"      && t("auth.signInSubtitle")}
@@ -689,6 +714,7 @@ export default function Auth({ onAuthSuccess, onBack }) {
               {mode === "reset"      && t("auth.resetSubtitle")}
               {mode === "phone"      && t("auth.phoneSubtitle")}
               {mode === "phone-code" && t("auth.codeSubtitle", { phone: `${countryCode} ${phoneNumber}` })}
+              {mode === "name"       && "Introduce tu nombre y apellido para continuar."}
             </p>
 
             {/* ── MODE: login / register ── */}
@@ -710,6 +736,28 @@ export default function Auth({ onAuthSuccess, onBack }) {
                 {error && <div className="auth-error">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
+                  {mode === "register" && (
+                    <>
+                      <label className="auth-label">Nombre</label>
+                      <input
+                        className="auth-input"
+                        type="text"
+                        placeholder="Tu nombre"
+                        value={firstName}
+                        onChange={e => setFirstName(e.target.value)}
+                        required
+                      />
+                      <label className="auth-label">Apellido</label>
+                      <input
+                        className="auth-input"
+                        type="text"
+                        placeholder="Tu apellido"
+                        value={lastName}
+                        onChange={e => setLastName(e.target.value)}
+                        required
+                      />
+                    </>
+                  )}
                   <label className="auth-label">{t("auth.emailLabel")}</label>
                   <input
                     className="auth-input"
@@ -879,6 +927,41 @@ export default function Auth({ onAuthSuccess, onBack }) {
                     {t("auth.resendCode")}
                   </button>
                 </div>
+              </>
+            )}
+
+            {/* ── MODE: name (collect first/last name for social sign-in) ── */}
+            {mode === "name" && (
+              <>
+                {error && <div className="auth-error">{error}</div>}
+                <form onSubmit={e => {
+                  e.preventDefault();
+                  if (!firstName.trim() || !lastName.trim()) {
+                    setError("Ambos campos son obligatorios."); return;
+                  }
+                  setError(""); setMode("phone");
+                }}>
+                  <label className="auth-label">Nombre</label>
+                  <input
+                    className="auth-input"
+                    type="text"
+                    placeholder="Tu nombre"
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                  <label className="auth-label">Apellido</label>
+                  <input
+                    className="auth-input"
+                    type="text"
+                    placeholder="Tu apellido"
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    required
+                  />
+                  <button className="auth-submit" type="submit">Continuar</button>
+                </form>
               </>
             )}
 

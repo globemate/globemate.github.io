@@ -22,6 +22,7 @@ const DEF = {
     profileVisibility: "all",
     showLocation: true, showLastSeen: true,
     showVisitedCountries: true, incognitoMode: false,
+    showLastName: false,
   },
   accountPaused: false,
 };
@@ -259,6 +260,8 @@ export default function Settings({
   const [cfmPwd, setCfmPwd]     = useState("");
   const [pwdMsg, setPwdMsg]     = useState({ text:"", type:"" });
   const [pwdBusy, setPwdBusy]   = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName,  setLastName]  = useState("");
   const [showDel, setShowDel]   = useState(false);
   const [delText, setDelText]   = useState("");
   const [delPwd, setDelPwd]     = useState("");
@@ -288,6 +291,8 @@ export default function Settings({
         }
         setVisibilityMode(data.visibilityMode || "all");
         setVisibilityCountries(data.visibilityCountries || []);
+        setFirstName(data.firstName || "");
+        setLastName(data.lastName  || "");
       }
     }).finally(() => setLoading(false));
   }, [user]);
@@ -299,7 +304,14 @@ export default function Settings({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, "users", user.uid), { settings, visibilityMode, visibilityCountries }, { merge: true });
+      const saveData = { settings, visibilityMode, visibilityCountries };
+      const fn = firstName.trim(), ln = lastName.trim();
+      if (fn) {
+        saveData.displayName = settings.privacy.showLastName && ln
+          ? `${fn} ${ln}`
+          : ln ? `${fn} ${ln[0].toUpperCase()}.` : fn;
+      }
+      await setDoc(doc(db, "users", user.uid), saveData, { merge: true });
       setDirty(false);
       setSaveMsg({ text: t("settings.savedChanges"), type:"ok" });
       setTimeout(() => setSaveMsg({ text:"", type:"" }), 3000);
@@ -686,6 +698,7 @@ export default function Settings({
                 { k:"showLocation",         lbl: t("settings.privacyShowLocation") },
                 { k:"showLastSeen",         lbl: t("settings.privacyShowLastSeen") },
                 { k:"showVisitedCountries", lbl: t("settings.privacyShowVisitedCountries") },
+                { k:"showLastName",         lbl: "Mostrar mi apellido en el perfil" },
               ].map(({ k, lbl }) => (
                 <div key={k} className="sg-row">
                   <div className="sg-row-info">
