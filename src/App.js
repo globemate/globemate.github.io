@@ -83,6 +83,7 @@ export default function App() {
   useEffect(() => {
     const handlePop = (e) => {
       const screen = e.state?.screen || "home";
+      setShowAuth(false);
       setShowProfile(false);
       setShowExplore(false);
       setShowChat(false);
@@ -223,7 +224,7 @@ export default function App() {
   } else if (showMap && user) {
     pageContent = <Map user={user} onBack={() => window.history.back()} {...nav} />;
   } else {
-    pageContent = <GlobeMate user={user} onSignIn={() => setShowAuth(true)} {...nav} />;
+    pageContent = <GlobeMate user={user} onSignIn={() => { window.history.pushState({ screen: "auth" }, ""); setShowAuth(true); }} {...nav} />;
   }
 
   return (
