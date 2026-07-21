@@ -667,7 +667,16 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
         } catch (_) {}
       }
 
-      await setDoc(doc(db, "users", user.uid), { ...profile, photoURL, coverURL, updatedAt: new Date().toISOString() }, { merge: true });
+      // Recompute displayName from firstName/lastName + showLastName toggle (same logic as Settings)
+      const fn = (profile.firstName || "").trim();
+      const ln = (profile.lastName  || "").trim();
+      const showLastName = profile.settings?.privacy?.showLastName ?? false;
+      const computedDisplayName = fn
+        ? (showLastName && ln ? `${fn} ${ln}` : ln ? `${fn} ${ln[0].toUpperCase()}.` : fn)
+        : profile.displayName;
+
+      await setDoc(doc(db, "users", user.uid), { ...profile, photoURL, coverURL, displayName: computedDisplayName, updatedAt: new Date().toISOString() }, { merge: true });
+      if (computedDisplayName !== profile.displayName) setProfile(p => ({ ...p, displayName: computedDisplayName }));
       setProfile(p => ({ ...p, photoURL, coverURL }));
       setPhotoFile(null);
       setCoverFile(null);
