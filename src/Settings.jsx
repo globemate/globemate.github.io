@@ -310,6 +310,11 @@ export default function Settings({
         saveData.displayName = settings.privacy.showLastName && ln
           ? `${fn} ${ln}`
           : ln ? `${fn} ${ln[0].toUpperCase()}.` : fn;
+      } else {
+        // Usuario sin firstName/lastName almacenados (registro anterior a este campo).
+        // No recomponemos displayName para no corromperlo; el toggle no tendrá efecto
+        // hasta que el usuario complete su nombre en el perfil.
+        console.warn("[Settings] showLastName toggle sin efecto: firstName vacío para uid", user.uid);
       }
       await setDoc(doc(db, "users", user.uid), saveData, { merge: true });
       setDirty(false);
