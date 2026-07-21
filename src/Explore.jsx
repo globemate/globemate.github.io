@@ -229,8 +229,9 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
   const { t } = useTranslation();
   const [travelers, setTravelers] = useState([]);
   const [loading, setLoading]     = useState(true);
-  const [myLikes,   setMyLikes]   = useState(new Set());
-  const [myMatches, setMyMatches] = useState(new Set());
+  const [myLikes,        setMyLikes]        = useState(new Set());
+  const [myMatches,      setMyMatches]      = useState(new Set());
+  const [pendingConnects, setPendingConnects] = useState({}); // uid → "sent"|"match", for instant feedback
   const [search, setSearch]       = useState("");
   const [styleFilters, setStyleFilters] = useState([]);
   const [langFilter, setLangFilter]     = useState("");
@@ -301,9 +302,10 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
     const fromUid = user?.uid;
     const toUid   = traveler.uid;
     if (!fromUid || !toUid) return;
+    if (myMatches.has(toUid) || myLikes.has(toUid) || pendingConnects[toUid]) return;
 
-    // Optimistic UI update
-    setMyLikes(prev => new Set([...prev, toUid]));
+    // Immediate feedback: pendingConnects is never overwritten by snapshots
+    setPendingConnects(prev => ({ ...prev, [toUid]: "sent" }));
 
     try {
       // 1. Write our like
@@ -320,7 +322,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         const [uidA, uidB] = [fromUid, toUid].sort();
         const matchId = `${uidA}_${uidB}`;
 
-        setMyMatches(prev => new Set([...prev, toUid]));
+        setPendingConnects(prev => ({ ...prev, [toUid]: "match" }));
         await setDoc(doc(db, "matches", matchId), {
           users: [uidA, uidB],
           createdAt: serverTimestamp(),
@@ -350,9 +352,8 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         }, { merge: true });
       }
     } catch (err) {
-      // Revert optimistic update on error
-      setMyLikes(prev => { const s = new Set(prev); s.delete(toUid); return s; });
-      setMyMatches(prev => { const s = new Set(prev); s.delete(toUid); return s; });
+      // Revert pending state on error
+      setPendingConnects(prev => { const s = { ...prev }; delete s[toUid]; return s; });
       console.error("Like error:", err);
     }
   };
@@ -473,7 +474,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
               <TravelerCard
                 key={tr.uid}
                 traveler={tr}
-                likeStatus={myMatches.has(tr.uid) ? "match" : myLikes.has(tr.uid) ? "sent" : null}
+                likeStatus={myMatches.has(tr.uid) ? "match" : myLikes.has(tr.uid) ? "sent" : pendingConnects[tr.uid] || null}
                 onConnect={() => handleConnect(tr)}
                 onViewProfile={() => setViewUid(tr.uid)}
               />

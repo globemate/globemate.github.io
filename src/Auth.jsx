@@ -638,7 +638,6 @@ export default function Auth({ onAuthSuccess, onBack }) {
   };
 
   const isPhoneStep = mode === "phone" || mode === "phone-code";
-  const isNameStep  = mode === "name";
 
   return (
     <>
