@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGES } from "./i18n";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { useSubscription } from "./useSubscription";
 import Auth from "./Auth.jsx";
 import GlobeMate from "./GlobeMate.jsx";
@@ -44,11 +45,23 @@ export default function App() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms,   setShowTerms]   = useState(false);
   const [showAdmin,   setShowAdmin]   = useState(false);
-  const [notifs, setNotifs]           = useState([]);
+  const [receivedLikes, setReceivedLikes] = useState([]);   // [{likeId, fromUid}]
+  const [sentLikeUids,  setSentLikeUids]  = useState(new Set());
+  const [ignoredUids,   setIgnoredUids]   = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("gm_ignored") || "[]")); }
+    catch { return new Set(); }
+  });
 
-  const notifCount  = notifs.filter(n => !n.read).length;
-  const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-  const markRead    = (id) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const pendingRequests = receivedLikes.filter(
+    r => !sentLikeUids.has(r.fromUid) && !ignoredUids.has(r.fromUid)
+  );
+  const notifCount = pendingRequests.length;
+
+  const handleIgnore = (fromUid) => {
+    const next = new Set([...ignoredUids, fromUid]);
+    setIgnoredUids(next);
+    try { localStorage.setItem("gm_ignored", JSON.stringify([...next])); } catch {}
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -73,6 +86,26 @@ export default function App() {
     });
     return () => unsub();
   }, []);
+
+  // subscribe to likes received (solicitudes de conexión)
+  useEffect(() => {
+    if (!user?.uid) return;
+    const q = query(collection(db, "likes"), where("toUid", "==", user.uid));
+    const unsub = onSnapshot(q, snap => {
+      setReceivedLikes(snap.docs.map(d => ({ likeId: d.id, fromUid: d.data().fromUid })));
+    }, () => {});
+    return () => unsub();
+  }, [user?.uid]);
+
+  // subscribe to likes sent (to know which requests I've already accepted)
+  useEffect(() => {
+    if (!user?.uid) return;
+    const q = query(collection(db, "likes"), where("fromUid", "==", user.uid));
+    const unsub = onSnapshot(q, snap => {
+      setSentLikeUids(new Set(snap.docs.map(d => d.data().toUid)));
+    }, () => {});
+    return () => unsub();
+  }, [user?.uid]);
 
   // initialise history state so browser back has a baseline
   useEffect(() => {
@@ -206,10 +239,10 @@ export default function App() {
   } else if (showNotif && user) {
     pageContent = (
       <Notifications
-        notifications={notifs}
+        pendingRequests={pendingRequests}
+        user={user}
+        onIgnore={handleIgnore}
         onBack={() => window.history.back()}
-        onMarkAllRead={markAllRead}
-        onMarkRead={markRead}
         {...nav}
       />
     );
