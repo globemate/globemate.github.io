@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGES } from "./i18n";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, addDoc, updateDoc, writeBatch, serverTimestamp } from "firebase/firestore";
 import { useSubscription } from "./useSubscription";
 import Auth from "./Auth.jsx";
 import GlobeMate from "./GlobeMate.jsx";
@@ -25,6 +25,7 @@ import BottomNav from "./BottomNav.jsx";
 export default function App() {
   const { i18n } = useTranslation();
   const [user, setUser]               = useState(undefined);
+  const verificationStatusRef = useRef(null);
   const subscription = useSubscription(user || null);
 
   // Apply RTL direction whenever language changes
@@ -51,16 +52,42 @@ export default function App() {
     try { return new Set(JSON.parse(localStorage.getItem("gm_ignored") || "[]")); }
     catch { return new Set(); }
   });
+  const [persistentNotifs, setPersistentNotifs] = useState([]);
+  const [profileVisitDocs, setProfileVisitDocs] = useState([]);
+  const [lastVisitSeenAt,  setLastVisitSeenAt]  = useState(() => {
+    try { return new Date(localStorage.getItem("gm_lastVisitSeenAt") || 0); }
+    catch { return new Date(0); }
+  });
 
-  const pendingRequests = receivedLikes.filter(
-    r => !sentLikeUids.has(r.fromUid) && !ignoredUids.has(r.fromUid)
-  );
-  const notifCount = pendingRequests.length;
+  const pendingRequests    = receivedLikes.filter(r => !sentLikeUids.has(r.fromUid) && !ignoredUids.has(r.fromUid));
+  const unseenPersistCount = persistentNotifs.filter(n => !n.seen).length;
+  const newVisitsCount     = profileVisitDocs.filter(v => { const t = v.timestamp?.toDate?.(); return t && t > lastVisitSeenAt; }).length;
+  const notifCount         = showNotif ? 0 : (pendingRequests.length + unseenPersistCount + (newVisitsCount > 0 ? 1 : 0));
 
   const handleIgnore = (fromUid) => {
     const next = new Set([...ignoredUids, fromUid]);
     setIgnoredUids(next);
     try { localStorage.setItem("gm_ignored", JSON.stringify([...next])); } catch {}
+  };
+
+  const handleMarkSeen = async () => {
+    if (!user?.uid) return;
+    const now = new Date();
+    setLastVisitSeenAt(now);
+    try { localStorage.setItem("gm_lastVisitSeenAt", now.toISOString()); } catch {}
+    const unseen = persistentNotifs.filter(n => !n.seen);
+    if (unseen.length > 0) {
+      try {
+        const batch = writeBatch(db);
+        unseen.forEach(n => batch.update(doc(db, "notifications", user.uid, "items", n.id), { seen: true }));
+        await batch.commit();
+      } catch {}
+    }
+  };
+
+  const handleDeleteNotif = async (notifId) => {
+    if (!user?.uid) return;
+    try { await updateDoc(doc(db, "notifications", user.uid, "items", notifId), { deleted: true }); } catch {}
   };
 
   useEffect(() => {
@@ -82,6 +109,9 @@ export default function App() {
         setShowPrivacy(false);
         setShowTerms(false);
         setShowAdmin(false);
+        setPersistentNotifs([]);
+        setProfileVisitDocs([]);
+        verificationStatusRef.current = null;
       }
     });
     return () => unsub();
@@ -103,6 +133,45 @@ export default function App() {
     const q = query(collection(db, "likes"), where("fromUid", "==", user.uid));
     const unsub = onSnapshot(q, snap => {
       setSentLikeUids(new Set(snap.docs.map(d => d.data().toUid)));
+    }, () => {});
+    return () => unsub();
+  }, [user?.uid]);
+
+  // subscribe to persistent notifications (matches, verification)
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(collection(db, "notifications", user.uid, "items"), snap => {
+      setPersistentNotifs(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(n => !n.deleted)
+          .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+      );
+    }, () => {});
+    return () => unsub();
+  }, [user?.uid]);
+
+  // subscribe to profile visits (subcollection)
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(collection(db, "users", user.uid, "profileVisits"), snap => {
+      setProfileVisitDocs(snap.docs.map(d => d.data()));
+    }, () => {});
+    return () => unsub();
+  }, [user?.uid]);
+
+  // detect verificationStatus change → write notification
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), snap => {
+      const status = snap.data()?.verificationStatus || "";
+      const prev   = verificationStatusRef.current;
+      if (prev !== null && prev !== status && (status === "verified" || status === "rejected")) {
+        addDoc(collection(db, "notifications", user.uid, "items"), {
+          type: "verification", status, seen: false, deleted: false, createdAt: serverTimestamp(),
+        }).catch(() => {});
+      }
+      verificationStatusRef.current = status;
     }, () => {});
     return () => unsub();
   }, [user?.uid]);
@@ -242,6 +311,11 @@ export default function App() {
         pendingRequests={pendingRequests}
         user={user}
         onIgnore={handleIgnore}
+        persistentNotifs={persistentNotifs}
+        profileVisitDocs={profileVisitDocs}
+        lastVisitSeenAt={lastVisitSeenAt}
+        onMarkSeen={handleMarkSeen}
+        onDeleteNotif={handleDeleteNotif}
         onBack={() => window.history.back()}
         {...nav}
       />

@@ -33,6 +33,30 @@ service cloud.firestore {
                request.resource.data.get('verificationStatus', '') == resource.data.get('verificationStatus', '')
             || request.resource.data.get('verificationStatus', '') == "pending"
           );
+
+      // ── Profile visits (subcollección) ─────────────────────────────────
+      // El visitante crea/actualiza su propio doc (una vez al día throttled en cliente).
+      // El visitado lee TODAS sus visitas.
+      match /profileVisits/{visitorId} {
+        allow create, update: if request.auth != null
+            && request.auth.uid != uid
+            && request.auth.uid == visitorId
+            && request.resource.data.visitorId == request.auth.uid;
+
+        allow read: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // ── Notifications ────────────────────────────────────────────────────
+    // Subcollección notifications/{userId}/items/{itemId}.
+    // Cualquier usuario autenticado puede CREAR una notificación para otro
+    // (necesario para notificar al otro cuando se acepta un match).
+    // Solo el dueño puede leer, actualizar (marcar seen) y borrar las suyas.
+    match /notifications/{userId}/items/{itemId} {
+      allow read:   if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // ── Products / Prices / Tax rates (Stripe) — lectura pública ───────────

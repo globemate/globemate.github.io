@@ -162,6 +162,18 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
       .finally(() => setLoading(false));
   }, [uid]);
 
+  // Record profile visit (max once per day per visitor, skip own profile)
+  useEffect(() => {
+    if (!currentUser?.uid || !uid || currentUser.uid === uid) return;
+    const today      = new Date().toISOString().slice(0, 10);
+    const storageKey = `gm_visit_${uid}_${currentUser.uid}`;
+    if (localStorage.getItem(storageKey) === today) return;
+    setDoc(doc(db, "users", uid, "profileVisits", currentUser.uid), {
+      visitorId: currentUser.uid, visitedId: uid, date: today, timestamp: serverTimestamp(),
+    }, { merge: true }).catch(() => {});
+    try { localStorage.setItem(storageKey, today); } catch {}
+  }, [uid, currentUser?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!currentUser?.uid || !uid || currentUser.uid === uid) return;
     getDoc(doc(db, "blocks", `${currentUser.uid}_${uid}`))

@@ -1,7 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db, auth } from "./firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { LangButton } from "./LanguageSelector";
+
+function relTime(ts) {
+  if (!ts?.toDate) return "";
+  const d = ts.toDate(), diff = Date.now() - d.getTime();
+  if (diff < 60_000)    return "ahora";
+  if (diff < 3_600_000) return `hace ${Math.floor(diff / 60_000)}m`;
+  if (diff < 86_400_000) return `hace ${Math.floor(diff / 3_600_000)}h`;
+  if (diff < 604_800_000) return `hace ${Math.floor(diff / 86_400_000)}d`;
+  return d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+}
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -37,6 +47,9 @@ const css = `
   @media(max-width:600px){ .nf-list{ padding:0 16px 60px; } }
   .nf-divider { height:1px; background:rgba(201,168,76,0.1); margin-bottom:8px; }
 
+  /* section header */
+  .nf-section-hdr { font-size:0.63rem; letter-spacing:0.22em; text-transform:uppercase; color:var(--muted); padding:18px 0 6px; }
+
   /* request card */
   .nf-req { display:flex; align-items:center; gap:14px; padding:18px 0; border-bottom:1px solid rgba(201,168,76,0.07); }
   .nf-req-avatar { width:50px; height:50px; border-radius:50%; border:1.5px solid rgba(201,168,76,0.3); background:rgba(20,18,9,0.9); display:flex; align-items:center; justify-content:center; font-size:1.5rem; overflow:hidden; flex-shrink:0; }
@@ -59,6 +72,35 @@ const css = `
     padding:8px 14px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
   }
   .nf-ignore-btn:hover { border-color:rgba(245,240,232,0.3); color:rgba(245,240,232,0.65); }
+
+  /* persistent notification card */
+  .nf-notif {
+    display:flex; align-items:center; gap:14px;
+    padding:15px 0; border-bottom:1px solid rgba(201,168,76,0.07);
+    position:relative;
+  }
+  .nf-notif-unseen { border-left:2px solid rgba(201,168,76,0.5); padding-left:10px; margin-left:-12px; }
+  @media(max-width:600px){ .nf-notif-unseen{ margin-left:-4px; padding-left:4px; } }
+  .nf-notif-icon {
+    width:44px; height:44px; border-radius:50%;
+    border:1.5px solid rgba(201,168,76,0.22);
+    background:rgba(20,18,9,0.9);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.3rem; overflow:hidden; flex-shrink:0;
+  }
+  .nf-notif-icon img { width:100%; height:100%; object-fit:cover; }
+  .nf-notif-body { flex:1; min-width:0; }
+  .nf-notif-text { font-size:0.85rem; color:var(--cream-dim); line-height:1.45; }
+  .nf-notif-text em { color:var(--cream); font-style:normal; font-weight:400; }
+  .nf-notif-text strong { color:var(--gold-light); font-weight:400; }
+  .nf-notif-sub { font-size:0.71rem; color:var(--muted); margin-top:3px; }
+  .nf-del-btn {
+    background:none; border:none;
+    color:rgba(245,240,232,0.2); font-size:0.85rem;
+    cursor:pointer; padding:6px 8px; flex-shrink:0;
+    transition:color 0.15s; line-height:1;
+  }
+  .nf-del-btn:hover { color:rgba(245,240,232,0.55); }
 
   /* empty */
   .nf-empty { padding:80px 40px; text-align:center; }
@@ -87,15 +129,33 @@ const css = `
 
 export default function Notifications({
   pendingRequests = [], user, onIgnore,
+  persistentNotifs = [], profileVisitDocs = [], lastVisitSeenAt = new Date(0),
+  onMarkSeen, onDeleteNotif,
   onBack, onChat, onProfile, onExplore, onMatches, onMap, onSignOut,
   notifCount, onSettings, onPricing,
 }) {
-  const [profiles,  setProfiles]  = useState({});  // {uid: {displayName, photoURL, emoji}}
-  const [accepting, setAccepting] = useState(new Set());  // uids mid-accept
-  const [matched,   setMatched]   = useState(new Set());  // uids just matched
+  const [profiles,  setProfiles]  = useState({});
+  const [accepting, setAccepting] = useState(new Set());
+  const [matched,   setMatched]   = useState(new Set());
   const [menuOpen,  setMenuOpen]  = useState(false);
+  const [visitsDismissedAt, setVisitsDismissedAt] = useState(() => {
+    try { return new Date(localStorage.getItem("gm_visitsDismissed") || 0); }
+    catch { return new Date(0); }
+  });
 
-  // load profiles for pending requesters
+  const markedRef = useRef(false);
+
+  // Mark all seen when panel opens
+  useEffect(() => {
+    if (!markedRef.current) { markedRef.current = true; onMarkSeen?.(); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also mark seen when data arrives (if any unseen)
+  useEffect(() => {
+    if (persistentNotifs.some(n => !n.seen)) onMarkSeen?.();
+  }, [persistentNotifs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load profiles for pending requesters
   useEffect(() => {
     const uids = pendingRequests.map(r => r.fromUid).filter(uid => !profiles[uid]);
     if (!uids.length) return;
@@ -127,7 +187,7 @@ export default function Notifications({
         fromUid: myUid, toUid: fromUid, createdAt: serverTimestamp(),
       }, { merge: true });
 
-      // 2. Match is guaranteed (they already liked me)
+      // 2. Match (guaranteed — they already liked me)
       const [uidA, uidB] = [myUid, fromUid].sort();
       const matchId = `${uidA}_${uidB}`;
       await setDoc(doc(db, "matches", matchId), {
@@ -145,12 +205,47 @@ export default function Notifications({
         lastMessage: "", lastMessageAt: serverTimestamp(), lastMessageBy: null, matchId,
       }, { merge: true });
 
+      // 4. Notificar al solicitante original: "X aceptó tu solicitud — ¡es un match! ✓"
+      await addDoc(collection(db, "notifications", fromUid, "items"), {
+        type: "match_received",
+        fromUid: myUid,
+        fromName:     auth.currentUser?.displayName || "Viajero",
+        fromPhotoURL: auth.currentUser?.photoURL    || null,
+        matchId, seen: false, deleted: false, createdAt: serverTimestamp(),
+      }).catch(() => {});
+
+      // 5. Notificarme a mí mismo: "Hiciste match con X ✓"
+      await addDoc(collection(db, "notifications", myUid, "items"), {
+        type: "match_accepted",
+        fromUid,
+        fromName:     theirProfile.displayName || "Viajero",
+        fromPhotoURL: theirProfile.photoURL    || null,
+        matchId, seen: false, deleted: false, createdAt: serverTimestamp(),
+      }).catch(() => {});
+
       setMatched(prev => new Set([...prev, fromUid]));
     } catch (err) {
       console.error("Accept error:", err);
     }
     setAccepting(prev => { const s = new Set(prev); s.delete(fromUid); return s; });
   };
+
+  // Profile visits
+  const totalVisits = profileVisitDocs.length;
+  const hasNewVisits = profileVisitDocs.some(v => {
+    const t = v.timestamp?.toDate?.();
+    return t && t > visitsDismissedAt;
+  });
+  const showVisitsCard = totalVisits > 0 && hasNewVisits;
+
+  const handleDismissVisits = () => {
+    const now = new Date();
+    setVisitsDismissedAt(now);
+    try { localStorage.setItem("gm_visitsDismissed", now.toISOString()); } catch {}
+  };
+
+  const hasHistory = persistentNotifs.length > 0 || showVisitsCard;
+  const isEmpty    = pendingRequests.length === 0 && !hasHistory;
 
   return (
     <>
@@ -191,58 +286,123 @@ export default function Notifications({
 
         <div className="nf-header">
           <div className="nf-eyebrow">Centro de notificaciones</div>
-          <h1 className="nf-h1"><em>Solicitudes</em> de conexión</h1>
+          <h1 className="nf-h1"><em>Notificaciones</em></h1>
           {pendingRequests.length > 0 && (
-            <p className="nf-subtitle">{pendingRequests.length} solicitud{pendingRequests.length !== 1 ? "es" : ""} pendiente{pendingRequests.length !== 1 ? "s" : ""}</p>
+            <p className="nf-subtitle">
+              {pendingRequests.length} solicitud{pendingRequests.length !== 1 ? "es" : ""} pendiente{pendingRequests.length !== 1 ? "s" : ""}
+            </p>
           )}
         </div>
 
         <div className="nf-list">
           <div className="nf-divider" />
 
-          {pendingRequests.length === 0 ? (
+          {/* ─── Pending connection requests ─── */}
+          {pendingRequests.length > 0 && (
+            <>
+              <div className="nf-section-hdr">Pendientes</div>
+              {pendingRequests.map(({ likeId, fromUid }) => {
+                const p           = profiles[fromUid];
+                const isAccepting = accepting.has(fromUid);
+                const isMatched   = matched.has(fromUid);
+                return (
+                  <div key={likeId} className="nf-req">
+                    <div className="nf-req-avatar">
+                      {p?.photoURL
+                        ? <img src={p.photoURL} alt={p.displayName} />
+                        : <span>{p?.emoji || "👤"}</span>
+                      }
+                    </div>
+                    <div className="nf-req-info">
+                      <div className="nf-req-name">{p?.displayName || "…"}</div>
+                      <div className="nf-req-sub">quiere conectar contigo</div>
+                    </div>
+                    <div className="nf-req-actions">
+                      {isMatched ? (
+                        <span className="nf-accept-btn matched">Match ✓</span>
+                      ) : (
+                        <button
+                          className="nf-accept-btn"
+                          onClick={() => handleAccept(fromUid)}
+                          disabled={isAccepting}
+                        >
+                          {isAccepting ? "…" : "Aceptar"}
+                        </button>
+                      )}
+                      {!isMatched && (
+                        <button className="nf-ignore-btn" onClick={() => onIgnore?.(fromUid)}>
+                          Ignorar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {/* ─── History: matches, verification, visits ─── */}
+          {hasHistory && (
+            <>
+              <div className="nf-section-hdr" style={{ marginTop: pendingRequests.length ? 8 : 0 }}>Historial</div>
+
+              {/* Profile visits aggregate */}
+              {showVisitsCard && (
+                <div className="nf-notif nf-notif-unseen">
+                  <div className="nf-notif-icon">
+                    <span style={{ fontSize:"1.35rem" }}>👁</span>
+                  </div>
+                  <div className="nf-notif-body">
+                    <div className="nf-notif-text">
+                      <em>{totalVisits}</em> {totalVisits === 1 ? "persona visitó" : "personas visitaron"} tu perfil
+                    </div>
+                  </div>
+                  <button className="nf-del-btn" onClick={handleDismissVisits} title="Marcar como visto">✕</button>
+                </div>
+              )}
+
+              {/* Match & verification notifications */}
+              {persistentNotifs.map(n => (
+                <div key={n.id} className={`nf-notif${!n.seen ? " nf-notif-unseen" : ""}`}>
+                  <div className="nf-notif-icon">
+                    {n.type === "verification"
+                      ? <span style={{ fontSize:"1.35rem" }}>{n.status === "verified" ? "✅" : "⚠️"}</span>
+                      : n.fromPhotoURL
+                        ? <img src={n.fromPhotoURL} alt="" />
+                        : <span style={{ fontSize:"1.35rem" }}>👤</span>
+                    }
+                  </div>
+                  <div className="nf-notif-body">
+                    <div className="nf-notif-text">
+                      {n.type === "match_accepted" && (
+                        <>Hiciste match con <em>{n.fromName}</em> <strong>✓</strong></>
+                      )}
+                      {n.type === "match_received" && (
+                        <><em>{n.fromName}</em> aceptó tu solicitud — ¡es un match! <strong>✓</strong></>
+                      )}
+                      {n.type === "verification" && n.status === "verified" && (
+                        <><strong>✓</strong> Tu perfil fue verificado</>
+                      )}
+                      {n.type === "verification" && n.status !== "verified" && (
+                        <>Tu verificación fue rechazada — puedes intentarlo de nuevo</>
+                      )}
+                    </div>
+                    <div className="nf-notif-sub">{relTime(n.createdAt)}</div>
+                  </div>
+                  <button className="nf-del-btn" onClick={() => onDeleteNotif?.(n.id)} title="Eliminar">✕</button>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* ─── Empty state ─── */}
+          {isEmpty && (
             <div className="nf-empty">
               <div className="nf-empty-icon">🔔</div>
-              <div className="nf-empty-txt">Sin solicitudes pendientes</div>
-              <div className="nf-empty-sub">Cuando alguien quiera conectar contigo aparecerá aquí.</div>
+              <div className="nf-empty-txt">Sin notificaciones</div>
+              <div className="nf-empty-sub">Cuando alguien quiera conectar contigo o tengas novedades aparecerán aquí.</div>
             </div>
-          ) : pendingRequests.map(({ likeId, fromUid }) => {
-            const p   = profiles[fromUid];
-            const isAccepting = accepting.has(fromUid);
-            const isMatched   = matched.has(fromUid);
-            return (
-              <div key={likeId} className="nf-req">
-                <div className="nf-req-avatar">
-                  {p?.photoURL
-                    ? <img src={p.photoURL} alt={p.displayName} />
-                    : <span>{p?.emoji || "👤"}</span>
-                  }
-                </div>
-                <div className="nf-req-info">
-                  <div className="nf-req-name">{p?.displayName || "…"}</div>
-                  <div className="nf-req-sub">quiere conectar contigo</div>
-                </div>
-                <div className="nf-req-actions">
-                  {isMatched ? (
-                    <span className="nf-accept-btn matched">Match ✓</span>
-                  ) : (
-                    <button
-                      className="nf-accept-btn"
-                      onClick={() => handleAccept(fromUid)}
-                      disabled={isAccepting}
-                    >
-                      {isAccepting ? "…" : "Aceptar"}
-                    </button>
-                  )}
-                  {!isMatched && (
-                    <button className="nf-ignore-btn" onClick={() => onIgnore?.(fromUid)}>
-                      Ignorar
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          )}
         </div>
       </div>
     </>
