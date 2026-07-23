@@ -197,6 +197,8 @@ const TOTAL_COUNTRIES = CONTINENTS.reduce((s,c) => c.regions.reduce((rs,r) => rs
 
 const DEF = {
   displayName: "",
+  firstName: "",
+  lastName: "",
   location: "",
   locationCountry: "",
   bio: "",
@@ -582,16 +584,26 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
   };
 
   useEffect(() => {
+    const splitName = dn => {
+      const parts = (dn || "").trim().split(" ");
+      return { firstName: parts[0] || "", lastName: parts.length > 1 ? parts.slice(1).join(" ") : "" };
+    };
     getDoc(doc(db, "users", user.uid))
       .then(snap => {
         if (snap.exists()) {
-          setProfile({ ...DEF, ...snap.data() });
+          const data = snap.data();
+          if (!data.firstName && data.displayName) {
+            Object.assign(data, splitName(data.displayName));
+          }
+          setProfile({ ...DEF, ...data });
         } else {
-          setProfile({ ...DEF, displayName: user.displayName || "", photoURL: user.photoURL || "" });
+          const { firstName, lastName } = splitName(user.displayName);
+          setProfile({ ...DEF, displayName: user.displayName || "", photoURL: user.photoURL || "", firstName, lastName });
         }
       })
       .catch(() => {
-        setProfile({ ...DEF, displayName: user.displayName || "", photoURL: user.photoURL || "" });
+        const { firstName, lastName } = splitName(user.displayName);
+        setProfile({ ...DEF, displayName: user.displayName || "", photoURL: user.photoURL || "", firstName, lastName });
       })
       .finally(() => setLoading(false));
   }, [user]);
@@ -646,6 +658,10 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
   };
 
   const handleSave = async () => {
+    if (!(profile.firstName || "").trim()) {
+      setMsg({ text: "El nombre es obligatorio.", type: "err" });
+      return;
+    }
     setSaving(true);
     setMsg({ text: "", type: "" });
     try {
@@ -772,12 +788,26 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
         {/* header */}
         <div className="pr-header">
           <div style={{ flex: 1 }}>
-            <input
-              className="pr-name-input"
-              placeholder={t("profile.yourName")}
-              value={profile.displayName}
-              onChange={e => upd("displayName", e.target.value)}
-            />
+            <div style={{ display:"flex", gap:"16px", flexWrap:"wrap" }}>
+              <div style={{ flex:1, minWidth:"120px" }}>
+                <div style={{ fontSize:"0.58rem", letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--muted)", marginBottom:"3px" }}>Nombre *</div>
+                <input
+                  className="pr-name-input"
+                  placeholder="Tu nombre"
+                  value={profile.firstName || ""}
+                  onChange={e => upd("firstName", e.target.value)}
+                />
+              </div>
+              <div style={{ flex:1, minWidth:"120px" }}>
+                <div style={{ fontSize:"0.58rem", letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--muted)", marginBottom:"3px" }}>Apellido *</div>
+                <input
+                  className="pr-name-input"
+                  placeholder="Tu apellido"
+                  value={profile.lastName || ""}
+                  onChange={e => upd("lastName", e.target.value)}
+                />
+              </div>
+            </div>
             {subscription?.isActive && (
               <span className={`pr-plan-badge ${subscription.plan}`}>
                 {subscription.plan === "elite" ? "⋆ Elite" : "✦ Premium"}

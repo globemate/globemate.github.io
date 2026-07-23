@@ -400,11 +400,11 @@ const XIcon = () => (
 /* ─────────────────────────────────────────
    Component
 ───────────────────────────────────────── */
-export default function Auth({ onAuthSuccess, onBack }) {
+export default function Auth({ onAuthSuccess, onBack, initialMode }) {
   const showTwitterLogin = true;
 
   const { t } = useTranslation();
-  const [mode, setMode]         = useState("login"); // login | register | reset | phone | phone-code
+  const [mode, setMode]         = useState(initialMode || "login"); // login | register | reset | phone | phone-code
 
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
@@ -485,6 +485,16 @@ export default function Auth({ onAuthSuccess, onBack }) {
       setLoading(true);
       try {
         await createUserWithEmailAndPassword(auth, email, password);
+        const fn = firstName.trim(), ln = lastName.trim();
+        if (fn) {
+          try {
+            await setDoc(doc(db, "users", auth.currentUser.uid), {
+              firstName: fn, lastName: ln,
+              displayName: ln ? `${fn} ${ln[0].toUpperCase()}.` : fn,
+              phoneVerified: false,
+            }, { merge: true });
+          } catch (_) {}
+        }
         setPendingEmail(email);
         setPendingPassword(password);
         setMode("phone");

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LANGUAGES } from "./i18n";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, query, where, onSnapshot, doc, addDoc, updateDoc, writeBatch, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, getDoc, addDoc, updateDoc, writeBatch, serverTimestamp } from "firebase/firestore";
 import { useSubscription } from "./useSubscription";
 import Auth from "./Auth.jsx";
 import GlobeMate from "./GlobeMate.jsx";
@@ -25,6 +25,8 @@ import BottomNav from "./BottomNav.jsx";
 export default function App() {
   const { i18n } = useTranslation();
   const [user, setUser]               = useState(undefined);
+  const [checkingUser,    setCheckingUser]    = useState(false);
+  const [needsPhoneVerif, setNeedsPhoneVerif] = useState(false);
   const verificationStatusRef = useRef(null);
   const subscription = useSubscription(user || null);
 
@@ -92,11 +94,8 @@ export default function App() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
+      if (u && !u.phoneNumber) setCheckingUser(true);
       setUser(u);
-      // On sign-out (u === null) reset every screen flag so the app lands on
-      // home/landing. showAuth is intentionally NOT touched here: during
-      // phone-verification Firebase fires with a real user, and showAuth is
-      // closed only via onAuthSuccess() — the !u branch never runs in that case.
       if (!u) {
         setShowProfile(false);
         setShowExplore(false);
@@ -111,11 +110,33 @@ export default function App() {
         setShowAdmin(false);
         setPersistentNotifs([]);
         setProfileVisitDocs([]);
+        setNeedsPhoneVerif(false);
+        setCheckingUser(false);
         verificationStatusRef.current = null;
       }
     });
     return () => unsub();
   }, []);
+
+  // Gate: if authenticated user has no phone linked, check whether they have a
+  // users doc. No doc means they abandoned registration mid-phone-step.
+  useEffect(() => {
+    if (!user || user.phoneNumber) {
+      setNeedsPhoneVerif(false);
+      setCheckingUser(false);
+      return;
+    }
+    let cancelled = false;
+    getDoc(doc(db, "users", user.uid)).then(snap => {
+      if (!cancelled) {
+        setNeedsPhoneVerif(!snap.exists());
+        setCheckingUser(false);
+      }
+    }).catch(() => {
+      if (!cancelled) { setNeedsPhoneVerif(false); setCheckingUser(false); }
+    });
+    return () => { cancelled = true; };
+  }, [user]);
 
   // subscribe to likes received (solicitudes de conexión)
   useEffect(() => {
@@ -213,22 +234,32 @@ export default function App() {
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
-  if (user === undefined) {
+  const loadingScreen = (
+    <div style={{
+      minHeight: "100vh",
+      background: "#0a0905",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "'DM Sans', sans-serif",
+      color: "rgba(245,240,232,0.4)",
+      fontSize: "0.85rem",
+      letterSpacing: "0.15em",
+      textTransform: "uppercase",
+    }}>
+      Loading…
+    </div>
+  );
+
+  if (user === undefined || checkingUser) return loadingScreen;
+
+  if (needsPhoneVerif) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        background: "#0a0905",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'DM Sans', sans-serif",
-        color: "rgba(245,240,232,0.4)",
-        fontSize: "0.85rem",
-        letterSpacing: "0.15em",
-        textTransform: "uppercase",
-      }}>
-        Loading…
-      </div>
+      <Auth
+        initialMode="phone"
+        onAuthSuccess={() => setNeedsPhoneVerif(false)}
+        onBack={null}
+      />
     );
   }
 
