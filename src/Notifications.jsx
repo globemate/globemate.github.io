@@ -181,21 +181,26 @@ export default function Notifications({
     if (!user?.uid || accepting.has(fromUid) || matched.has(fromUid)) return;
     const myUid = user.uid;
     setAccepting(prev => new Set([...prev, fromUid]));
+
+    const [uidA, uidB] = [myUid, fromUid].sort();
+    const matchId = `${uidA}_${uidB}`;
+    const theirProfile = profiles[fromUid] || {};
+    let likeOk = false;
+
     try {
       // 1. Create my like back
       await setDoc(doc(db, "likes", `${myUid}_${fromUid}`), {
         fromUid: myUid, toUid: fromUid, createdAt: serverTimestamp(),
       }, { merge: true });
+      likeOk = true;
 
-      // 2. Match (guaranteed — they already liked me)
-      const [uidA, uidB] = [myUid, fromUid].sort();
-      const matchId = `${uidA}_${uidB}`;
+      // 2. Match — may already exist if both users liked each other in Explore first.
+      // The firestore.rules match update rule allows participants to merge-update.
       await setDoc(doc(db, "matches", matchId), {
         users: [uidA, uidB], createdAt: serverTimestamp(),
       }, { merge: true });
 
       // 3. Conversation
-      const theirProfile = profiles[fromUid] || {};
       await setDoc(doc(db, "conversations", matchId), {
         participants: [uidA, uidB],
         participantProfiles: {
@@ -204,28 +209,32 @@ export default function Notifications({
         },
         lastMessage: "", lastMessageAt: serverTimestamp(), lastMessageBy: null, matchId,
       }, { merge: true });
+    } catch (err) {
+      console.error("[handleAccept] match/conv creation failed:", err);
+    }
 
-      // 4. Notificar al solicitante original: "X aceptó tu solicitud — ¡es un match! ✓"
-      await addDoc(collection(db, "notifications", fromUid, "items"), {
+    // Notifications written independently: a pre-existing match (Explore mutual like) must
+    // not prevent the history entry and the other user's notification from being written.
+    if (likeOk) {
+      // Notify the original requester: "X aceptó tu solicitud — ¡es un match! ✓"
+      addDoc(collection(db, "notifications", fromUid, "items"), {
         type: "match_received",
         fromUid: myUid,
         fromName:     auth.currentUser?.displayName || "Viajero",
         fromPhotoURL: auth.currentUser?.photoURL    || null,
         matchId, seen: false, deleted: false, createdAt: serverTimestamp(),
-      }).catch(() => {});
+      }).catch(err => console.error("[handleAccept] notif→requester failed:", err));
 
-      // 5. Notificarme a mí mismo: "Hiciste match con X ✓"
-      await addDoc(collection(db, "notifications", myUid, "items"), {
+      // Write history entry for myself: "Hiciste match con X ✓"
+      addDoc(collection(db, "notifications", myUid, "items"), {
         type: "match_accepted",
         fromUid,
         fromName:     theirProfile.displayName || "Viajero",
         fromPhotoURL: theirProfile.photoURL    || null,
         matchId, seen: false, deleted: false, createdAt: serverTimestamp(),
-      }).catch(() => {});
+      }).catch(err => console.error("[handleAccept] notif→self failed:", err));
 
       setMatched(prev => new Set([...prev, fromUid]));
-    } catch (err) {
-      console.error("Accept error:", err);
     }
     setAccepting(prev => { const s = new Set(prev); s.delete(fromUid); return s; });
   };

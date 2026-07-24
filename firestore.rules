@@ -144,13 +144,18 @@ service cloud.firestore {
 
     // ── Matches ──────────────────────────────────────────────────────────────
     // El ID es `{uidA}_{uidB}` (UIDs ordenados alfabéticamente).
-    // Solo los participantes pueden leer o crear su propio match.
+    // Solo los participantes pueden leer, crear o actualizar su propio match.
+    // Update es necesario porque setDoc({merge:true}) en un doc existente
+    // (creado por Explore cuando ambos se dieron like mutuo) se evalúa como update.
     match /matches/{matchId} {
       allow read: if request.auth != null
           && request.auth.uid in resource.data.users;
 
       allow create: if request.auth != null
           && request.auth.uid in request.resource.data.users;
+
+      allow update: if request.auth != null
+          && request.auth.uid in resource.data.users;
 
       allow delete: if request.auth != null
           && request.auth.uid in resource.data.users;

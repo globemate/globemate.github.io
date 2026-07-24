@@ -168,7 +168,7 @@ export default function App() {
           .filter(n => !n.deleted)
           .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
       );
-    }, () => {});
+    }, err => console.error("[notifications] subscription error:", err));
     return () => unsub();
   }, [user?.uid]);
 
