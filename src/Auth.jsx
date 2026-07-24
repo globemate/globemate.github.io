@@ -428,12 +428,17 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
 
   useEffect(() => {
     return () => {
-      if (recaptchaRef.current) {
-        try { recaptchaRef.current.clear(); } catch (_) {}
-        recaptchaRef.current = null;
-      }
+      try { recaptchaRef.current?.clear(); } catch (_) {}
+      recaptchaRef.current = null;
     };
   }, []);
+
+  const clearVerifier = () => {
+    try { recaptchaRef.current?.clear(); } catch (_) {}
+    recaptchaRef.current = null;
+    const el = document.getElementById("recaptcha-container");
+    if (el) el.innerHTML = "";
+  };
 
   const switchMode = (next) => {
     setMode(next); setError(""); setInfo("");
@@ -520,13 +525,13 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
 
   const getOrCreateVerifier = () => {
     if (!recaptchaRef.current) {
+      // Clear container DOM before rendering new widget to prevent "already rendered" error
+      const el = document.getElementById("recaptcha-container");
+      if (el) el.innerHTML = "";
       recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
         size: "invisible",
         callback: () => {},
-        "expired-callback": () => {
-          try { recaptchaRef.current?.clear(); } catch (_) {}
-          recaptchaRef.current = null;
-        },
+        "expired-callback": () => { clearVerifier(); },
       });
     }
     return recaptchaRef.current;
@@ -546,17 +551,16 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       const result   = auth.currentUser
         ? await linkWithPhoneNumber(auth.currentUser, fullPhone, verifier)
         : await signInWithPhoneNumber(auth, fullPhone, verifier);
-      // Limpiar el verifier antes de que React re-renderice al cambiar de paso;
-      // si no, reCAPTCHA intenta limpiar sus nodos DOM de forma asíncrona y
-      // encuentra nulls → "Cannot read properties of null (reading 'style')"
-      try { recaptchaRef.current?.clear(); } catch (_) {}
-      recaptchaRef.current = null;
+      // Limpiar el verifier + contenedor DOM síncronamente antes del re-render;
+      // evita que reCAPTCHA acceda a nodos ya eliminados (null 'style' crash)
+      clearVerifier();
       setConfirmResult(result);
       setMode("phone-code");
     } catch (err) {
       console.error("[sendSMS] err.code:", err.code, "| err.message:", err.message, err);
-      try { recaptchaRef.current?.clear(); } catch (_) {}
-      recaptchaRef.current = null;
+      // Limpiar verifier + DOM antes de cualquier setState que dispare re-render;
+      // sin esto el reintento produce "reCAPTCHA has already been rendered in this element"
+      clearVerifier();
       setPhoneError(getPhoneError(err.code));
     }
     setPhoneLoading(false);
