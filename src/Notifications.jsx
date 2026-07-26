@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { db, auth } from "./firebase";
 import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { LangButton } from "./LanguageSelector";
+import { isPremium } from "./utils/isPremium";
 
 function relTime(ts) {
   if (!ts?.toDate) return "";
@@ -108,6 +109,21 @@ const css = `
   .nf-empty-txt { font-family:var(--serif); font-size:1.3rem; font-weight:300; color:var(--cream-dim); margin-bottom:8px; }
   .nf-empty-sub { font-size:0.8rem; color:var(--muted); }
 
+  /* visits card */
+  .nf-visits-card { padding:15px 0; border-bottom:1px solid rgba(201,168,76,0.07); }
+  .nf-visits-header { display:flex; align-items:center; gap:14px; cursor:pointer; user-select:none; }
+  .nf-visits-toggle { margin-left:auto; font-size:0.72rem; color:var(--gold); letter-spacing:0.08em; flex-shrink:0; }
+  .nf-visits-list { margin-top:10px; display:flex; flex-direction:column; gap:0; }
+  .nf-visitor-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid rgba(201,168,76,0.06); }
+  .nf-visitor-avatar { width:38px; height:38px; border-radius:50%; border:1px solid rgba(201,168,76,0.25); background:rgba(20,18,9,0.9); display:flex; align-items:center; justify-content:center; font-size:1.15rem; overflow:hidden; flex-shrink:0; }
+  .nf-visitor-avatar img { width:100%; height:100%; object-fit:cover; }
+  .nf-visitor-name { font-size:0.85rem; color:var(--cream-dim); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nf-visitor-time { font-size:0.7rem; color:var(--muted); flex-shrink:0; }
+  /* free teaser */
+  .nf-visits-teaser { margin-top:8px; font-size:0.77rem; color:var(--muted); line-height:1.5; }
+  .nf-visits-teaser-btn { margin-top:10px; display:inline-block; background:none; border:1px solid rgba(201,168,76,0.4); color:var(--gold); font-family:var(--sans); font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; padding:7px 16px; cursor:pointer; transition:border-color 0.2s,color 0.2s; }
+  .nf-visits-teaser-btn:hover { border-color:var(--gold); color:var(--gold-light); }
+
   /* hamburger */
   .nf-hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:6px; flex-shrink:0; }
   @media(max-width:860px){ .nf-hamburger { display:flex; } }
@@ -130,14 +146,18 @@ const css = `
 export default function Notifications({
   pendingRequests = [], user, onIgnore,
   persistentNotifs = [], profileVisitDocs = [], lastVisitSeenAt = new Date(0),
-  onMarkSeen, onDeleteNotif,
+  onMarkSeen, onDeleteNotif, subscription,
   onBack, onChat, onProfile, onExplore, onMatches, onMap, onSignOut,
   notifCount, onSettings, onPricing,
 }) {
-  const [profiles,  setProfiles]  = useState({});
-  const [accepting, setAccepting] = useState(new Set());
-  const [matched,   setMatched]   = useState(new Set());
-  const [menuOpen,  setMenuOpen]  = useState(false);
+  const premium = isPremium(subscription);
+
+  const [profiles,       setProfiles]       = useState({});
+  const [accepting,      setAccepting]      = useState(new Set());
+  const [matched,        setMatched]        = useState(new Set());
+  const [menuOpen,       setMenuOpen]       = useState(false);
+  const [visitsExpanded, setVisitsExpanded] = useState(false);
+  const [visitorProfiles, setVisitorProfiles] = useState({});
   const [visitsDismissedAt, setVisitsDismissedAt] = useState(() => {
     try { return new Date(localStorage.getItem("gm_visitsDismissed") || 0); }
     catch { return new Date(0); }
@@ -238,6 +258,30 @@ export default function Notifications({
     }
     setAccepting(prev => { const s = new Set(prev); s.delete(fromUid); return s; });
   };
+
+  // Load visitor profiles for premium users
+  useEffect(() => {
+    if (!premium || !profileVisitDocs.length) return;
+    const uids = [...new Set(profileVisitDocs.map(v => v.visitorId).filter(Boolean))];
+    const missing = uids.filter(uid => !visitorProfiles[uid]);
+    if (!missing.length) return;
+    Promise.all(missing.map(uid =>
+      getDoc(doc(db, "users", uid)).then(snap => ({ uid, data: snap.data() || {} }))
+    )).then(results => {
+      setVisitorProfiles(prev => {
+        const next = { ...prev };
+        results.forEach(({ uid, data }) => {
+          next[uid] = {
+            displayName: data.displayName || "Viajero",
+            photoURL:    data.photoURL    || null,
+            emoji:       data.emoji       || "👤",
+          };
+        });
+        return next;
+      });
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [premium, profileVisitDocs.map(v => v.visitorId).join(",")]);
 
   // Profile visits
   const totalVisits = profileVisitDocs.length;
@@ -355,18 +399,66 @@ export default function Notifications({
             <>
               <div className="nf-section-hdr" style={{ marginTop: pendingRequests.length ? 8 : 0 }}>Historial</div>
 
-              {/* Profile visits aggregate */}
+              {/* Profile visits card */}
               {showVisitsCard && (
-                <div className="nf-notif nf-notif-unseen">
-                  <div className="nf-notif-icon">
-                    <span style={{ fontSize:"1.35rem" }}>👁</span>
-                  </div>
-                  <div className="nf-notif-body">
-                    <div className="nf-notif-text">
-                      <em>{totalVisits}</em> {totalVisits === 1 ? "persona visitó" : "personas visitaron"} tu perfil
+                <div className={`nf-visits-card${hasNewVisits ? " nf-notif-unseen" : ""}`} style={{ paddingLeft: hasNewVisits ? undefined : 0 }}>
+                  <div
+                    className="nf-visits-header"
+                    onClick={premium ? () => setVisitsExpanded(e => !e) : undefined}
+                    style={{ cursor: premium ? "pointer" : "default" }}
+                  >
+                    <div className="nf-notif-icon">
+                      <span style={{ fontSize:"1.35rem" }}>👁</span>
                     </div>
+                    <div className="nf-notif-body">
+                      <div className="nf-notif-text">
+                        <em>{totalVisits}</em> {totalVisits === 1 ? "persona visitó" : "personas visitaron"} tu perfil
+                      </div>
+                      {!premium && (
+                        <div className="nf-visits-teaser">
+                          Descubre quién te visitó. Hazte Premium para ver la lista ✨
+                          <br />
+                          <button className="nf-visits-teaser-btn" onClick={() => onPricing?.()}>
+                            Ver planes
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {premium && (
+                      <span className="nf-visits-toggle">
+                        {visitsExpanded ? "Ocultar ▴" : "Ver lista ▾"}
+                      </span>
+                    )}
+                    <button
+                      className="nf-del-btn"
+                      onClick={e => { e.stopPropagation(); handleDismissVisits(); }}
+                      title="Marcar como visto"
+                    >✕</button>
                   </div>
-                  <button className="nf-del-btn" onClick={handleDismissVisits} title="Marcar como visto">✕</button>
+
+                  {premium && visitsExpanded && (
+                    <div className="nf-visits-list">
+                      {[...profileVisitDocs]
+                        .sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0))
+                        .map((v, i) => {
+                          const uid = v.visitorId;
+                          const p   = visitorProfiles[uid] || {};
+                          return (
+                            <div key={uid || i} className="nf-visitor-row">
+                              <div className="nf-visitor-avatar">
+                                {p.photoURL
+                                  ? <img src={p.photoURL} alt={p.displayName} />
+                                  : <span>{p.emoji || "👤"}</span>
+                                }
+                              </div>
+                              <span className="nf-visitor-name">{p.displayName || "…"}</span>
+                              <span className="nf-visitor-time">{relTime(v.timestamp)}</span>
+                            </div>
+                          );
+                        })
+                      }
+                    </div>
+                  )}
                 </div>
               )}
 

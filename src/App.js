@@ -347,6 +347,7 @@ export default function App() {
         lastVisitSeenAt={lastVisitSeenAt}
         onMarkSeen={handleMarkSeen}
         onDeleteNotif={handleDeleteNotif}
+        subscription={subscription}
         onBack={() => window.history.back()}
         {...nav}
       />
