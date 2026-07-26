@@ -32,9 +32,10 @@ const css = `
   .pp-close:hover { border-color: #c9a84c; color: #c9a84c; }
 
   /* carousel */
+  .pp-carousel-section { position: relative; flex-shrink: 0; }
   .pp-carousel {
     height: 280px; background: linear-gradient(135deg,#1a1508,#100f0a);
-    position: relative; flex-shrink: 0; overflow: hidden; user-select: none;
+    position: relative; overflow: hidden; user-select: none;
   }
   .pp-carousel-slide {
     position: absolute; inset: 0; transition: opacity 0.35s ease;
@@ -301,38 +302,40 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
             const next = () => setCarouselIdx(i => (i + 1) % total);
             return (
             <>
-              {/* carousel */}
-              <div
-                className="pp-carousel"
-                onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
-                onTouchEnd={e => {
-                  if (touchStartX.current === null || !total) return;
-                  const dx = e.changedTouches[0].clientX - touchStartX.current;
-                  if (Math.abs(dx) > 40) dx < 0 ? next() : prev();
-                  touchStartX.current = null;
-                }}
-              >
-                {total === 0 ? null : slides.map((src, i) => (
-                  <div
-                    key={i}
-                    className="pp-carousel-slide"
-                    style={{ opacity: i === carouselIdx ? 1 : 0, zIndex: i === carouselIdx ? 1 : 0 }}
-                  >
-                    <img src={src} alt={`Foto ${i + 1}`} />
-                  </div>
-                ))}
-                <div className="pp-carousel-overlay" />
-                {total > 1 && (
-                  <>
-                    <button className="pp-carousel-arrow left" onClick={prev}>‹</button>
-                    <button className="pp-carousel-arrow right" onClick={next}>›</button>
-                    <div className="pp-carousel-dots">
-                      {slides.map((_, i) => (
-                        <div key={i} className={`pp-carousel-dot${i === carouselIdx ? " active" : ""}`} />
-                      ))}
+              {/* carousel + avatar wrapper — overflow visible so avatar is not clipped */}
+              <div className="pp-carousel-section">
+                <div
+                  className="pp-carousel"
+                  onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+                  onTouchEnd={e => {
+                    if (touchStartX.current === null || !total) return;
+                    const dx = e.changedTouches[0].clientX - touchStartX.current;
+                    if (Math.abs(dx) > 40) dx < 0 ? next() : prev();
+                    touchStartX.current = null;
+                  }}
+                >
+                  {total === 0 ? null : slides.map((src, i) => (
+                    <div
+                      key={i}
+                      className="pp-carousel-slide"
+                      style={{ opacity: i === carouselIdx ? 1 : 0, zIndex: i === carouselIdx ? 1 : 0 }}
+                    >
+                      <img src={src} alt={`Foto ${i + 1}`} />
                     </div>
-                  </>
-                )}
+                  ))}
+                  <div className="pp-carousel-overlay" />
+                  {total > 1 && (
+                    <>
+                      <button className="pp-carousel-arrow left" onClick={prev}>‹</button>
+                      <button className="pp-carousel-arrow right" onClick={next}>›</button>
+                      <div className="pp-carousel-dots">
+                        {slides.map((_, i) => (
+                          <div key={i} className={`pp-carousel-dot${i === carouselIdx ? " active" : ""}`} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div className="pp-avatar-wrap">
                   {profile.photoURL
                     ? <img src={profile.photoURL} alt={profile.displayName || "Viajero"} />
