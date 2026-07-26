@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
 import {
   doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp,
@@ -31,18 +31,43 @@ const css = `
   }
   .pp-close:hover { border-color: #c9a84c; color: #c9a84c; }
 
-  /* banner */
-  .pp-banner {
-    height: 140px; background: linear-gradient(135deg,#1a1508,#100f0a);
-    position: relative; flex-shrink: 0;
+  /* carousel */
+  .pp-carousel {
+    height: 280px; background: linear-gradient(135deg,#1a1508,#100f0a);
+    position: relative; flex-shrink: 0; overflow: hidden; user-select: none;
   }
-  .pp-banner img.pp-cover { width: 100%; height: 100%; object-fit: cover; }
-  .pp-banner-overlay {
+  .pp-carousel-slide {
+    position: absolute; inset: 0; transition: opacity 0.35s ease;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pp-carousel-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pp-carousel-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(to bottom, transparent 40%, rgba(20,18,9,0.85) 100%);
+    background: linear-gradient(to bottom, transparent 50%, rgba(20,18,9,0.82) 100%);
+    pointer-events: none;
   }
+  .pp-carousel-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+    background: rgba(10,9,5,0.55); border: 1px solid rgba(201,168,76,0.3);
+    color: rgba(245,240,232,0.75); width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+  .pp-carousel-arrow:hover { background: rgba(201,168,76,0.2); color: #e8c97a; border-color: #c9a84c; }
+  .pp-carousel-arrow.left  { left: 10px; }
+  .pp-carousel-arrow.right { right: 10px; }
+  .pp-carousel-dots {
+    position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; z-index: 5; pointer-events: none;
+  }
+  .pp-carousel-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(245,240,232,0.35); transition: background 0.25s, transform 0.25s;
+  }
+  .pp-carousel-dot.active { background: #c9a84c; transform: scale(1.3); }
   .pp-avatar-wrap {
-    position: absolute; bottom: -36px; left: 24px; z-index: 2;
+    position: absolute; bottom: -36px; left: 24px; z-index: 6;
     width: 72px; height: 72px; border-radius: 50%;
     border: 2.5px solid #c9a84c; background: rgba(10,9,5,0.9);
     display: flex; align-items: center; justify-content: center;
@@ -132,6 +157,8 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
   const [reporting, setReporting]       = useState(false);
   const [likeStatus, setLikeStatus]     = useState(null); // null | "sent" | "match"
   const [likeBusy,   setLikeBusy]       = useState(false);
+  const [carouselIdx, setCarouselIdx]   = useState(0);
+  const touchStartX = useRef(null);
 
   useEffect(() => {
     if (!uid) return;
@@ -144,6 +171,7 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
             displayName:      d.displayName      || null,
             photoURL:         d.photoURL         || null,
             coverURL:         d.coverURL         || null,
+            photos:           Array.isArray(d.photos) ? d.photos.filter(Boolean) : [],
             emoji:            d.emoji            || null,
             location:         d.location         || null,
             bio:              d.bio              || null,
@@ -154,6 +182,7 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
             upcoming:         d.upcoming         || [],
             isVerified:       d.isVerified       || false,
           });
+          setCarouselIdx(0);
         } else {
           setError(true);
         }
@@ -263,15 +292,50 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
           {loading && <div className="pp-loading">Cargando…</div>}
           {error   && <div className="pp-error">Perfil no encontrado.</div>}
 
-          {!loading && !error && profile && (
+          {!loading && !error && profile && (() => {
+            const slides = profile.photos?.length
+              ? profile.photos
+              : profile.coverURL ? [profile.coverURL] : [];
+            const total = slides.length;
+            const prev = () => setCarouselIdx(i => (i - 1 + total) % total);
+            const next = () => setCarouselIdx(i => (i + 1) % total);
+            return (
             <>
-              {/* banner */}
-              <div className="pp-banner">
-                {profile.coverURL && <img className="pp-cover" src={profile.coverURL} alt="" />}
-                <div className="pp-banner-overlay" />
+              {/* carousel */}
+              <div
+                className="pp-carousel"
+                onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+                onTouchEnd={e => {
+                  if (touchStartX.current === null || !total) return;
+                  const dx = e.changedTouches[0].clientX - touchStartX.current;
+                  if (Math.abs(dx) > 40) dx < 0 ? next() : prev();
+                  touchStartX.current = null;
+                }}
+              >
+                {total === 0 ? null : slides.map((src, i) => (
+                  <div
+                    key={i}
+                    className="pp-carousel-slide"
+                    style={{ opacity: i === carouselIdx ? 1 : 0, zIndex: i === carouselIdx ? 1 : 0 }}
+                  >
+                    <img src={src} alt={`Foto ${i + 1}`} />
+                  </div>
+                ))}
+                <div className="pp-carousel-overlay" />
+                {total > 1 && (
+                  <>
+                    <button className="pp-carousel-arrow left" onClick={prev}>‹</button>
+                    <button className="pp-carousel-arrow right" onClick={next}>›</button>
+                    <div className="pp-carousel-dots">
+                      {slides.map((_, i) => (
+                        <div key={i} className={`pp-carousel-dot${i === carouselIdx ? " active" : ""}`} />
+                      ))}
+                    </div>
+                  </>
+                )}
                 <div className="pp-avatar-wrap">
                   {profile.photoURL
-                    ? <img src={profile.photoURL} alt={profile.displayName || "Traveler"} />
+                    ? <img src={profile.photoURL} alt={profile.displayName || "Viajero"} />
                     : <span>{profile.emoji || "👤"}</span>
                   }
                 </div>
@@ -431,7 +495,7 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
                 )}
               </div>
             </>
-          )}
+          ); })()}
         </div>
       </div>
 

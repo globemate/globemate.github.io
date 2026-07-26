@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage } from "./firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { doc, getDoc, setDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
+import { ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
 import { COUNTRY_NAMES } from "./countryData";
@@ -204,6 +204,7 @@ const DEF = {
   bio: "",
   photoURL: "",
   coverURL: "",
+  photos: [],
   visitedCountries: [],
   upcoming: [],
   interests: [],
@@ -213,6 +214,26 @@ const DEF = {
   verificationStatus: "",
   isVerified: false,
 };
+
+const MAX_GALLERY = 6;
+
+function compressImage(file, maxDim = 1200, quality = 0.82) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width  = Math.round(img.width  * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => resolve(blob || file), "image/jpeg", quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -468,6 +489,31 @@ const css = `
   .pr-selfie-capture:hover:not(:disabled) { background:rgba(201,168,76,0.18); }
   .pr-selfie-capture:disabled { opacity:0.4; cursor:not-allowed; }
 
+  /* ── gallery ── */
+  .pr-gallery-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  .pr-gallery-thumb { position:relative; aspect-ratio:1/1; background:rgba(245,240,232,0.04); border:1px solid rgba(201,168,76,0.12); overflow:hidden; cursor:default; }
+  .pr-gallery-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .pr-gallery-del {
+    position:absolute; top:5px; right:5px;
+    width:22px; height:22px; border-radius:50%;
+    background:rgba(10,9,5,0.78); border:1px solid rgba(245,240,232,0.22);
+    color:rgba(245,240,232,0.7); font-size:0.7rem; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all 0.18s; opacity:0;
+  }
+  .pr-gallery-thumb:hover .pr-gallery-del { opacity:1; }
+  .pr-gallery-del:hover { background:rgba(201,112,106,0.7); border-color:rgba(201,112,106,0.9); color:#fff; }
+  .pr-gallery-add {
+    aspect-ratio:1/1; background:rgba(245,240,232,0.02);
+    border:1px dashed rgba(201,168,76,0.25); color:var(--muted);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    cursor:pointer; transition:all 0.2s; gap:6px; font-size:0.68rem;
+    letter-spacing:0.1em; text-transform:uppercase;
+  }
+  .pr-gallery-add:hover { border-color:rgba(201,168,76,0.55); color:var(--gold); background:rgba(201,168,76,0.05); }
+  .pr-gallery-add-icon { font-size:1.4rem; line-height:1; }
+  .pr-gallery-uploading { opacity:0.5; pointer-events:none; }
+
   /* ── mobile ≤480px ─────────────────────────────────────────────────────── */
   @media (max-width: 480px) {
     /* grid items must not exceed track width */
@@ -524,6 +570,8 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
   const [menuOpen, setMenuOpen]         = useState(false);
   const [countrySearch, setCountrySearch] = useState(null);
 
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const galleryInputRef = useRef();
   const photoRef = useRef();
   const coverRef = useRef();
   const selfieVideoRef  = useRef();
@@ -643,6 +691,44 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
     setCoverFile(f);
     setCoverPreview(URL.createObjectURL(f));
     setDirty(true);
+  };
+
+  const handleGalleryUpload = async e => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length || !user?.uid) return;
+    e.target.value = "";
+    const currentPhotos = profile.photos || [];
+    const slots = MAX_GALLERY - currentPhotos.length;
+    if (slots <= 0) return;
+    const toUpload = files.slice(0, slots);
+    setGalleryUploading(true);
+    const newUrls = [];
+    for (let i = 0; i < toUpload.length; i++) {
+      try {
+        const blob = await compressImage(toUpload[i]);
+        const r    = sRef(storage, `profile-gallery/${user.uid}/${Date.now()}-${i}.jpg`);
+        await uploadBytes(r, blob, { contentType: "image/jpeg" });
+        const url = await getDownloadURL(r);
+        newUrls.push(url);
+      } catch { /* skip failed photo */ }
+    }
+    if (newUrls.length) {
+      await setDoc(doc(db, "users", user.uid), { photos: arrayUnion(...newUrls) }, { merge: true });
+      setProfile(p => ({ ...p, photos: [...(p.photos || []), ...newUrls] }));
+    }
+    setGalleryUploading(false);
+  };
+
+  const handleDeleteGalleryPhoto = async url => {
+    if (!user?.uid) return;
+    setProfile(p => ({ ...p, photos: (p.photos || []).filter(u => u !== url) }));
+    try {
+      await setDoc(doc(db, "users", user.uid), { photos: arrayRemove(url) }, { merge: true });
+    } catch { /* revert if Firestore fails */ }
+    try {
+      const path = decodeURIComponent(url.split("/o/")[1]?.split("?")[0] || "");
+      if (path) await deleteObject(sRef(storage, path));
+    } catch { /* ignore if Storage deletion fails */ }
   };
 
   const addDest = () => {
@@ -1089,6 +1175,47 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
                     />
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* gallery */}
+            <div className="pr-section">
+              <div className="pr-section-title">Mis fotos</div>
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={handleGalleryUpload}
+              />
+              <div className={`pr-gallery-grid${galleryUploading ? " pr-gallery-uploading" : ""}`}>
+                {(profile.photos || []).map((url, i) => (
+                  <div key={url} className="pr-gallery-thumb">
+                    <img src={url} alt={`Foto ${i + 1}`} />
+                    <button
+                      className="pr-gallery-del"
+                      onClick={() => handleDeleteGalleryPhoto(url)}
+                      title="Eliminar foto"
+                    >✕</button>
+                  </div>
+                ))}
+                {(profile.photos || []).length < MAX_GALLERY && (
+                  <button
+                    className="pr-gallery-add"
+                    onClick={() => galleryInputRef.current?.click()}
+                    disabled={galleryUploading}
+                    title="Añadir foto"
+                  >
+                    <span className="pr-gallery-add-icon">
+                      {galleryUploading ? "⏳" : "+"}
+                    </span>
+                    <span>{galleryUploading ? "Subiendo…" : "Añadir"}</span>
+                  </button>
+                )}
+              </div>
+              <div style={{ fontSize:"0.68rem", color:"var(--muted)", lineHeight:1.55 }}>
+                Hasta {MAX_GALLERY} fotos · Se guardan automáticamente
               </div>
             </div>
           </div>

@@ -25,5 +25,12 @@ service firebase.storage {
       allow read:  if request.auth != null;
     }
 
+    // ── Galería de fotos de perfil ──────────────────────────────────────────
+    // Solo el propietario puede subir/eliminar; cualquier autenticado puede leer.
+    match /profile-gallery/{uid}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read:  if request.auth != null;
+    }
+
   }
 }
