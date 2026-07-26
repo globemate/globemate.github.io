@@ -5,7 +5,7 @@ import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAjJY9vQzxFQy26jPYtP2P1LFpg7QODafM",
-  authDomain: "globemate-85c6b.firebaseapp.com",
+  authDomain: "auth.globemate.app",
   projectId: "globemate-85c6b",
   storageBucket: "globemate-85c6b.firebasestorage.app",
   messagingSenderId: "869913391747",
