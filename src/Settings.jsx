@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "./firebase";
-import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch, arrayRemove } from "firebase/firestore";
 import {
   updatePassword, verifyBeforeUpdateEmail,
   reauthenticateWithCredential, reauthenticateWithPopup,
@@ -217,6 +217,17 @@ const css = `
   .sg-cpicker-opt { width:100%; background:none; border:none; border-bottom:1px solid rgba(201,168,76,0.06); color:rgba(245,240,232,0.75); padding:9px 14px; text-align:left; font-family:var(--sans); font-size:0.82rem; cursor:pointer; transition:background 0.12s; }
   .sg-cpicker-opt:hover { background:rgba(201,168,76,0.09); color:var(--cream); }
 
+  /* blocked users list */
+  .sg-blocked-row { display:flex; align-items:center; gap:12px; padding:12px 24px; border-bottom:1px solid rgba(201,168,76,0.06); }
+  .sg-blocked-row:last-child { border-bottom:none; }
+  .sg-blocked-avatar { width:40px; height:40px; border-radius:50%; border:1.5px solid rgba(201,168,76,0.25); background:rgba(20,18,9,0.9); display:flex; align-items:center; justify-content:center; font-size:1.2rem; overflow:hidden; flex-shrink:0; }
+  .sg-blocked-avatar img { width:100%; height:100%; object-fit:cover; }
+  .sg-blocked-name { flex:1; font-size:0.86rem; color:var(--cream-dim); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sg-blocked-empty { padding:18px 24px; font-size:0.82rem; color:var(--muted); }
+  .sg-btn-unblock { background:none; border:1px solid rgba(245,240,232,0.18); color:rgba(245,240,232,0.45); font-family:var(--sans); font-size:0.66rem; letter-spacing:0.1em; text-transform:uppercase; padding:6px 14px; cursor:pointer; transition:all 0.2s; white-space:nowrap; flex-shrink:0; }
+  .sg-btn-unblock:hover:not(:disabled) { border-color:rgba(111,207,151,0.45); color:#6fcf97; }
+  .sg-btn-unblock:disabled { opacity:0.35; cursor:not-allowed; }
+
   /* hamburger */
   .sg-hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:6px; flex-shrink:0; }
   @media(max-width:860px){ .sg-hamburger{ display:flex; } }
@@ -268,6 +279,11 @@ export default function Settings({
   const [delBusy, setDelBusy]   = useState(false);
   const [delErr, setDelErr]     = useState("");
 
+  const [blockedUsers,    setBlockedUsers]    = useState([]);   // [{ docId, blockedId }]
+  const [blockedProfiles, setBlockedProfiles] = useState({});   // uid -> { displayName, photoURL, emoji }
+  const [blockedLoaded,   setBlockedLoaded]   = useState(false);
+  const [unblocking,      setUnblocking]      = useState(new Set());
+
   const isEmailUser = user.providerData.some(p => p.providerId === "password");
 
   const TAB_LABELS = {
@@ -296,6 +312,52 @@ export default function Settings({
       }
     }).finally(() => setLoading(false));
   }, [user]);
+
+  useEffect(() => {
+    if (tab !== "privacy" || blockedLoaded || !user?.uid) return;
+    setBlockedLoaded(true);
+    getDocs(query(collection(db, "blocks"), where("blockerId", "==", user.uid)))
+      .then(async snap => {
+        const docs = snap.docs.map(d => ({ docId: d.id, blockedId: d.data().blockedId }));
+        setBlockedUsers(docs);
+        if (!docs.length) return;
+        const profiles = await Promise.all(
+          docs.map(({ blockedId }) =>
+            getDoc(doc(db, "users", blockedId))
+              .then(s => ({ uid: blockedId, data: s.data() || {} }))
+              .catch(() => ({ uid: blockedId, data: {} }))
+          )
+        );
+        setBlockedProfiles(prev => {
+          const next = { ...prev };
+          profiles.forEach(({ uid, data }) => {
+            next[uid] = {
+              displayName: data.displayName || "Usuario",
+              photoURL:    data.photoURL    || null,
+              emoji:       data.emoji       || "👤",
+            };
+          });
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, [tab, blockedLoaded, user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleUnblock = async (blockedId, docId) => {
+    if (unblocking.has(blockedId)) return;
+    setUnblocking(prev => new Set([...prev, blockedId]));
+    try {
+      await deleteDoc(doc(db, "blocks", docId));
+      const [uidA, uidB] = [user.uid, blockedId].sort();
+      try {
+        await updateDoc(doc(db, "conversations", `${uidA}_${uidB}`), {
+          hiddenFor: arrayRemove(user.uid),
+        });
+      } catch { /* no conversation exists — fine */ }
+      setBlockedUsers(prev => prev.filter(b => b.blockedId !== blockedId));
+    } catch { /* ignore */ }
+    setUnblocking(prev => { const s = new Set(prev); s.delete(blockedId); return s; });
+  };
 
   const updNotif   = (k, v) => { setSettings(s => ({ ...s, notif:   { ...s.notif,   [k]: v } })); setDirty(true); setSaveMsg({ text:"", type:"" }); };
   const updPrivacy = (k, v) => { setSettings(s => ({ ...s, privacy: { ...s.privacy, [k]: v } })); setDirty(true); setSaveMsg({ text:"", type:"" }); };
@@ -721,6 +783,35 @@ export default function Settings({
                 </div>
                 <Toggle on={settings.privacy.incognitoMode} onChange={v => updPrivacy("incognitoMode", v)} />
               </div>
+            </div>
+
+            <div className="sg-section">
+              <div className="sg-sec-title">Usuarios bloqueados</div>
+              {blockedUsers.length === 0 ? (
+                <div className="sg-blocked-empty">No has bloqueado a nadie.</div>
+              ) : (
+                blockedUsers.map(({ docId, blockedId }) => {
+                  const p = blockedProfiles[blockedId] || {};
+                  return (
+                    <div key={blockedId} className="sg-blocked-row">
+                      <div className="sg-blocked-avatar">
+                        {p.photoURL
+                          ? <img src={p.photoURL} alt={p.displayName} />
+                          : <span>{p.emoji || "👤"}</span>
+                        }
+                      </div>
+                      <span className="sg-blocked-name">{p.displayName || "…"}</span>
+                      <button
+                        className="sg-btn-unblock"
+                        disabled={unblocking.has(blockedId)}
+                        onClick={() => handleUnblock(blockedId, docId)}
+                      >
+                        {unblocking.has(blockedId) ? "…" : "Desbloquear"}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             <div className="sg-section">
