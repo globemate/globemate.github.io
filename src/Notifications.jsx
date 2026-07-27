@@ -1,17 +1,18 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { db, auth } from "./firebase";
 import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { LangButton } from "./LanguageSelector";
 import { isPremium } from "./utils/isPremium";
 
-function relTime(ts) {
+function relTime(ts, t, lang) {
   if (!ts?.toDate) return "";
   const d = ts.toDate(), diff = Date.now() - d.getTime();
-  if (diff < 60_000)    return "ahora";
-  if (diff < 3_600_000) return `hace ${Math.floor(diff / 60_000)}m`;
-  if (diff < 86_400_000) return `hace ${Math.floor(diff / 3_600_000)}h`;
-  if (diff < 604_800_000) return `hace ${Math.floor(diff / 86_400_000)}d`;
-  return d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  if (diff < 60_000)     return t("notifications.relNow");
+  if (diff < 3_600_000)  return t("notifications.relMinutes", { n: Math.floor(diff / 60_000) });
+  if (diff < 86_400_000) return t("notifications.relHours",   { n: Math.floor(diff / 3_600_000) });
+  if (diff < 604_800_000) return t("notifications.relDays",   { n: Math.floor(diff / 86_400_000) });
+  return d.toLocaleDateString(lang, { day: "numeric", month: "short" });
 }
 
 const css = `
@@ -150,6 +151,7 @@ export default function Notifications({
   onBack, onChat, onProfile, onExplore, onMatches, onMap, onSignOut,
   notifCount, onSettings, onPricing,
 }) {
+  const { t, i18n } = useTranslation();
   const premium = isPremium(subscription);
 
   const [profiles,       setProfiles]       = useState({});
@@ -311,19 +313,19 @@ export default function Notifications({
           <LangButton align="right" />
           <button className="mob-nav-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>Inicio</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onBack(); }}>{t("nav.home")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>Explorar</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>Matches</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>Mensajes</button>
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>Mapa</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onExplore(); }}>{t("nav.explore")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMatches(); }}>{t("nav.matches")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onChat(); }}>{t("nav.messages")}</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onMap(); }}>{t("nav.map")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>Mi perfil</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onProfile(); }}>{t("nav.myProfile")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>Planes</button>
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>Ajustes</button>
+        <button className="mob-nav-link gold" onClick={() => { setMenuOpen(false); onPricing?.(); }}>{t("nav.plans")}</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSettings?.(); }}>{t("nav.settings")}</button>
         <div className="mob-nav-divider" />
-        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>Cerrar sesión</button>
+        <button className="mob-nav-link" onClick={() => { setMenuOpen(false); onSignOut(); }}>{t("nav.signOut")}</button>
       </div>
 
       <div className="nf-root">
@@ -331,18 +333,18 @@ export default function Notifications({
           <button className="nf-logo" onClick={onBack}>Globe<span>Mate</span></button>
           <div style={{ display:"flex", gap:12, alignItems:"center" }}>
             <LangButton align="right" className="nf-desktop" />
-            <button className="nf-hamburger" onClick={() => setMenuOpen(true)} aria-label="Abrir menú">
+            <button className="nf-hamburger" onClick={() => setMenuOpen(true)} aria-label={t("notifications.openMenu")}>
               <span /><span /><span />
             </button>
           </div>
         </nav>
 
         <div className="nf-header">
-          <div className="nf-eyebrow">Centro de notificaciones</div>
-          <h1 className="nf-h1"><em>Notificaciones</em></h1>
+          <div className="nf-eyebrow">{t("notifications.center")}</div>
+          <h1 className="nf-h1"><em>{t("notifications.title")}</em></h1>
           {pendingRequests.length > 0 && (
             <p className="nf-subtitle">
-              {pendingRequests.length} solicitud{pendingRequests.length !== 1 ? "es" : ""} pendiente{pendingRequests.length !== 1 ? "s" : ""}
+              {t("notifications.pendingRequests", { count: pendingRequests.length })}
             </p>
           )}
         </div>
@@ -353,7 +355,7 @@ export default function Notifications({
           {/* ─── Pending connection requests ─── */}
           {pendingRequests.length > 0 && (
             <>
-              <div className="nf-section-hdr">Pendientes</div>
+              <div className="nf-section-hdr">{t("notifications.sectionPending")}</div>
               {pendingRequests.map(({ likeId, fromUid }) => {
                 const p           = profiles[fromUid];
                 const isAccepting = accepting.has(fromUid);
@@ -368,23 +370,23 @@ export default function Notifications({
                     </div>
                     <div className="nf-req-info">
                       <div className="nf-req-name">{p?.displayName || "…"}</div>
-                      <div className="nf-req-sub">quiere conectar contigo</div>
+                      <div className="nf-req-sub">{t("notifications.wantsToConnect")}</div>
                     </div>
                     <div className="nf-req-actions">
                       {isMatched ? (
-                        <span className="nf-accept-btn matched">Match ✓</span>
+                        <span className="nf-accept-btn matched">{t("notifications.matchDone")}</span>
                       ) : (
                         <button
                           className="nf-accept-btn"
                           onClick={() => handleAccept(fromUid)}
                           disabled={isAccepting}
                         >
-                          {isAccepting ? "…" : "Aceptar"}
+                          {isAccepting ? "…" : t("notifications.accept")}
                         </button>
                       )}
                       {!isMatched && (
                         <button className="nf-ignore-btn" onClick={() => onIgnore?.(fromUid)}>
-                          Ignorar
+                          {t("notifications.ignore")}
                         </button>
                       )}
                     </div>
@@ -397,7 +399,7 @@ export default function Notifications({
           {/* ─── History: matches, verification, visits ─── */}
           {hasHistory && (
             <>
-              <div className="nf-section-hdr" style={{ marginTop: pendingRequests.length ? 8 : 0 }}>Historial</div>
+              <div className="nf-section-hdr" style={{ marginTop: pendingRequests.length ? 8 : 0 }}>{t("notifications.sectionHistory")}</div>
 
               {/* Profile visits card */}
               {showVisitsCard && (
@@ -412,27 +414,27 @@ export default function Notifications({
                     </div>
                     <div className="nf-notif-body">
                       <div className="nf-notif-text">
-                        <em>{totalVisits}</em> {totalVisits === 1 ? "persona visitó" : "personas visitaron"} tu perfil
+                        {t("notifications.visitsText", { count: totalVisits })}
                       </div>
                       {!premium && (
                         <div className="nf-visits-teaser">
-                          Descubre quién te visitó. Hazte Premium para ver la lista ✨
+                          {t("notifications.visitTeaser")}
                           <br />
                           <button className="nf-visits-teaser-btn" onClick={() => onPricing?.()}>
-                            Ver planes
+                            {t("notifications.seePlans")}
                           </button>
                         </div>
                       )}
                     </div>
                     {premium && (
                       <span className="nf-visits-toggle">
-                        {visitsExpanded ? "Ocultar ▴" : "Ver lista ▾"}
+                        {visitsExpanded ? t("notifications.hideList") : t("notifications.showList")}
                       </span>
                     )}
                     <button
                       className="nf-del-btn"
                       onClick={e => { e.stopPropagation(); handleDismissVisits(); }}
-                      title="Marcar como visto"
+                      title={t("notifications.markSeen")}
                     >✕</button>
                   </div>
 
@@ -452,7 +454,7 @@ export default function Notifications({
                                 }
                               </div>
                               <span className="nf-visitor-name">{p.displayName || "…"}</span>
-                              <span className="nf-visitor-time">{relTime(v.timestamp)}</span>
+                              <span className="nf-visitor-time">{relTime(v.timestamp, t, i18n.language)}</span>
                             </div>
                           );
                         })
@@ -475,22 +477,14 @@ export default function Notifications({
                   </div>
                   <div className="nf-notif-body">
                     <div className="nf-notif-text">
-                      {n.type === "match_accepted" && (
-                        <>Hiciste match con <em>{n.fromName}</em> <strong>✓</strong></>
-                      )}
-                      {n.type === "match_received" && (
-                        <><em>{n.fromName}</em> aceptó tu solicitud — ¡es un match! <strong>✓</strong></>
-                      )}
-                      {n.type === "verification" && n.status === "verified" && (
-                        <><strong>✓</strong> Tu perfil fue verificado</>
-                      )}
-                      {n.type === "verification" && n.status !== "verified" && (
-                        <>Tu verificación fue rechazada — puedes intentarlo de nuevo</>
-                      )}
+                      {n.type === "match_accepted" && t("notifications.matchWith", { name: n.fromName })}
+                      {n.type === "match_received" && t("notifications.matchAccepted", { name: n.fromName })}
+                      {n.type === "verification" && n.status === "verified" && t("notifications.verifiedOk")}
+                      {n.type === "verification" && n.status !== "verified" && t("notifications.verifiedFailed")}
                     </div>
-                    <div className="nf-notif-sub">{relTime(n.createdAt)}</div>
+                    <div className="nf-notif-sub">{relTime(n.createdAt, t, i18n.language)}</div>
                   </div>
-                  <button className="nf-del-btn" onClick={() => onDeleteNotif?.(n.id)} title="Eliminar">✕</button>
+                  <button className="nf-del-btn" onClick={() => onDeleteNotif?.(n.id)} title={t("common.delete")}>✕</button>
                 </div>
               ))}
             </>
@@ -500,8 +494,8 @@ export default function Notifications({
           {isEmpty && (
             <div className="nf-empty">
               <div className="nf-empty-icon">🔔</div>
-              <div className="nf-empty-txt">Sin notificaciones</div>
-              <div className="nf-empty-sub">Cuando alguien quiera conectar contigo o tengas novedades aparecerán aquí.</div>
+              <div className="nf-empty-txt">{t("notifications.noNotifications")}</div>
+              <div className="nf-empty-sub">{t("notifications.emptySub")}</div>
             </div>
           )}
         </div>

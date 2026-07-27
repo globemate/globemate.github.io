@@ -594,7 +594,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
       setSelfieStream(stream);
     } catch {
       setSelfieModal(false);
-      setMsg({ text: "No se pudo acceder a la cámara. Permite el acceso en tu navegador.", type: "err" });
+      setMsg({ text: t("profile.errCamera"), type: "err" });
     }
   };
 
@@ -623,10 +623,10 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
       }, { merge: true });
       setProfile(p => ({ ...p, verificationStatus: "pending", verificationSelfieUrl: url }));
       closeSelfie();
-      setMsg({ text: "Selfie enviada. Tu verificación está pendiente de revisión.", type: "ok" });
+      setMsg({ text: t("profile.selfieUploaded"), type: "ok" });
       setTimeout(() => setMsg({ text: "", type: "" }), 5000);
     } catch {
-      setMsg({ text: "Error al subir la selfie. Inténtalo de nuevo.", type: "err" });
+      setMsg({ text: t("profile.errSelfie"), type: "err" });
     }
     setSelfieUploading(false);
   };
@@ -745,7 +745,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
   const handleSave = async () => {
     if (!(profile.firstName || "").trim()) {
-      setMsg({ text: "El nombre es obligatorio.", type: "err" });
+      setMsg({ text: t("profile.errNameRequired"), type: "err" });
       return;
     }
     setSaving(true);
@@ -876,19 +876,19 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
           <div style={{ flex: 1 }}>
             <div style={{ display:"flex", gap:"16px", flexWrap:"wrap" }}>
               <div style={{ flex:1, minWidth:"120px" }}>
-                <div style={{ fontSize:"0.58rem", letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--muted)", marginBottom:"3px" }}>Nombre *</div>
+                <div style={{ fontSize:"0.58rem", letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--muted)", marginBottom:"3px" }}>{t("profile.firstNameLabel")}</div>
                 <input
                   className="pr-name-input"
-                  placeholder="Tu nombre"
+                  placeholder={t("profile.firstNamePlaceholder")}
                   value={profile.firstName || ""}
                   onChange={e => upd("firstName", e.target.value)}
                 />
               </div>
               <div style={{ flex:1, minWidth:"120px" }}>
-                <div style={{ fontSize:"0.58rem", letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--muted)", marginBottom:"3px" }}>Apellido *</div>
+                <div style={{ fontSize:"0.58rem", letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--muted)", marginBottom:"3px" }}>{t("profile.lastNameLabel")}</div>
                 <input
                   className="pr-name-input"
-                  placeholder="Tu apellido"
+                  placeholder={t("profile.lastNamePlaceholder")}
                   value={profile.lastName || ""}
                   onChange={e => upd("lastName", e.target.value)}
                 />
@@ -914,7 +914,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
               <div className="pr-country-wrap">
                 <input
                   className="pr-loc-input"
-                  placeholder="País de residencia…"
+                  placeholder={t("profile.locationCountryPlaceholder")}
                   value={countrySearch !== null ? countrySearch : (profile.locationCountry || "")}
                   onFocus={() => setCountrySearch(profile.locationCountry || "")}
                   onChange={e => setCountrySearch(e.target.value)}
@@ -955,17 +955,17 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
             {/* ── verification ── */}
             <div className="pr-verif-section">
               {profile.verificationStatus === "pending" && (
-                <div className="pr-verif-status pending">⏳ Verificación pendiente de revisión</div>
+                <div className="pr-verif-status pending">{t("profile.verifPending")}</div>
               )}
               {profile.verificationStatus === "approved" && (
-                <div className="pr-verif-status approved">✓ Perfil verificado</div>
+                <div className="pr-verif-status approved">{t("profile.verifApproved")}</div>
               )}
               {profile.verificationStatus === "rejected" && (
-                <div className="pr-verif-status rejected">✗ Verificación rechazada — puedes intentarlo de nuevo</div>
+                <div className="pr-verif-status rejected">{t("profile.verifRejected")}</div>
               )}
               {(!profile.verificationStatus || profile.verificationStatus === "rejected") && (
                 <button className="pr-verif-btn" onClick={openSelfie}>
-                  Verificar mi perfil 📸
+                  {t("profile.verifyBtn")}
                 </button>
               )}
             </div>
@@ -1180,7 +1180,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
 
             {/* gallery */}
             <div className="pr-section">
-              <div className="pr-section-title">Mis fotos</div>
+              <div className="pr-section-title">{t("profile.galleryTitle")}</div>
               <input
                 ref={galleryInputRef}
                 type="file"
@@ -1192,11 +1192,11 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
               <div className={`pr-gallery-grid${galleryUploading ? " pr-gallery-uploading" : ""}`}>
                 {(profile.photos || []).map((url, i) => (
                   <div key={url} className="pr-gallery-thumb">
-                    <img src={url} alt={`Foto ${i + 1}`} />
+                    <img src={url} alt={t("profile.galleryPhotoAlt", { n: i + 1 })} />
                     <button
                       className="pr-gallery-del"
                       onClick={() => handleDeleteGalleryPhoto(url)}
-                      title="Eliminar foto"
+                      title={t("profile.galleryDelete")}
                     >✕</button>
                   </div>
                 ))}
@@ -1205,17 +1205,17 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
                     className="pr-gallery-add"
                     onClick={() => galleryInputRef.current?.click()}
                     disabled={galleryUploading}
-                    title="Añadir foto"
+                    title={t("profile.galleryAddTitle")}
                   >
                     <span className="pr-gallery-add-icon">
                       {galleryUploading ? "⏳" : "+"}
                     </span>
-                    <span>{galleryUploading ? "Subiendo…" : "Añadir"}</span>
+                    <span>{galleryUploading ? t("profile.galleryUploading") : t("profile.galleryAddBtn")}</span>
                   </button>
                 )}
               </div>
               <div style={{ fontSize:"0.68rem", color:"var(--muted)", lineHeight:1.55 }}>
-                Hasta {MAX_GALLERY} fotos · Se guardan automáticamente
+                {t("profile.galleryNote", { max: MAX_GALLERY })}
               </div>
             </div>
           </div>
@@ -1242,15 +1242,13 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
         <div className="pr-selfie-overlay">
           <div className="pr-selfie-modal">
             <div className="pr-selfie-header">
-              <span className="pr-selfie-title">Verificar identidad</span>
+              <span className="pr-selfie-title">{t("profile.selfieTitle")}</span>
               <button className="pr-selfie-close" onClick={closeSelfie}>✕</button>
             </div>
-            <p className="pr-selfie-hint">
-              Se usará la cámara frontal en vivo. Asegúrate de que tu rostro sea claramente visible y con buena iluminación. No se permite subir fotos desde la galería.
-            </p>
+            <p className="pr-selfie-hint">{t("profile.selfieHint")}</p>
             {selfieStream
               ? <video ref={selfieVideoRef} className="pr-selfie-video" autoPlay playsInline muted />
-              : <div className="pr-selfie-waiting">Iniciando cámara…</div>
+              : <div className="pr-selfie-waiting">{t("profile.selfieCamera")}</div>
             }
             <canvas ref={selfieCanvasRef} style={{ display: "none" }} />
             <button
@@ -1258,7 +1256,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
               onClick={captureSelfie}
               disabled={!selfieStream || selfieUploading}
             >
-              {selfieUploading ? "Enviando…" : "📸 Tomar selfie y enviar"}
+              {selfieUploading ? t("profile.selfieUploading") : t("profile.selfieCapture")}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { db } from "./firebase";
 import {
   collection, addDoc, setDoc, doc, updateDoc, arrayUnion, serverTimestamp,
@@ -91,6 +92,7 @@ const css = `
 `;
 
 export default function ReportModal({ reportedUid, currentUser, onClose, onBlockDone }) {
+  const { t } = useTranslation();
   const [reason, setReason]       = useState("");
   const [details, setDetails]     = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -141,18 +143,14 @@ export default function ReportModal({ reportedUid, currentUser, onClose, onBlock
           {done ? (
             <div className="rm-success">
               <div className="rm-success-icon">✓</div>
-              <div className="rm-success-text">
-                Reporte enviado correctamente.<br />El usuario ha sido bloqueado.
-              </div>
+              <div className="rm-success-text">{t("report.successText")}</div>
             </div>
           ) : (
             <>
-              <div className="rm-title">Reportar usuario</div>
-              <div className="rm-sub">
-                Tu reporte será revisado por el equipo de GlobeMate. El usuario también será bloqueado automáticamente.
-              </div>
+              <div className="rm-title">{t("report.title")}</div>
+              <div className="rm-sub">{t("report.sub")}</div>
 
-              <span className="rm-label">Motivo</span>
+              <span className="rm-label">{t("report.reasonLabel")}</span>
               <div className="rm-reasons">
                 {REASONS.map(r => (
                   <button
@@ -168,23 +166,23 @@ export default function ReportModal({ reportedUid, currentUser, onClose, onBlock
                 ))}
               </div>
 
-              <span className="rm-label">Detalles adicionales (opcional)</span>
+              <span className="rm-label">{t("report.detailsLabel")}</span>
               <textarea
                 className="rm-textarea"
                 rows={3}
-                placeholder="Describe brevemente lo ocurrido…"
+                placeholder={t("report.detailsPlaceholder")}
                 value={details}
                 onChange={e => setDetails(e.target.value)}
               />
 
               <div className="rm-actions">
-                <button className="rm-cancel" onClick={onClose}>Cancelar</button>
+                <button className="rm-cancel" onClick={onClose}>{t("common.cancel")}</button>
                 <button
                   className="rm-submit"
                   onClick={handleSubmit}
                   disabled={!reason || submitting}
                 >
-                  {submitting ? "Enviando…" : "Enviar reporte"}
+                  {submitting ? t("auth.sending") : t("report.submit")}
                 </button>
               </div>
             </>

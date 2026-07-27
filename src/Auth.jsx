@@ -332,46 +332,45 @@ const style = `
 `;
 
 /* ─────────────────────────────────────────
-   Error maps
+   Error key maps  (values are i18n keys)
 ───────────────────────────────────────── */
-const AUTH_ERRORS = {
-  "auth/invalid-credential":                        "Email o contraseña incorrectos.",
-  "auth/user-not-found":                            "No existe cuenta con ese email.",
-  "auth/wrong-password":                            "Contraseña incorrecta.",
-  "auth/email-already-in-use":                      "Este email ya está registrado.",
-  "auth/weak-password":                             "La contraseña debe tener al menos 6 caracteres.",
-  "auth/invalid-email":                             "El formato del email no es válido.",
-  "auth/too-many-requests":                         "Demasiados intentos. Espera un momento.",
-  "auth/popup-closed-by-user":                      "Ventana cerrada. Inténtalo de nuevo.",
-  "auth/cancelled-popup-request":                   "Solicitud cancelada.",
-  "auth/account-exists-with-different-credential":  "Ya existe una cuenta con ese email usando otro método de inicio de sesión.",
-  "auth/popup-blocked":                             "El navegador bloqueó el popup. Permite popups para este sitio.",
-  "auth/credential-already-in-use":                "Esta cuenta de X ya está vinculada a otro usuario.",
-  "auth/invalid-credential":                        "Credencial inválida. Vuelve a intentarlo.",
+const AUTH_ERROR_KEYS = {
+  "auth/invalid-credential":                       "auth.errInvalidCredential",
+  "auth/user-not-found":                           "auth.errUserNotFound",
+  "auth/wrong-password":                           "auth.errWrongPassword",
+  "auth/email-already-in-use":                     "auth.errEmailInUse",
+  "auth/weak-password":                            "auth.errWeakPassword",
+  "auth/invalid-email":                            "auth.errInvalidEmail",
+  "auth/too-many-requests":                        "auth.errTooManyRequests",
+  "auth/popup-closed-by-user":                     "auth.errPopupClosed",
+  "auth/cancelled-popup-request":                  "auth.errCancelled",
+  "auth/account-exists-with-different-credential": "auth.errAccountExists",
+  "auth/popup-blocked":                            "auth.errPopupBlocked",
+  "auth/credential-already-in-use":               "auth.errCredentialInUse",
 };
 
-const PHONE_ERRORS = {
-  "auth/invalid-phone-number":        "Número de teléfono inválido. Incluye el código de país correcto.",
-  "auth/too-many-requests":           "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
-  "auth/invalid-verification-code":   "Código incorrecto. Verifícalo e inténtalo de nuevo.",
-  "auth/code-expired":                "El código ha expirado. Solicita uno nuevo.",
-  "auth/credential-already-in-use":   "Este número ya está vinculado a otra cuenta.",
-  "auth/provider-already-linked":     "Tu cuenta ya tiene un teléfono verificado.",
-  "auth/missing-phone-number":        "Por favor ingresa tu número de teléfono.",
-  "auth/captcha-check-failed":        "Error de verificación. Recarga la página e inténtalo de nuevo.",
-  "auth/quota-exceeded":              "Límite de SMS superado. Inténtalo más tarde.",
-  "auth/missing-verification-code":   "Ingresa el código de verificación.",
-  "auth/missing-verification-id":     "Error de sesión. Solicita un nuevo código.",
-  "auth/network-request-failed":      "Error de red. Verifica tu conexión.",
-  "auth/user-disabled":               "Esta cuenta ha sido deshabilitada.",
-  "auth/operation-not-allowed":       "El inicio de sesión con teléfono no está habilitado. Contacta con soporte.",
-  "auth/internal-error":              "Error interno de Firebase. Recarga la página e inténtalo de nuevo.",
-  "auth/missing-app-credential":      "Error de verificación de la app. Recarga la página e inténtalo de nuevo.",
-  "auth/requires-recent-login":       "Tu sesión ha expirado. Vuelve a iniciar sesión e inténtalo de nuevo.",
+const PHONE_ERROR_KEYS = {
+  "auth/invalid-phone-number":       "auth.errInvalidPhone",
+  "auth/too-many-requests":          "auth.errTooManyRequests",
+  "auth/invalid-verification-code":  "auth.errInvalidCode",
+  "auth/code-expired":               "auth.errCodeExpired",
+  "auth/credential-already-in-use":  "auth.errCredentialInUse",
+  "auth/provider-already-linked":    "auth.errAlreadyLinked",
+  "auth/missing-phone-number":       "auth.errMissingPhone",
+  "auth/captcha-check-failed":       "auth.errCaptcha",
+  "auth/quota-exceeded":             "auth.errQuotaExceeded",
+  "auth/missing-verification-code":  "auth.errMissingCode",
+  "auth/missing-verification-id":    "auth.errMissingId",
+  "auth/network-request-failed":     "auth.errNetwork",
+  "auth/user-disabled":              "auth.errUserDisabled",
+  "auth/operation-not-allowed":      "auth.errNotAllowed",
+  "auth/internal-error":             "auth.errInternal",
+  "auth/missing-app-credential":     "auth.errMissingAppCredential",
+  "auth/requires-recent-login":      "auth.errRecentLogin",
 };
 
-const getAuthError  = (err) => AUTH_ERRORS[err.code]  || `Error: ${err.message}`;
-const getPhoneError = (code) => PHONE_ERRORS[code]     || "Error inesperado. Inténtalo de nuevo.";
+const getAuthError  = (err, t) => t(AUTH_ERROR_KEYS[err.code]  || "auth.unknownError");
+const getPhoneError = (code, t) => t(PHONE_ERROR_KEYS[code]    || "auth.unknownPhoneError");
 
 /* ─────────────────────────────────────────
    SVG icons
@@ -466,7 +465,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         onAuthSuccess();
       }
     } catch (err) {
-      setError(getAuthError(err));
+      setError(getAuthError(err, t));
     }
     setLoading(false);
   };
@@ -485,7 +484,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       setLoading(false);
     } else {
       if (!firstName.trim() || !lastName.trim()) {
-        setError("El nombre y el apellido son obligatorios."); return;
+        setError(t("auth.errNameRequired")); return;
       }
       setLoading(true);
       try {
@@ -504,7 +503,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         setPendingPassword(password);
         setMode("phone");
       } catch (err) {
-        setError(getAuthError(err));
+        setError(getAuthError(err, t));
       }
       setLoading(false);
     }
@@ -512,13 +511,13 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
 
   const handleReset = async (e) => {
     e.preventDefault();
-    if (!email.trim()) { setError(t("auth.emailLabel") + " required"); return; }
+    if (!email.trim()) { setError(t("auth.errEmailRequired")); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      setInfo(t("auth.sendResetBtn") + " ✓");
+      setInfo(t("auth.resetEmailSent"));
     } catch (err) {
-      setError(getAuthError(err));
+      setError(getAuthError(err, t));
     }
     setLoading(false);
   };
@@ -561,7 +560,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       // Limpiar verifier + DOM antes de cualquier setState que dispare re-render;
       // sin esto el reintento produce "reCAPTCHA has already been rendered in this element"
       clearVerifier();
-      setPhoneError(getPhoneError(err.code));
+      setPhoneError(getPhoneError(err.code, t));
     }
     setPhoneLoading(false);
   };
@@ -578,7 +577,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         await auth.currentUser.getIdToken(true);
         uid = auth.currentUser.uid;
       } else {
-        if (!auth.currentUser) { setPhoneError("Sesión expirada. Vuelve a intentarlo."); setPhoneLoading(false); return; }
+        if (!auth.currentUser) { setPhoneError(t("auth.errSessionExpired")); setPhoneLoading(false); return; }
         const phoneCred = PhoneAuthProvider.credential(confirmResult.verificationId, code);
         await linkWithCredential(auth.currentUser, phoneCred);
         uid = auth.currentUser.uid;
@@ -598,10 +597,9 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       onAuthSuccess();
     } catch (err) {
       console.error("[verifyCode] err.code:", err.code, "| err.message:", err.message, err);
-      const phoneMsg = getPhoneError(err.code);
-      setPhoneError(
-        phoneMsg !== "Error inesperado. Inténtalo de nuevo." ? phoneMsg : getAuthError(err)
-      );
+      const unknownMsg = t("auth.unknownPhoneError");
+      const phoneMsg   = getPhoneError(err.code, t);
+      setPhoneError(phoneMsg !== unknownMsg ? phoneMsg : getAuthError(err, t));
       if (err.code === "auth/invalid-verification-code" || err.code === "auth/code-expired") {
         setCodeDigits(["","","","","",""]);
         setTimeout(() => document.getElementById("code-0")?.focus(), 50);
@@ -662,7 +660,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
 
         {onBack && (
           <button className="auth-back-btn" onClick={onBack}>
-            ← Volver
+            {t("auth.back")}
           </button>
         )}
 
@@ -719,7 +717,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
               {mode === "reset"      && t("auth.resetPassword")}
               {mode === "phone"      && t("auth.verifyPhone")}
               {mode === "phone-code" && t("auth.enterCode")}
-              {mode === "name"       && "¿Cómo te llamas?"}
+              {mode === "name"       && t("auth.nameModeTitle")}
             </h2>
             <p className="auth-subtitle">
               {mode === "login"      && t("auth.signInSubtitle")}
@@ -727,7 +725,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
               {mode === "reset"      && t("auth.resetSubtitle")}
               {mode === "phone"      && t("auth.phoneSubtitle")}
               {mode === "phone-code" && t("auth.codeSubtitle", { phone: `${countryCode} ${phoneNumber}` })}
-              {mode === "name"       && "Introduce tu nombre y apellido para continuar."}
+              {mode === "name"       && t("auth.nameModeSubtitle")}
             </p>
 
             {/* ── MODE: login / register ── */}
@@ -741,7 +739,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
                 </button>
                 {showTwitterLogin && (
                   <button className="social-btn" disabled={loading} onClick={() => loginWithSocial(twitterProvider)}>
-                    <XIcon /> Continuar con X
+                    <XIcon /> {t("auth.continueX")}
                   </button>
                 )}
                 <div className="auth-divider">{t("auth.orEmail")}</div>
@@ -751,20 +749,20 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
                 <form onSubmit={handleSubmit}>
                   {mode === "register" && (
                     <>
-                      <label className="auth-label">Nombre</label>
+                      <label className="auth-label">{t("auth.firstNameLabel")}</label>
                       <input
                         className="auth-input"
                         type="text"
-                        placeholder="Tu nombre"
+                        placeholder={t("auth.firstNamePlaceholder")}
                         value={firstName}
                         onChange={e => setFirstName(e.target.value)}
                         required
                       />
-                      <label className="auth-label">Apellido</label>
+                      <label className="auth-label">{t("auth.lastNameLabel")}</label>
                       <input
                         className="auth-input"
                         type="text"
-                        placeholder="Tu apellido"
+                        placeholder={t("auth.lastNamePlaceholder")}
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
                         required
@@ -950,30 +948,30 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
                 <form onSubmit={e => {
                   e.preventDefault();
                   if (!firstName.trim() || !lastName.trim()) {
-                    setError("Ambos campos son obligatorios."); return;
+                    setError(t("auth.errBothRequired")); return;
                   }
                   setError(""); setMode("phone");
                 }}>
-                  <label className="auth-label">Nombre</label>
+                  <label className="auth-label">{t("auth.firstNameLabel")}</label>
                   <input
                     className="auth-input"
                     type="text"
-                    placeholder="Tu nombre"
+                    placeholder={t("auth.firstNamePlaceholder")}
                     value={firstName}
                     onChange={e => setFirstName(e.target.value)}
                     required
                     autoFocus
                   />
-                  <label className="auth-label">Apellido</label>
+                  <label className="auth-label">{t("auth.lastNameLabel")}</label>
                   <input
                     className="auth-input"
                     type="text"
-                    placeholder="Tu apellido"
+                    placeholder={t("auth.lastNamePlaceholder")}
                     value={lastName}
                     onChange={e => setLastName(e.target.value)}
                     required
                   />
-                  <button className="auth-submit" type="submit">Continuar</button>
+                  <button className="auth-submit" type="submit">{t("auth.continue")}</button>
                 </form>
               </>
             )}

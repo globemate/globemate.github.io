@@ -27,7 +27,7 @@ const DEF = {
   accountPaused: false,
 };
 
-function CountryPicker({ selected, onChange }) {
+function CountryPicker({ selected, onChange, placeholder }) {
   const [search, setSearch] = useState("");
   const suggestions = search.trim().length > 0
     ? COUNTRY_NAMES.filter(c =>
@@ -51,7 +51,7 @@ function CountryPicker({ selected, onChange }) {
       <div className="sg-cpicker-wrap">
         <input
           className="sg-inp"
-          placeholder="Buscar país…"
+          placeholder={placeholder}
           value={search}
           onChange={e => setSearch(e.target.value)}
           onBlur={() => setTimeout(() => setSearch(""), 160)}
@@ -396,47 +396,47 @@ export default function Settings({
       const cred = EmailAuthProvider.credential(currentUser.email, emailPwd);
       await reauthenticateWithCredential(currentUser, cred);
       await verifyBeforeUpdateEmail(currentUser, newEmail);
-      setEmailMsg({ text: "Te enviamos un enlace de verificación al nuevo correo. Confírmalo para aplicar el cambio.", type:"ok" });
+      setEmailMsg({ text: t("settings.emailVerifSent"), type:"ok" });
       setNewEmail(""); setEmailPwd("");
     } catch (e) {
       console.error("[Settings] handleUpdateEmail:", e.code, e.message);
       const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
-                    ? "Contraseña actual incorrecta."
+                    ? t("settings.errWrongPassword")
                 : e.code === "auth/email-already-in-use"
-                    ? "Ese email ya está en uso por otra cuenta."
+                    ? t("settings.errEmailInUse")
                 : e.code === "auth/invalid-email"
-                    ? "El formato del email no es válido."
-                : "Error al cambiar el email. Inténtalo de nuevo.";
+                    ? t("settings.errInvalidEmail")
+                : t("settings.errChangeEmail");
       setEmailMsg({ text: msg, type:"err" });
     }
     setEmailBusy(false);
   };
 
   const handleUpdatePassword = async () => {
-    if (!curPwd || !newPwd || !cfmPwd) { setPwdMsg({ text:"Rellena todos los campos.", type:"err" }); return; }
-    if (newPwd !== cfmPwd)             { setPwdMsg({ text:"Las contraseñas nuevas no coinciden.", type:"err" }); return; }
-    if (newPwd.length < 6)             { setPwdMsg({ text:"La nueva contraseña debe tener al menos 6 caracteres.", type:"err" }); return; }
+    if (!curPwd || !newPwd || !cfmPwd) { setPwdMsg({ text: t("settings.errFillAll"), type:"err" }); return; }
+    if (newPwd !== cfmPwd)             { setPwdMsg({ text: t("settings.errPasswordMismatch"), type:"err" }); return; }
+    if (newPwd.length < 6)             { setPwdMsg({ text: t("settings.errPasswordTooShort"), type:"err" }); return; }
     setPwdBusy(true); setPwdMsg({ text:"", type:"" });
     try {
       const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error("No hay sesión activa.");
+      if (!currentUser) throw new Error("No session");
       console.log("[Settings] reautenticando con email:", currentUser.email);
       const cred = EmailAuthProvider.credential(currentUser.email, curPwd);
       await reauthenticateWithCredential(currentUser, cred);
       console.log("[Settings] reauth OK, actualizando contraseña…");
       await updatePassword(currentUser, newPwd);
       console.log("[Settings] updatePassword OK");
-      setPwdMsg({ text:"Contraseña actualizada correctamente. Cierra sesión y vuelve a entrar para confirmar.", type:"ok" });
+      setPwdMsg({ text: t("settings.passwordUpdated"), type:"ok" });
       setCurPwd(""); setNewPwd(""); setCfmPwd("");
     } catch (e) {
       console.error("[Settings] handleUpdatePassword:", e.code, e.message);
       const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
-                    ? "Contraseña actual incorrecta."
+                    ? t("settings.errWrongPassword")
                 : e.code === "auth/weak-password"
-                    ? "La nueva contraseña es demasiado débil (mínimo 6 caracteres)."
+                    ? t("settings.errPasswordWeak")
                 : e.code === "auth/requires-recent-login"
-                    ? "Por seguridad, cierra sesión, vuelve a entrar e inténtalo de nuevo."
-                : `Error al actualizar: ${e.message}`;
+                    ? t("settings.errRecentLogin")
+                : t("settings.errUpdatePassword", { message: e.message });
       setPwdMsg({ text: msg, type:"err" });
     }
     setPwdBusy(false);
@@ -456,13 +456,13 @@ export default function Settings({
       // 1. Reautenticar con auth.currentUser (no el prop React)
       const currentUser = auth.currentUser;
       if (isEmailUser) {
-        if (!delPwd) { setDelErr("Introduce tu contraseña para confirmar."); setDelBusy(false); return; }
+        if (!delPwd) { setDelErr(t("settings.errNeedPassword")); setDelBusy(false); return; }
         const cred = EmailAuthProvider.credential(currentUser.email, delPwd);
         await reauthenticateWithCredential(currentUser, cred);
       } else {
         const pid = currentUser.providerData[0]?.providerId;
         const provider = pid === "google.com" ? new GoogleAuthProvider() : null;
-        if (!provider) { setDelErr("No se pudo identificar tu proveedor. Cierra sesión, vuelve a entrar e inténtalo."); setDelBusy(false); return; }
+        if (!provider) { setDelErr(t("settings.errProviderNotFound")); setDelBusy(false); return; }
         await reauthenticateWithPopup(currentUser, provider);
       }
 
@@ -516,12 +516,12 @@ export default function Settings({
     } catch (e) {
       console.error("[Settings] handleDeleteAccount:", e.code, e.message);
       const msg = e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"
-                    ? "Contraseña incorrecta. No se eliminó la cuenta."
+                    ? t("settings.errWrongPasswordDelete")
                 : e.code === "auth/popup-closed-by-user"
-                    ? "Cancelaste la autenticación. No se eliminó la cuenta."
+                    ? t("settings.errCancelledAuth")
                 : e.code === "auth/requires-recent-login"
-                    ? "Por seguridad, cierra sesión, vuelve a entrar e inténtalo de nuevo."
-                : `Error al eliminar la cuenta: ${e.message}`;
+                    ? t("settings.errRecentLogin")
+                : t("settings.errDeleteAccount", { message: e.message });
       setDelErr(msg);
       setDelBusy(false);
     }
@@ -541,12 +541,9 @@ export default function Settings({
         <div className="sg-overlay" onClick={() => { setShowDel(false); setDelText(""); setDelPwd(""); setDelErr(""); }}>
           <div className="sg-modal" onClick={e => e.stopPropagation()}>
             <div className="sg-modal-icon">⚠️</div>
-            <div className="sg-modal-title">Eliminar cuenta</div>
-            <div className="sg-modal-body">
-              Esta acción es <strong>irreversible</strong>. Se borrarán tu perfil, likes, matches y conversaciones.
-              Los reportes donde apareces se conservan para el historial de moderación.
-            </div>
-            <div className="sg-modal-lbl">Escribe <strong>ELIMINAR</strong> para confirmar:</div>
+            <div className="sg-modal-title">{t("settings.deleteTitle")}</div>
+            <div className="sg-modal-body">{t("settings.deleteBody")}</div>
+            <div className="sg-modal-lbl">{t("settings.deleteTypeToConfirm")}:</div>
             <input
               className="sg-inp"
               placeholder="ELIMINAR"
@@ -556,7 +553,7 @@ export default function Settings({
             />
             {isEmailUser && (
               <>
-                <div className="sg-modal-lbl" style={{ marginTop:12 }}>Tu contraseña actual:</div>
+                <div className="sg-modal-lbl" style={{ marginTop:12 }}>{t("settings.deleteConfirmPasswordLabel")}</div>
                 <input
                   className="sg-inp"
                   type="password"
@@ -569,20 +566,20 @@ export default function Settings({
             )}
             {!isEmailUser && delText === "ELIMINAR" && (
               <div className="sg-modal-lbl" style={{ marginTop:8, color:"rgba(245,240,232,0.45)" }}>
-                Se abrirá una ventana para confirmar tu identidad con {user.providerData[0]?.providerId?.replace(".com","") || "tu proveedor"}.
+                {t("settings.deleteProviderNotice", { provider: user.providerData[0]?.providerId?.replace(".com","") || "?" })}
               </div>
             )}
             {delErr && <div className="sg-modal-err">{delErr}</div>}
             <div className="sg-modal-actions">
               <button className="sg-btn-cancel" onClick={() => { setShowDel(false); setDelText(""); setDelPwd(""); setDelErr(""); }}>
-                Cancelar
+                {t("common.cancel")}
               </button>
               <button
                 className="sg-btn-confirm-del"
                 onClick={handleDeleteAccount}
                 disabled={delText !== "ELIMINAR" || delBusy || (isEmailUser && !delPwd)}
               >
-                {delBusy ? "Eliminando…" : "Eliminar definitivamente"}
+                {delBusy ? t("settings.deleting") : t("settings.deleteDefinitive")}
               </button>
             </div>
           </div>
@@ -649,22 +646,22 @@ export default function Settings({
           {/* ─── ACCOUNT ─────────────────────────── */}
           {tab === "account" && (<>
 
-            {/* Email actual (siempre visible) */}
+            {/* Email */}
             <div className="sg-section">
-              <div className="sg-sec-title">Correo electrónico</div>
+              <div className="sg-sec-title">{t("settings.email")}</div>
               <div className="sg-field">
-                <div className="sg-lbl">Correo actual</div>
+                <div className="sg-lbl">{t("settings.currentEmail")}</div>
                 <div className="sg-cur-val">{user.email}</div>
               </div>
               {isEmailUser && (
                 <div className="sg-field">
-                  <div className="sg-lbl">Nuevo correo</div>
+                  <div className="sg-lbl">{t("settings.newEmail")}</div>
                   <input className="sg-inp" type="email" placeholder="nuevo@correo.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
-                  <div className="sg-lbl" style={{ marginTop:6 }}>Contraseña actual (para confirmar)</div>
+                  <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.confirmPasswordForEmail")}</div>
                   <input className="sg-inp" type="password" placeholder="••••••••" value={emailPwd} onChange={e => setEmailPwd(e.target.value)} />
                   {emailMsg.text && <div className={`sg-note ${emailMsg.type}`}>{emailMsg.text}</div>}
                   <button className="sg-field-btn" onClick={handleUpdateEmail} disabled={emailBusy || !newEmail || !emailPwd}>
-                    {emailBusy ? "Enviando…" : "Cambiar email"}
+                    {emailBusy ? t("settings.sending") : t("settings.changeEmail")}
                   </button>
                 </div>
               )}
@@ -673,17 +670,17 @@ export default function Settings({
             {/* Contraseña — solo usuarios email/contraseña */}
             {isEmailUser && (
               <div className="sg-section">
-                <div className="sg-sec-title">Contraseña</div>
+                <div className="sg-sec-title">{t("settings.password")}</div>
                 <div className="sg-field">
-                  <div className="sg-lbl">Contraseña actual</div>
+                  <div className="sg-lbl">{t("settings.currentPassword")}</div>
                   <input className="sg-inp" type="password" placeholder="••••••••" value={curPwd} onChange={e => setCurPwd(e.target.value)} />
-                  <div className="sg-lbl" style={{ marginTop:6 }}>Nueva contraseña</div>
-                  <input className="sg-inp" type="password" placeholder="Mínimo 6 caracteres" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-                  <div className="sg-lbl" style={{ marginTop:6 }}>Confirmar nueva contraseña</div>
+                  <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.newPassword")}</div>
+                  <input className="sg-inp" type="password" placeholder={t("settings.newPasswordPlaceholder")} value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+                  <div className="sg-lbl" style={{ marginTop:6 }}>{t("settings.confirmPassword")}</div>
                   <input className="sg-inp" type="password" placeholder="••••••••" value={cfmPwd} onChange={e => setCfmPwd(e.target.value)} />
                   {pwdMsg.text && <div className={`sg-note ${pwdMsg.type}`}>{pwdMsg.text}</div>}
                   <button className="sg-field-btn" onClick={handleUpdatePassword} disabled={pwdBusy || !curPwd || !newPwd || !cfmPwd}>
-                    {pwdBusy ? "Guardando…" : "Cambiar contraseña"}
+                    {pwdBusy ? t("settings.saving") : t("settings.changePassword")}
                   </button>
                 </div>
               </div>
@@ -705,14 +702,14 @@ export default function Settings({
               </div>
             </div>
 
-            {/* Cerrar sesión */}
+            {/* Sign out */}
             <div className="sg-section">
               <div className="sg-danger-row">
                 <div className="sg-row-info">
-                  <div className="sg-row-lbl">Cerrar sesión</div>
-                  <div className="sg-row-sub" style={{ marginTop:4 }}>Salir de tu cuenta en este dispositivo.</div>
+                  <div className="sg-row-lbl">{t("settings.signOutTitle")}</div>
+                  <div className="sg-row-sub" style={{ marginTop:4 }}>{t("settings.signOutDesc")}</div>
                 </div>
-                <button className="sg-btn-pause" onClick={onSignOut}>Cerrar sesión</button>
+                <button className="sg-btn-pause" onClick={onSignOut}>{t("nav.signOut")}</button>
               </div>
             </div>
 
@@ -765,7 +762,7 @@ export default function Settings({
                 { k:"showLocation",         lbl: t("settings.privacyShowLocation") },
                 { k:"showLastSeen",         lbl: t("settings.privacyShowLastSeen") },
                 { k:"showVisitedCountries", lbl: t("settings.privacyShowVisitedCountries") },
-                { k:"showLastName",         lbl: "Mostrar mi apellido en el perfil" },
+                { k:"showLastName",         lbl: t("settings.showLastName") },
               ].map(({ k, lbl }) => (
                 <div key={k} className="sg-row">
                   <div className="sg-row-info">
@@ -786,9 +783,9 @@ export default function Settings({
             </div>
 
             <div className="sg-section">
-              <div className="sg-sec-title">Usuarios bloqueados</div>
+              <div className="sg-sec-title">{t("settings.blockedUsers")}</div>
               {blockedUsers.length === 0 ? (
-                <div className="sg-blocked-empty">No has bloqueado a nadie.</div>
+                <div className="sg-blocked-empty">{t("settings.noBlockedUsers")}</div>
               ) : (
                 blockedUsers.map(({ docId, blockedId }) => {
                   const p = blockedProfiles[blockedId] || {};
@@ -806,7 +803,7 @@ export default function Settings({
                         disabled={unblocking.has(blockedId)}
                         onClick={() => handleUnblock(blockedId, docId)}
                       >
-                        {unblocking.has(blockedId) ? "…" : "Desbloquear"}
+                        {unblocking.has(blockedId) ? "…" : t("settings.unblock")}
                       </button>
                     </div>
                   );
@@ -815,16 +812,16 @@ export default function Settings({
             </div>
 
             <div className="sg-section">
-              <div className="sg-sec-title">Visibilidad geográfica</div>
+              <div className="sg-sec-title">{t("settings.geoVisibility")}</div>
               <div className="sg-field">
                 <div className="sg-row-sub" style={{ marginBottom:10 }}>
-                  Elige en qué países pueden descubrirte otros viajeros en Explorar y el Mapa.
+                  {t("settings.geoVisibilityDesc")}
                 </div>
                 <div className="sg-radios">
                   {[
-                    { v:"all",    l:"🌍 Visible en todo el mundo" },
-                    { v:"except", l:"🚫 Visible en todo el mundo excepto en:" },
-                    { v:"only",   l:"✅ Visible solo en:" },
+                    { v:"all",    l: t("settings.visibilityWorldwide") },
+                    { v:"except", l: t("settings.visibilityExcept") },
+                    { v:"only",   l: t("settings.visibilityOnly") },
                   ].map(({ v, l }) => (
                     <div key={v}>
                       <div
@@ -842,6 +839,7 @@ export default function Settings({
                         <CountryPicker
                           selected={visibilityCountries}
                           onChange={c => { setVisibilityCountries(c); setDirty(true); }}
+                          placeholder={t("settings.searchCountry")}
                         />
                       )}
                     </div>
