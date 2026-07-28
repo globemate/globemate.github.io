@@ -122,8 +122,9 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Gate: if authenticated user has no phone linked, check whether they have a
-  // users doc. No doc means they abandoned registration mid-phone-step.
+  // Gate: if authenticated user has no phone linked, require phone verification
+  // unless the doc already has phoneVerified:true (phone was verified via a
+  // different path, e.g. social sign-in flow that completed phone step).
   useEffect(() => {
     if (!user || user.phoneNumber) {
       setNeedsPhoneVerif(false);
@@ -133,7 +134,10 @@ export default function App() {
     let cancelled = false;
     getDoc(doc(db, "users", user.uid)).then(snap => {
       if (!cancelled) {
-        setNeedsPhoneVerif(!snap.exists());
+        // Show phone gate if: no doc yet, OR doc exists but phone not verified.
+        // Checking phoneVerified prevents skipping the SMS step when the Firestore
+        // doc is created (with phoneVerified:false) before this gate runs.
+        setNeedsPhoneVerif(!snap.exists() || !snap.data()?.phoneVerified);
         setCheckingUser(false);
       }
     }).catch(() => {

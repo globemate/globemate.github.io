@@ -538,17 +538,13 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       try {
         await createUserWithEmailAndPassword(auth, email, password);
         const fn = firstName.trim(), ln = lastName.trim();
-        if (fn) {
-          try {
-            await setDoc(doc(db, "users", auth.currentUser.uid), {
-              firstName: fn, lastName: ln,
-              displayName: ln ? `${fn} ${ln[0].toUpperCase()}.` : fn,
-              phoneVerified: false,
-              birthDate,
-              acceptedTermsAt: serverTimestamp(),
-            }, { merge: true });
-          } catch (_) {}
-        }
+        await setDoc(doc(db, "users", auth.currentUser.uid), {
+          firstName: fn, lastName: ln,
+          displayName: ln ? `${fn} ${ln[0].toUpperCase()}.` : fn,
+          phoneVerified: false,
+          birthDate,
+          acceptedTermsAt: serverTimestamp(),
+        }, { merge: true });
         setPendingEmail(email);
         setPendingPassword(password);
         setMode("phone");
