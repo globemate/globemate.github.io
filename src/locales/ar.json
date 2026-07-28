@@ -125,7 +125,22 @@
     "unknownPhoneError": "خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
     "errSessionExpired": "انتهت صلاحية الجلسة. يرجى المحاولة مرة أخرى.",
     "errNameRequired": "الاسم الأول واسم العائلة مطلوبان.",
-    "errBothRequired": "كلا الحقلين مطلوبان."
+    "errBothRequired": "كلا الحقلين مطلوبان.",
+    "birthDateLabel": "تاريخ الميلاد",
+    "errBirthDateRequired": "تاريخ الميلاد مطلوب.",
+    "errUnder18": "يجب أن يكون عمرك 18 عامًا على الأقل للتسجيل.",
+    "errTermsRequired": "يجب قبول الشروط والأحكام للمتابعة.",
+    "termsCheckboxPre": "أوافق على ",
+    "termsCheckboxMid": " و",
+    "termsCheckboxSuf": "",
+    "termsLink": "الشروط والأحكام",
+    "privacyLink": "سياسة الخصوصية",
+    "ageTermsModeTitle": "خطوة أخيرة",
+    "ageTermsModeSubtitle": "يرجى تأكيد بياناتك قبل المتابعة",
+    "ageTermsBadge": "مطلوب قانونًا. يُستخدم تاريخ ميلادك فقط للتحقق من أنك في سن 18 أو أكبر.",
+    "birthDateGateTitle": "التحقق من العمر",
+    "birthDateGateSubtitle": "نحتاج إلى التحقق من أن عمرك لا يقل عن 18 عامًا",
+    "errUnder18Gate": "للأسف، يجب أن يكون عمرك 18 عامًا على الأقل لاستخدام GlobeMate. تم إنهاء جلستك."
   },
   "landing": {
     "howItWorks": "كيف يعمل",

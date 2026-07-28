@@ -125,7 +125,22 @@
     "unknownPhoneError": "Erreur inattendue. Veuillez réessayer.",
     "errSessionExpired": "Session expirée. Veuillez réessayer.",
     "errNameRequired": "Le prénom et le nom de famille sont obligatoires.",
-    "errBothRequired": "Les deux champs sont obligatoires."
+    "errBothRequired": "Les deux champs sont obligatoires.",
+    "birthDateLabel": "Date de naissance",
+    "errBirthDateRequired": "La date de naissance est obligatoire.",
+    "errUnder18": "Vous devez avoir au moins 18 ans pour vous inscrire.",
+    "errTermsRequired": "Vous devez accepter les Conditions Générales pour continuer.",
+    "termsCheckboxPre": "J'accepte les ",
+    "termsCheckboxMid": " et la ",
+    "termsCheckboxSuf": "",
+    "termsLink": "Conditions Générales",
+    "privacyLink": "Politique de Confidentialité",
+    "ageTermsModeTitle": "Presque là",
+    "ageTermsModeSubtitle": "Confirmez vos informations avant de continuer",
+    "ageTermsBadge": "Requis par la loi. Votre date de naissance est uniquement utilisée pour vérifier que vous avez 18 ans ou plus.",
+    "birthDateGateTitle": "Vérification d'âge",
+    "birthDateGateSubtitle": "Nous devons vérifier que vous avez au moins 18 ans",
+    "errUnder18Gate": "Malheureusement, vous devez avoir au moins 18 ans pour utiliser GlobeMate. Votre session a été fermée."
   },
   "landing": {
     "howItWorks": "Comment ça marche",

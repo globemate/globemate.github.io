@@ -13,8 +13,9 @@ import {
   PhoneAuthProvider,
   linkWithCredential,
   getAdditionalUserInfo,
+  signOut,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 /* ─────────────────────────────────────────
    Country codes
@@ -214,6 +215,27 @@ const style = `
   }
   .auth-input::placeholder { color: rgba(245,240,232,0.18); }
   .auth-input:focus { border-color: #c9a84c; }
+  .auth-input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.6) sepia(1) saturate(2) hue-rotate(5deg);
+    cursor: pointer;
+  }
+
+  /* Terms checkbox */
+  .auth-checkbox-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 20px; cursor: pointer;
+  }
+  .auth-checkbox {
+    width: 16px; height: 16px; flex-shrink: 0; margin-top: 3px;
+    accent-color: #c9a84c; cursor: pointer;
+  }
+  .auth-checkbox-label {
+    font-size: 0.8rem; color: rgba(245,240,232,0.55); line-height: 1.55;
+  }
+  .auth-checkbox-label a {
+    color: #c9a84c; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .auth-checkbox-label a:hover { color: #e8c97a; }
 
   /* Error / info */
   .auth-error {
@@ -373,6 +395,18 @@ const getAuthError  = (err, t) => t(AUTH_ERROR_KEYS[err.code]  || "auth.unknownE
 const getPhoneError = (code, t) => t(PHONE_ERROR_KEYS[code]    || "auth.unknownPhoneError");
 
 /* ─────────────────────────────────────────
+   Age check helper
+───────────────────────────────────────── */
+const isAdult = (dateStr) => {
+  if (!dateStr) return false;
+  const born  = new Date(dateStr);
+  const today = new Date();
+  const age   = today.getFullYear() - born.getFullYear()
+    - (today < new Date(today.getFullYear(), born.getMonth(), born.getDate()) ? 1 : 0);
+  return age >= 18;
+};
+
+/* ─────────────────────────────────────────
    SVG icons
 ───────────────────────────────────────── */
 const GoogleIcon = () => (
@@ -403,7 +437,8 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
   const showTwitterLogin = true;
 
   const { t } = useTranslation();
-  const [mode, setMode]         = useState(initialMode || "login"); // login | register | reset | phone | phone-code
+  // login | register | reset | phone | phone-code | name | age-terms | birthdate-gate
+  const [mode, setMode]         = useState(initialMode || "login");
 
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
@@ -413,6 +448,10 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
 
   const [firstName, setFirstName] = useState("");
   const [lastName,  setLastName]  = useState("");
+
+  // Age & terms fields
+  const [birthDate,     setBirthDate]     = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [pendingEmail, setPendingEmail]       = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
@@ -455,7 +494,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         if (parts.length >= 2) {
           setFirstName(parts[0]);
           setLastName(parts.slice(1).join(" "));
-          setMode("phone");
+          setMode("age-terms");
         } else {
           setFirstName(parts[0] || "");
           setLastName("");
@@ -486,6 +525,15 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       if (!firstName.trim() || !lastName.trim()) {
         setError(t("auth.errNameRequired")); return;
       }
+      if (!birthDate) {
+        setError(t("auth.errBirthDateRequired")); return;
+      }
+      if (!isAdult(birthDate)) {
+        setError(t("auth.errUnder18")); return;
+      }
+      if (!termsAccepted) {
+        setError(t("auth.errTermsRequired")); return;
+      }
       setLoading(true);
       try {
         await createUserWithEmailAndPassword(auth, email, password);
@@ -496,6 +544,8 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
               firstName: fn, lastName: ln,
               displayName: ln ? `${fn} ${ln[0].toUpperCase()}.` : fn,
               phoneVerified: false,
+              birthDate,
+              acceptedTermsAt: serverTimestamp(),
             }, { merge: true });
           } catch (_) {}
         }
@@ -522,9 +572,61 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
     setLoading(false);
   };
 
+  // Handle age & terms step (social sign-in new users)
+  const handleAgeTerms = async (e) => {
+    e?.preventDefault();
+    setError("");
+    if (!birthDate) { setError(t("auth.errBirthDateRequired")); return; }
+    if (!isAdult(birthDate)) { setError(t("auth.errUnder18")); return; }
+    if (!termsAccepted) { setError(t("auth.errTermsRequired")); return; }
+    setLoading(true);
+    try {
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        const fn = firstName.trim(), ln = lastName.trim();
+        await setDoc(doc(db, "users", uid), {
+          ...(fn ? {
+            firstName: fn, lastName: ln,
+            displayName: ln ? `${fn} ${ln[0].toUpperCase()}.` : fn,
+          } : {}),
+          birthDate,
+          acceptedTermsAt: serverTimestamp(),
+          phoneVerified: false,
+          isVerified: false,
+        }, { merge: true });
+      }
+      setMode("phone");
+    } catch (err) {
+      setError(t("auth.unknownError"));
+    }
+    setLoading(false);
+  };
+
+  // Handle birth date gate (existing users without birthDate)
+  const handleBirthDateGate = async (e) => {
+    e?.preventDefault();
+    setError("");
+    if (!birthDate) { setError(t("auth.errBirthDateRequired")); return; }
+    if (!isAdult(birthDate)) {
+      setError(t("auth.errUnder18Gate"));
+      setTimeout(() => signOut(auth).catch(() => {}), 3000);
+      return;
+    }
+    setLoading(true);
+    try {
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        await setDoc(doc(db, "users", uid), { birthDate }, { merge: true });
+      }
+      onAuthSuccess();
+    } catch (err) {
+      setError(t("auth.unknownError"));
+    }
+    setLoading(false);
+  };
+
   const getOrCreateVerifier = () => {
     if (!recaptchaRef.current) {
-      // Clear container DOM before rendering new widget to prevent "already rendered" error
       const el = document.getElementById("recaptcha-container");
       if (el) el.innerHTML = "";
       recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
@@ -550,15 +652,11 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       const result   = auth.currentUser
         ? await linkWithPhoneNumber(auth.currentUser, fullPhone, verifier)
         : await signInWithPhoneNumber(auth, fullPhone, verifier);
-      // Limpiar el verifier + contenedor DOM síncronamente antes del re-render;
-      // evita que reCAPTCHA acceda a nodos ya eliminados (null 'style' crash)
       clearVerifier();
       setConfirmResult(result);
       setMode("phone-code");
     } catch (err) {
       console.error("[sendSMS] err.code:", err.code, "| err.message:", err.message, err);
-      // Limpiar verifier + DOM antes de cualquier setState que dispare re-render;
-      // sin esto el reintento produce "reCAPTCHA has already been rendered in this element"
       clearVerifier();
       setPhoneError(getPhoneError(err.code, t));
     }
@@ -649,7 +747,15 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
     setMode("phone");
   };
 
-  const isPhoneStep = mode === "phone" || mode === "phone-code";
+  const isRegistrationStep = mode === "age-terms" || mode === "phone" || mode === "phone-code";
+  const isBirthDateGate    = mode === "birthdate-gate";
+
+  // Maximum birth date allowed (must be at least 18 years old)
+  const maxBirthDate = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString().split("T")[0];
+  })();
 
   return (
     <>
@@ -668,13 +774,13 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         <div className="auth-panel">
           <div className="auth-panel-logo">Globe<span>Mate</span></div>
           <h2 className="auth-panel-h2">
-            {isPhoneStep
+            {(isRegistrationStep || isBirthDateGate)
               ? t("auth.almostReady")
               : <>{t("auth.whereJourneys")}<br /><em>{t("auth.becomeConnections")}</em></>
             }
           </h2>
           <p className="auth-panel-sub">
-            {isPhoneStep
+            {(isRegistrationStep || isBirthDateGate)
               ? t("auth.panelSubtitlePhone")
               : t("auth.panelSubtitle")
             }
@@ -700,11 +806,14 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
           </div>
           <div className="auth-form-box">
 
-            {isPhoneStep && (
+            {/* Step indicator (registration flow: 4 steps) */}
+            {isRegistrationStep && (
               <div className="auth-steps">
                 <div className="auth-step-dot done" />
                 <div className="auth-step-line" />
-                <div className={`auth-step-dot ${mode === "phone" ? "active" : "done"}`} />
+                <div className={`auth-step-dot ${mode === "age-terms" ? "active" : "done"}`} />
+                <div className="auth-step-line" />
+                <div className={`auth-step-dot ${mode === "phone" ? "active" : mode === "phone-code" ? "done" : ""}`} />
                 <div className="auth-step-line" />
                 <div className={`auth-step-dot ${mode === "phone-code" ? "active" : ""}`} />
               </div>
@@ -712,20 +821,24 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
 
             {/* ── Title ── */}
             <h2 className="auth-title">
-              {mode === "login"      && t("auth.welcomeBack")}
-              {mode === "register"   && t("auth.createAccount")}
-              {mode === "reset"      && t("auth.resetPassword")}
-              {mode === "phone"      && t("auth.verifyPhone")}
-              {mode === "phone-code" && t("auth.enterCode")}
-              {mode === "name"       && t("auth.nameModeTitle")}
+              {mode === "login"           && t("auth.welcomeBack")}
+              {mode === "register"        && t("auth.createAccount")}
+              {mode === "reset"           && t("auth.resetPassword")}
+              {mode === "phone"           && t("auth.verifyPhone")}
+              {mode === "phone-code"      && t("auth.enterCode")}
+              {mode === "name"            && t("auth.nameModeTitle")}
+              {mode === "age-terms"       && t("auth.ageTermsModeTitle")}
+              {mode === "birthdate-gate"  && t("auth.birthDateGateTitle")}
             </h2>
             <p className="auth-subtitle">
-              {mode === "login"      && t("auth.signInSubtitle")}
-              {mode === "register"   && t("auth.registerSubtitle")}
-              {mode === "reset"      && t("auth.resetSubtitle")}
-              {mode === "phone"      && t("auth.phoneSubtitle")}
-              {mode === "phone-code" && t("auth.codeSubtitle", { phone: `${countryCode} ${phoneNumber}` })}
-              {mode === "name"       && t("auth.nameModeSubtitle")}
+              {mode === "login"           && t("auth.signInSubtitle")}
+              {mode === "register"        && t("auth.registerSubtitle")}
+              {mode === "reset"           && t("auth.resetSubtitle")}
+              {mode === "phone"           && t("auth.phoneSubtitle")}
+              {mode === "phone-code"      && t("auth.codeSubtitle", { phone: `${countryCode} ${phoneNumber}` })}
+              {mode === "name"            && t("auth.nameModeSubtitle")}
+              {mode === "age-terms"       && t("auth.ageTermsModeSubtitle")}
+              {mode === "birthdate-gate"  && t("auth.birthDateGateSubtitle")}
             </p>
 
             {/* ── MODE: login / register ── */}
@@ -788,6 +901,39 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
                     required
                     minLength={6}
                   />
+                  {mode === "register" && (
+                    <>
+                      <label className="auth-label">{t("auth.birthDateLabel")}</label>
+                      <input
+                        className="auth-input"
+                        type="date"
+                        value={birthDate}
+                        onChange={e => setBirthDate(e.target.value)}
+                        max={maxBirthDate}
+                        required
+                      />
+                      <label className="auth-checkbox-row" onClick={() => setTermsAccepted(v => !v)}>
+                        <input
+                          className="auth-checkbox"
+                          type="checkbox"
+                          checked={termsAccepted}
+                          onChange={e => setTermsAccepted(e.target.checked)}
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <span className="auth-checkbox-label">
+                          {t("auth.termsCheckboxPre")}
+                          <a href="/#terms" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                            {t("auth.termsLink")}
+                          </a>
+                          {t("auth.termsCheckboxMid")}
+                          <a href="/#privacy" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                            {t("auth.privacyLink")}
+                          </a>
+                          {t("auth.termsCheckboxSuf")}
+                        </span>
+                      </label>
+                    </>
+                  )}
                   <button className="auth-submit" type="submit" disabled={loading}>
                     {loading
                       ? t("common.pleaseWait")
@@ -845,6 +991,82 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
                     {t("auth.backToSignIn")}
                   </button>
                 </div>
+              </>
+            )}
+
+            {/* ── MODE: age-terms (social sign-in new users) ── */}
+            {mode === "age-terms" && (
+              <>
+                <div className="auth-secure-badge">
+                  <span>⚖️</span>
+                  {t("auth.ageTermsBadge")}
+                </div>
+
+                {error && <div className="auth-error">{error}</div>}
+
+                <form onSubmit={handleAgeTerms}>
+                  <label className="auth-label">{t("auth.birthDateLabel")}</label>
+                  <input
+                    className="auth-input"
+                    type="date"
+                    value={birthDate}
+                    onChange={e => setBirthDate(e.target.value)}
+                    max={maxBirthDate}
+                    required
+                    autoFocus
+                  />
+                  <label className="auth-checkbox-row" onClick={() => setTermsAccepted(v => !v)}>
+                    <input
+                      className="auth-checkbox"
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={e => setTermsAccepted(e.target.checked)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <span className="auth-checkbox-label">
+                      {t("auth.termsCheckboxPre")}
+                      <a href="/#terms" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                        {t("auth.termsLink")}
+                      </a>
+                      {t("auth.termsCheckboxMid")}
+                      <a href="/#privacy" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                        {t("auth.privacyLink")}
+                      </a>
+                      {t("auth.termsCheckboxSuf")}
+                    </span>
+                  </label>
+                  <button className="auth-submit" type="submit" disabled={loading}>
+                    {loading ? t("common.pleaseWait") : t("auth.continue")}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* ── MODE: birthdate-gate (existing users without birthDate) ── */}
+            {mode === "birthdate-gate" && (
+              <>
+                <div className="auth-secure-badge">
+                  <span>⚖️</span>
+                  {t("auth.ageTermsBadge")}
+                </div>
+
+                {error && <div className="auth-error">{error}</div>}
+
+                <form onSubmit={handleBirthDateGate}>
+                  <label className="auth-label">{t("auth.birthDateLabel")}</label>
+                  <input
+                    className="auth-input"
+                    type="date"
+                    value={birthDate}
+                    onChange={e => setBirthDate(e.target.value)}
+                    max={maxBirthDate}
+                    required
+                    autoFocus
+                  />
+                  <button className="auth-submit" type="submit" disabled={loading}>
+                    {loading ? t("common.pleaseWait") : t("auth.continue")}
+                  </button>
+                </form>
               </>
             )}
 
@@ -950,7 +1172,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
                   if (!firstName.trim() || !lastName.trim()) {
                     setError(t("auth.errBothRequired")); return;
                   }
-                  setError(""); setMode("phone");
+                  setError(""); setMode("age-terms");
                 }}>
                   <label className="auth-label">{t("auth.firstNameLabel")}</label>
                   <input

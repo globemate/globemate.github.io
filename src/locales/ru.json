@@ -125,7 +125,22 @@
     "unknownPhoneError": "Непредвиденная ошибка. Попробуйте снова.",
     "errSessionExpired": "Сессия истекла. Попробуйте снова.",
     "errNameRequired": "Имя и фамилия обязательны.",
-    "errBothRequired": "Оба поля обязательны."
+    "errBothRequired": "Оба поля обязательны.",
+    "birthDateLabel": "Дата рождения",
+    "errBirthDateRequired": "Дата рождения обязательна.",
+    "errUnder18": "Для регистрации необходимо быть не моложе 18 лет.",
+    "errTermsRequired": "Необходимо принять Условия использования, чтобы продолжить.",
+    "termsCheckboxPre": "Я принимаю ",
+    "termsCheckboxMid": " и ",
+    "termsCheckboxSuf": "",
+    "termsLink": "Условия использования",
+    "privacyLink": "Политику конфиденциальности",
+    "ageTermsModeTitle": "Почти готово",
+    "ageTermsModeSubtitle": "Подтвердите свои данные перед продолжением",
+    "ageTermsBadge": "Требуется по закону. Дата рождения используется только для подтверждения возраста 18+.",
+    "birthDateGateTitle": "Проверка возраста",
+    "birthDateGateSubtitle": "Нам нужно убедиться, что вам не менее 18 лет",
+    "errUnder18Gate": "К сожалению, для использования GlobeMate необходимо быть не моложе 18 лет. Ваша сессия завершена."
   },
   "landing": {
     "howItWorks": "Как это работает",

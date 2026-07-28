@@ -25,8 +25,10 @@ import BottomNav from "./BottomNav.jsx";
 export default function App() {
   const { i18n } = useTranslation();
   const [user, setUser]               = useState(undefined);
-  const [checkingUser,    setCheckingUser]    = useState(false);
-  const [needsPhoneVerif, setNeedsPhoneVerif] = useState(false);
+  const [checkingUser,      setCheckingUser]      = useState(false);
+  const [needsPhoneVerif,   setNeedsPhoneVerif]   = useState(false);
+  const [needsBirthDate,    setNeedsBirthDate]    = useState(false);
+  const [checkingBirthDate, setCheckingBirthDate] = useState(false);
   const verificationStatusRef = useRef(null);
   const subscription = useSubscription(user || null);
 
@@ -45,8 +47,8 @@ export default function App() {
   const [showNotif, setShowNotif]     = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const [showTerms,   setShowTerms]   = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(() => window.location.hash === "#privacy");
+  const [showTerms,   setShowTerms]   = useState(() => window.location.hash === "#terms");
   const [showAdmin,   setShowAdmin]   = useState(false);
   const [receivedLikes, setReceivedLikes] = useState([]);   // [{likeId, fromUid}]
   const [sentLikeUids,  setSentLikeUids]  = useState(new Set());
@@ -112,6 +114,8 @@ export default function App() {
         setProfileVisitDocs([]);
         setNeedsPhoneVerif(false);
         setCheckingUser(false);
+        setNeedsBirthDate(false);
+        setCheckingBirthDate(false);
         verificationStatusRef.current = null;
       }
     });
@@ -137,6 +141,25 @@ export default function App() {
     });
     return () => { cancelled = true; };
   }, [user]);
+
+  // Gate: if authenticated user has no birthDate in their document, ask for it
+  useEffect(() => {
+    if (!user || checkingUser || needsPhoneVerif) {
+      if (!user) { setNeedsBirthDate(false); setCheckingBirthDate(false); }
+      return;
+    }
+    let cancelled = false;
+    setCheckingBirthDate(true);
+    getDoc(doc(db, "users", user.uid)).then(snap => {
+      if (!cancelled) {
+        setNeedsBirthDate(snap.exists() && !snap.data()?.birthDate);
+        setCheckingBirthDate(false);
+      }
+    }).catch(() => {
+      if (!cancelled) { setNeedsBirthDate(false); setCheckingBirthDate(false); }
+    });
+    return () => { cancelled = true; };
+  }, [user, checkingUser, needsPhoneVerif]);
 
   // subscribe to likes received (solicitudes de conexión)
   useEffect(() => {
@@ -197,9 +220,9 @@ export default function App() {
     return () => unsub();
   }, [user?.uid]);
 
-  // initialise history state so browser back has a baseline
+  // initialise history state so browser back has a baseline; clear hash deep-links
   useEffect(() => {
-    window.history.replaceState({ screen: "home" }, "");
+    window.history.replaceState({ screen: "home" }, "", window.location.pathname);
   }, []);
 
   // browser/mobile back button
@@ -251,13 +274,23 @@ export default function App() {
     </div>
   );
 
-  if (user === undefined || checkingUser) return loadingScreen;
+  if (user === undefined || checkingUser || checkingBirthDate) return loadingScreen;
 
   if (needsPhoneVerif) {
     return (
       <Auth
         initialMode="phone"
         onAuthSuccess={() => setNeedsPhoneVerif(false)}
+        onBack={null}
+      />
+    );
+  }
+
+  if (needsBirthDate) {
+    return (
+      <Auth
+        initialMode="birthdate-gate"
+        onAuthSuccess={() => setNeedsBirthDate(false)}
         onBack={null}
       />
     );

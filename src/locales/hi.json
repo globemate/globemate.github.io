@@ -125,7 +125,22 @@
     "unknownPhoneError": "अप्रत्याशित त्रुटि। कृपया फिर से प्रयास करें।",
     "errSessionExpired": "सत्र समाप्त हो गया। कृपया फिर से प्रयास करें।",
     "errNameRequired": "पहला और अंतिम नाम आवश्यक है।",
-    "errBothRequired": "दोनों फ़ील्ड आवश्यक हैं।"
+    "errBothRequired": "दोनों फ़ील्ड आवश्यक हैं।",
+    "birthDateLabel": "जन्म तिथि",
+    "errBirthDateRequired": "जन्म तिथि आवश्यक है।",
+    "errUnder18": "पंजीकरण के लिए आपकी आयु कम से कम 18 वर्ष होनी चाहिए।",
+    "errTermsRequired": "जारी रखने के लिए आपको नियम और शर्तें स्वीकार करनी होंगी।",
+    "termsCheckboxPre": "मैं ",
+    "termsCheckboxMid": " और ",
+    "termsCheckboxSuf": " स्वीकार करता/करती हूं",
+    "termsLink": "नियम एवं शर्तें",
+    "privacyLink": "गोपनीयता नीति",
+    "ageTermsModeTitle": "लगभग हो गया",
+    "ageTermsModeSubtitle": "आगे बढ़ने से पहले अपना विवरण पुष्टि करें",
+    "ageTermsBadge": "कानूनी रूप से आवश्यक। आपकी जन्म तिथि केवल यह सत्यापित करने के लिए उपयोग की जाती है कि आप 18 वर्ष या उससे अधिक हैं।",
+    "birthDateGateTitle": "आयु सत्यापन",
+    "birthDateGateSubtitle": "हमें सत्यापित करना होगा कि आपकी आयु कम से कम 18 वर्ष है",
+    "errUnder18Gate": "दुर्भाग्य से, GlobeMate का उपयोग करने के लिए आपकी आयु कम से कम 18 वर्ष होनी चाहिए। आपका सत्र बंद कर दिया गया है।"
   },
   "landing": {
     "howItWorks": "यह कैसे काम करता है",

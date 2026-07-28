@@ -125,7 +125,22 @@
     "unknownPhoneError": "予期しないエラーです。再度お試しください。",
     "errSessionExpired": "セッションの有効期限が切れました。再度お試しください。",
     "errNameRequired": "姓と名は必須です。",
-    "errBothRequired": "両方のフィールドが必要です。"
+    "errBothRequired": "両方のフィールドが必要です。",
+    "birthDateLabel": "生年月日",
+    "errBirthDateRequired": "生年月日は必須です。",
+    "errUnder18": "登録するには18歳以上である必要があります。",
+    "errTermsRequired": "続行するには利用規約に同意する必要があります。",
+    "termsCheckboxPre": "「",
+    "termsCheckboxMid": "」および「",
+    "termsCheckboxSuf": "」に同意します",
+    "termsLink": "利用規約",
+    "privacyLink": "プライバシーポリシー",
+    "ageTermsModeTitle": "もうすぐです",
+    "ageTermsModeSubtitle": "続行する前に詳細を確認してください",
+    "ageTermsBadge": "法律上必要です。生年月日は18歳以上であることを確認するためだけに使用されます。",
+    "birthDateGateTitle": "年齢確認",
+    "birthDateGateSubtitle": "18歳以上であることを確認する必要があります",
+    "errUnder18Gate": "申し訳ありませんが、GlobeMateを使用するには18歳以上である必要があります。セッションが終了されました。"
   },
   "landing": {
     "howItWorks": "使い方",

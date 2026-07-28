@@ -125,7 +125,22 @@
     "unknownPhoneError": "意外错误，请重试。",
     "errSessionExpired": "会话已过期，请重试。",
     "errNameRequired": "名字和姓氏为必填项。",
-    "errBothRequired": "两个字段均为必填项。"
+    "errBothRequired": "两个字段均为必填项。",
+    "birthDateLabel": "出生日期",
+    "errBirthDateRequired": "出生日期为必填项。",
+    "errUnder18": "注册年龄须满18周岁。",
+    "errTermsRequired": "您必须接受条款和条件才能继续。",
+    "termsCheckboxPre": "我同意",
+    "termsCheckboxMid": "和",
+    "termsCheckboxSuf": "",
+    "termsLink": "使用条款",
+    "privacyLink": "隐私政策",
+    "ageTermsModeTitle": "快完成了",
+    "ageTermsModeSubtitle": "继续前请确认您的信息",
+    "ageTermsBadge": "法律要求。您的出生日期仅用于验证您是否年满18周岁。",
+    "birthDateGateTitle": "年龄验证",
+    "birthDateGateSubtitle": "我们需要验证您至少18岁",
+    "errUnder18Gate": "很遗憾，您必须年满18周岁才能使用GlobeMate。您的会话已关闭。"
   },
   "landing": {
     "howItWorks": "使用方法",

@@ -125,7 +125,22 @@
     "unknownPhoneError": "Unerwarteter Fehler. Bitte versuche es erneut.",
     "errSessionExpired": "Sitzung abgelaufen. Bitte versuche es erneut.",
     "errNameRequired": "Vor- und Nachname sind erforderlich.",
-    "errBothRequired": "Beide Felder sind erforderlich."
+    "errBothRequired": "Beide Felder sind erforderlich.",
+    "birthDateLabel": "Geburtsdatum",
+    "errBirthDateRequired": "Das Geburtsdatum ist erforderlich.",
+    "errUnder18": "Du musst mindestens 18 Jahre alt sein, um dich anzumelden.",
+    "errTermsRequired": "Du musst die AGB akzeptieren, um fortzufahren.",
+    "termsCheckboxPre": "Ich akzeptiere die ",
+    "termsCheckboxMid": " und die ",
+    "termsCheckboxSuf": "",
+    "termsLink": "Allgemeinen Geschäftsbedingungen",
+    "privacyLink": "Datenschutzerklärung",
+    "ageTermsModeTitle": "Fast fertig",
+    "ageTermsModeSubtitle": "Bitte bestätige deine Daten bevor du fortfährst",
+    "ageTermsBadge": "Gesetzlich vorgeschrieben. Dein Geburtsdatum wird nur zur Altersverifikation (18+) verwendet.",
+    "birthDateGateTitle": "Altersverifikation",
+    "birthDateGateSubtitle": "Wir müssen überprüfen, dass du mindestens 18 Jahre alt bist",
+    "errUnder18Gate": "Leider musst du mindestens 18 Jahre alt sein, um GlobeMate zu nutzen. Deine Sitzung wurde beendet."
   },
   "landing": {
     "howItWorks": "So funktioniert es",
