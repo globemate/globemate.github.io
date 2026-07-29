@@ -141,7 +141,8 @@ export default function App() {
         setCheckingUser(false);
       }
     }).catch(() => {
-      if (!cancelled) { setNeedsPhoneVerif(false); setCheckingUser(false); }
+      // Fail closed: can't verify phone status → keep gate active
+      if (!cancelled) { setNeedsPhoneVerif(true); setCheckingUser(false); }
     });
     return () => { cancelled = true; };
   }, [user]);

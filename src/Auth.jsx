@@ -463,6 +463,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
   const [phoneLoading, setPhoneLoading]   = useState(false);
   const [phoneError, setPhoneError]       = useState("");
   const recaptchaRef = useRef(null);
+  const termsCheckboxRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -532,7 +533,9 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         setError(t("auth.errUnder18")); return;
       }
       if (!termsAccepted) {
-        setError(t("auth.errTermsRequired")); return;
+        setError(t("auth.errTermsRequired"));
+        setTimeout(() => termsCheckboxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+        return;
       }
       setLoading(true);
       try {
@@ -686,6 +689,8 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         phone: countryCode + phoneNumber.replace(/\D/g, ""),
         phoneVerified: true,
         isVerified: false,
+        // Safety net: write acceptedTermsAt if it wasn't already written in the registration step
+        ...(termsAccepted ? { acceptedTermsAt: serverTimestamp() } : {}),
         ...nameFields,
       }, { merge: true });
       onAuthSuccess();
@@ -908,13 +913,14 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
                         max={maxBirthDate}
                         required
                       />
-                      <label className="auth-checkbox-row" onClick={() => setTermsAccepted(v => !v)}>
+                      <label className="auth-checkbox-row" onClick={() => setTermsAccepted(v => !v)} ref={termsCheckboxRef}>
                         <input
                           className="auth-checkbox"
                           type="checkbox"
                           checked={termsAccepted}
                           onChange={e => setTermsAccepted(e.target.checked)}
                           onClick={e => e.stopPropagation()}
+                          required
                         />
                         <span className="auth-checkbox-label">
                           {t("auth.termsCheckboxPre")}
@@ -1018,6 +1024,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
                       checked={termsAccepted}
                       onChange={e => setTermsAccepted(e.target.checked)}
                       onClick={e => e.stopPropagation()}
+                      required
                     />
                     <span className="auth-checkbox-label">
                       {t("auth.termsCheckboxPre")}
