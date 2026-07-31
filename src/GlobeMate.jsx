@@ -339,6 +339,9 @@ const style = `
   }
   .dest-matches span { color: var(--gold-light); }
 
+  .feature-icon-lg { font-size: 2.2rem; margin-bottom: 20px; }
+  .feature-title-lbl { font-family: var(--serif); font-size: 1.3rem; font-weight: 400; color: var(--cream); margin-bottom: 16px; letter-spacing: 0.02em; }
+
   .testimonials { padding: 80px 56px 120px; }
   .testimonial-grid {
     display: grid;
@@ -584,10 +587,11 @@ const style = `
     .globe-label { display: none; }
     .pulse-dot { display: none; }
 
-    /* stats 2×2 */
+    /* stats 2+1 */
     .stats { flex-wrap: wrap; padding: 0; }
     .stat { flex: 0 0 50%; max-width: 50%; padding: 28px 16px; border-right: none; }
     .stat:nth-child(odd) { border-right: 1px solid rgba(201,168,76,0.12); }
+    .stat:last-child { border-right: none; }
     .stat:nth-child(-n+2) { border-bottom: 1px solid rgba(201,168,76,0.1); }
 
     /* how it works */
@@ -865,10 +869,9 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
 
       <div className="stats">
         {[
-          { num: "124K", label: t("landing.statTravelers") },
-          { num: "89",   label: t("landing.statCountries") },
-          { num: "4.2K", label: t("landing.statMatches") },
-          { num: "96%",  label: t("landing.statSatisfaction") },
+          { num: "✓",   label: t("landing.statVerified") },
+          { num: "12",  label: t("landing.statLanguages") },
+          { num: "🌍",  label: t("landing.statPrivacy") },
         ].map((s, i) => (
           <div key={i} className="stat">
             <div className="stat-num">{s.num}</div>
@@ -925,20 +928,14 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
         <h2 className="section-h2">{t("landing.journeysTitle")} <em>{t("landing.journeysTitleItalic")}</em></h2>
         <div className="testimonial-grid">
           {[
-            { text: t("landing.test1"), author: t("landing.test1Author"), trip: t("landing.test1Trip"), emoji:"✈️" },
-            { text: t("landing.test2"), author: t("landing.test2Author"), trip: t("landing.test2Trip"), emoji:"🌸" },
-            { text: t("landing.test3"), author: t("landing.test3Author"), trip: t("landing.test3Trip"), emoji:"🗺️" },
+            { icon:"📸", title: t("landing.feature1Title"), desc: t("landing.feature1Desc") },
+            { icon:"🔐", title: t("landing.feature2Title"), desc: t("landing.feature2Desc") },
+            { icon:"🌐", title: t("landing.feature3Title"), desc: t("landing.feature3Desc") },
           ].map((item, i) => (
             <div key={i} className="testimonial">
-              <div className="quote-mark">"</div>
-              <p className="quote-text">{item.text}</p>
-              <div className="quote-author">
-                <div className="author-avatar">{item.emoji}</div>
-                <div>
-                  <div className="author-name">{item.author}</div>
-                  <div className="author-trip">{item.trip}</div>
-                </div>
-              </div>
+              <div className="feature-icon-lg">{item.icon}</div>
+              <div className="feature-title-lbl">{item.title}</div>
+              <p className="quote-text" style={{ fontStyle:"normal" }}>{item.desc}</p>
             </div>
           ))}
         </div>
