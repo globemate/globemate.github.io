@@ -100,13 +100,22 @@ service cloud.firestore {
     }
 
     // ── Blocks ───────────────────────────────────────────────────────────────
-    // Doc ID: {blockerId}_{blockedId}. Solo el blocker crea y lee sus propios blocks.
+    // Doc ID: {blockerId}_{blockedId}.
+    // Crear y borrar: solo el blocker.
+    // Leer: tanto el blocker como el blockedId pueden leer los docs que les afectan.
+    //   - El blocker los necesita para filtrar Explore/Map (query blockerId==yo).
+    //   - El blockedId los necesita para filtrar a quien le ha bloqueado (query blockedId==yo).
+    //   - El blockedId nunca recibe señal explícita en la UI — simplemente el otro desaparece.
+    //   - Esta apertura también permite que los exists() en la regla de likes
+    //     evalúen correctamente el bloqueo inverso.
     match /blocks/{blockId} {
       allow create: if request.auth != null
           && request.resource.data.blockerId == request.auth.uid;
 
       allow read: if request.auth != null
-          && (resource == null || resource.data.blockerId == request.auth.uid);
+          && (resource == null
+           || resource.data.blockerId == request.auth.uid
+           || resource.data.blockedId == request.auth.uid);
 
       allow delete: if request.auth != null
           && resource.data.blockerId == request.auth.uid;
@@ -124,11 +133,14 @@ service cloud.firestore {
 
     // ── Likes ────────────────────────────────────────────────────────────────
     // El ID del documento es `{fromUid}_{toUid}`.
-    // Solo el dueño puede crear su propio like.
-    // Solo los implicados (fromUid o toUid) pueden leerlo (necesario para detectar like mutuo).
+    // Create: el emisor debe ser auth.uid y no debe existir bloqueo en ninguna
+    //   dirección. Los exists() funcionan porque blocks/read ahora permite al
+    //   blockedId leer los docs que le afectan.
     match /likes/{likeId} {
       allow create: if request.auth != null
-          && request.resource.data.fromUid == request.auth.uid;
+          && request.resource.data.fromUid == request.auth.uid
+          && !exists(/databases/$(database)/documents/blocks/$(request.auth.uid + '_' + request.resource.data.toUid))
+          && !exists(/databases/$(database)/documents/blocks/$(request.resource.data.toUid + '_' + request.auth.uid));
 
       allow update: if request.auth != null
           && resource.data.fromUid == request.auth.uid;
@@ -163,6 +175,10 @@ service cloud.firestore {
 
     // ── Conversations ────────────────────────────────────────────────────────
     // Solo los participantes pueden leer/escribir la conversación.
+    // hiddenFor es un array con los UIDs para quienes la conversación está oculta.
+    // Al bloquear se añaden AMBOS UIDs (blocker + blocked) a hiddenFor, lo que:
+    //   - Oculta la conversación en Chat para ambas partes.
+    //   - Impide que cualquiera de los dos envíe nuevos mensajes (regla create en messages).
     match /conversations/{convId} {
       allow read, update: if request.auth != null
           && request.auth.uid in resource.data.participants;

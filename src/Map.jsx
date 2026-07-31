@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from "rea
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { db } from "./firebase";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 
 /* ── known destinations with coordinates ── */
@@ -97,12 +97,20 @@ export default function Map({ user, onBack, onProfile, onExplore, onMatches, onC
   useEffect(() => {
     const load = async () => {
       try {
-        if (user?.uid) {
-          const mySnap = await getDoc(doc(db, "users", user.uid));
-          if (mySnap.exists()) setMyLocationCountry(mySnap.data().locationCountry || "");
-        }
-        const snap = await getDocs(collection(db, "users"));
-        const real = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== user?.uid);
+        const [mySnap, usersSnap, q1Snap, q2Snap] = await Promise.all([
+          user?.uid ? getDoc(doc(db, "users", user.uid)) : Promise.resolve(null),
+          getDocs(collection(db, "users")),
+          user?.uid ? getDocs(query(collection(db, "blocks"), where("blockerId", "==", user.uid))) : Promise.resolve({ docs: [] }),
+          user?.uid ? getDocs(query(collection(db, "blocks"), where("blockedId", "==", user.uid))) : Promise.resolve({ docs: [] }),
+        ]);
+        if (mySnap?.exists()) setMyLocationCountry(mySnap.data().locationCountry || "");
+        const blocked = new Set([
+          ...q1Snap.docs.map(d => d.data().blockedId),
+          ...q2Snap.docs.map(d => d.data().blockerId),
+        ]);
+        const real = usersSnap.docs
+          .map(d => ({ uid: d.id, ...d.data() }))
+          .filter(u => u.uid !== user?.uid && !blocked.has(u.uid));
         setAllTravelers(real);
       } catch (err) {
         console.error("Error loading map travelers:", err);

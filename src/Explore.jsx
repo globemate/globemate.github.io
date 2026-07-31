@@ -266,14 +266,26 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
     load();
   }, [user]);
 
-  /* ── subscribe to blocks to keep blocked list up to date ── */
+  /* ── subscribe to blocks (both directions) ── */
   useEffect(() => {
     if (!user?.uid) return;
-    const q = query(collection(db, "blocks"), where("blockerId", "==", user.uid));
-    const unsub = onSnapshot(q, snap => {
-      setBlockedIds(new Set(snap.docs.map(d => d.data().blockedId)));
+    let iBlocked = [];
+    let blockedMe = [];
+    const merge = () => setBlockedIds(new Set([...iBlocked, ...blockedMe]));
+
+    const q1 = query(collection(db, "blocks"), where("blockerId", "==", user.uid));
+    const unsub1 = onSnapshot(q1, snap => {
+      iBlocked = snap.docs.map(d => d.data().blockedId);
+      merge();
     }, () => {});
-    return () => unsub();
+
+    const q2 = query(collection(db, "blocks"), where("blockedId", "==", user.uid));
+    const unsub2 = onSnapshot(q2, snap => {
+      blockedMe = snap.docs.map(d => d.data().blockerId);
+      merge();
+    }, () => {});
+
+    return () => { unsub1(); unsub2(); };
   }, [user?.uid]);
 
   /* ── subscribe to my likes ── */

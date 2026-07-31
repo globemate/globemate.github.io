@@ -206,8 +206,14 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
 
   useEffect(() => {
     if (!currentUser?.uid || !uid || currentUser.uid === uid) return;
+    // Check if I blocked them
     getDoc(doc(db, "blocks", `${currentUser.uid}_${uid}`))
       .then(snap => setAlreadyBlocked(snap.exists()))
+      .catch(() => {});
+    // Check if they blocked me — with updated rules, blockedId can read their own block docs.
+    // Show "not found" silently, no mention of block (req. 5).
+    getDoc(doc(db, "blocks", `${uid}_${currentUser.uid}`))
+      .then(snap => { if (snap.exists()) setError(true); })
       .catch(() => {});
   }, [currentUser?.uid, uid]);
 
