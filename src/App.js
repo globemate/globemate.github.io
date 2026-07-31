@@ -62,10 +62,14 @@ export default function App() {
     try { return new Date(localStorage.getItem("gm_lastVisitSeenAt") || 0); }
     catch { return new Date(0); }
   });
+  const [blockedIds, setBlockedIds] = useState(new Set());
 
-  const pendingRequests    = receivedLikes.filter(r => !sentLikeUids.has(r.fromUid) && !ignoredUids.has(r.fromUid));
-  const unseenPersistCount = persistentNotifs.filter(n => !n.seen).length;
-  const newVisitsCount     = profileVisitDocs.filter(v => { const t = v.timestamp?.toDate?.(); return t && t > lastVisitSeenAt; }).length;
+  // Apply block filter to all notification surfaces
+  const pendingRequests          = receivedLikes.filter(r => !sentLikeUids.has(r.fromUid) && !ignoredUids.has(r.fromUid) && !blockedIds.has(r.fromUid));
+  const filteredPersistentNotifs = persistentNotifs.filter(n => !n.fromUid || !blockedIds.has(n.fromUid));
+  const filteredProfileVisitDocs = profileVisitDocs.filter(v => !blockedIds.has(v.visitorId));
+  const unseenPersistCount = filteredPersistentNotifs.filter(n => !n.seen).length;
+  const newVisitsCount     = filteredProfileVisitDocs.filter(v => { const t = v.timestamp?.toDate?.(); return t && t > lastVisitSeenAt; }).length;
   const notifCount         = showNotif ? 0 : (pendingRequests.length + unseenPersistCount + (newVisitsCount > 0 ? 1 : 0));
 
   const handleIgnore = (fromUid) => {
@@ -112,6 +116,7 @@ export default function App() {
         setShowAdmin(false);
         setPersistentNotifs([]);
         setProfileVisitDocs([]);
+        setBlockedIds(new Set());
         setNeedsPhoneVerif(false);
         setCheckingUser(false);
         setNeedsBirthDate(false);
@@ -184,6 +189,18 @@ export default function App() {
       setSentLikeUids(new Set(snap.docs.map(d => d.data().toUid)));
     }, () => {});
     return () => unsub();
+  }, [user?.uid]);
+
+  // subscribe to blocks (both directions) — needed to filter notifications
+  useEffect(() => {
+    if (!user?.uid) return;
+    let iBlocked = [], blockedMe = [];
+    const merge = () => setBlockedIds(new Set([...iBlocked, ...blockedMe]));
+    const q1 = query(collection(db, "blocks"), where("blockerId", "==", user.uid));
+    const u1 = onSnapshot(q1, snap => { iBlocked = snap.docs.map(d => d.data().blockedId); merge(); }, () => {});
+    const q2 = query(collection(db, "blocks"), where("blockedId", "==", user.uid));
+    const u2 = onSnapshot(q2, snap => { blockedMe = snap.docs.map(d => d.data().blockerId); merge(); }, () => {});
+    return () => { u1(); u2(); };
   }, [user?.uid]);
 
   // subscribe to persistent notifications (matches, verification)
@@ -380,8 +397,8 @@ export default function App() {
         pendingRequests={pendingRequests}
         user={user}
         onIgnore={handleIgnore}
-        persistentNotifs={persistentNotifs}
-        profileVisitDocs={profileVisitDocs}
+        persistentNotifs={filteredPersistentNotifs}
+        profileVisitDocs={filteredProfileVisitDocs}
         lastVisitSeenAt={lastVisitSeenAt}
         onMarkSeen={handleMarkSeen}
         onDeleteNotif={handleDeleteNotif}

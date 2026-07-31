@@ -284,25 +284,35 @@ export default function Matches({ user, onBack, onProfile, onExplore, onMatches,
   useEffect(() => {
     const load = async () => {
       try {
-        // Fetch my profile for compatibility calculation
-        const mySnap = await getDoc(doc(db, "users", user.uid));
-        const myData = mySnap.exists() ? mySnap.data() : null;
-        setMyProfile(myData);
+        const [mySnap, matchSnap, blockerSnap, blockedSnap] = await Promise.all([
+          getDoc(doc(db, "users", user.uid)),
+          getDocs(query(collection(db, "matches"), where("users", "array-contains", user.uid))),
+          getDocs(query(collection(db, "blocks"), where("blockerId", "==", user.uid))),
+          getDocs(query(collection(db, "blocks"), where("blockedId", "==", user.uid))),
+        ]);
 
-        // Fetch my matches
-        const q    = query(collection(db, "matches"), where("users", "array-contains", user.uid));
-        const snap = await getDocs(q);
+        setMyProfile(mySnap.exists() ? mySnap.data() : null);
 
-        // For each match, fetch the other user's profile
-        const enriched = await Promise.all(snap.docs.map(async d => {
-          const matchData = d.data();
-          const otherUid  = (matchData.users || []).find(uid => uid !== user.uid);
+        const blockedIds = new Set([
+          ...blockerSnap.docs.map(d => d.data().blockedId),
+          ...blockedSnap.docs.map(d => d.data().blockerId),
+        ]);
+
+        // Filter blocked matches first, then fetch profiles only for visible ones
+        const visibleDocs = matchSnap.docs
+          .map(d => {
+            const matchData = d.data();
+            const otherUid  = (matchData.users || []).find(uid => uid !== user.uid);
+            return { d, matchData, otherUid };
+          })
+          .filter(({ otherUid }) => !blockedIds.has(otherUid));
+
+        const enriched = await Promise.all(visibleDocs.map(async ({ d, matchData, otherUid }) => {
           let otherProfile = {};
           if (otherUid) {
             const otherSnap = await getDoc(doc(db, "users", otherUid));
             if (otherSnap.exists()) {
               const data = otherSnap.data();
-              // Explicit field pick — never read "photo" (legacy empty field)
               otherProfile = {
                 displayName:      data.displayName      || null,
                 photoURL:         data.photoURL         || null,
