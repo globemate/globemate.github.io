@@ -470,7 +470,15 @@
     "visibilityWorldwide": "🌍 全世界で公開",
     "visibilityExcept": "🚫 全世界で公開（以下を除く）：",
     "visibilityOnly": "✅ 以下の国でのみ公開：",
-    "searchCountry": "国を検索…"
+    "searchCountry": "国を検索…",
+    "blockSearchTitle": "ユーザーをブロック",
+    "blockSearchDesc": "名前でユーザーを検索し、マッチや事前の会話なしに直接ブロックできます。",
+    "blockSearchPlaceholder": "名前で検索…",
+    "blockSearchBtn": "検索",
+    "blockSearching": "検索中…",
+    "blockNoResults": "その名前のユーザーは見つかりませんでした。",
+    "block": "ブロック",
+    "blocking": "ブロック中…"
   },
   "langSelector": {
     "label": "言語"

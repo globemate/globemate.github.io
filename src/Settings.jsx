@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "./firebase";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch, arrayRemove } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch, arrayRemove, arrayUnion, serverTimestamp } from "firebase/firestore";
 import {
   updatePassword, verifyBeforeUpdateEmail,
   reauthenticateWithCredential, reauthenticateWithPopup,
@@ -227,6 +227,9 @@ const css = `
   .sg-btn-unblock { background:none; border:1px solid rgba(245,240,232,0.18); color:rgba(245,240,232,0.45); font-family:var(--sans); font-size:0.66rem; letter-spacing:0.1em; text-transform:uppercase; padding:6px 14px; cursor:pointer; transition:all 0.2s; white-space:nowrap; flex-shrink:0; }
   .sg-btn-unblock:hover:not(:disabled) { border-color:rgba(111,207,151,0.45); color:#6fcf97; }
   .sg-btn-unblock:disabled { opacity:0.35; cursor:not-allowed; }
+  .sg-btn-block { background:none; border:1px solid rgba(192,57,43,0.4); color:#e07070; font-family:var(--sans); font-size:0.66rem; letter-spacing:0.1em; text-transform:uppercase; padding:6px 14px; cursor:pointer; transition:all 0.2s; white-space:nowrap; flex-shrink:0; }
+  .sg-btn-block:hover:not(:disabled) { border-color:rgba(192,57,43,0.75); color:#ff8a80; background:rgba(192,57,43,0.08); }
+  .sg-btn-block:disabled { opacity:0.35; cursor:not-allowed; }
 
   /* hamburger */
   .sg-hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:6px; flex-shrink:0; }
@@ -283,6 +286,13 @@ export default function Settings({
   const [blockedProfiles, setBlockedProfiles] = useState({});   // uid -> { displayName, photoURL, emoji }
   const [blockedLoaded,   setBlockedLoaded]   = useState(false);
   const [unblocking,      setUnblocking]      = useState(new Set());
+
+  const [blockSearch,     setBlockSearch]     = useState("");
+  const [blockResults,    setBlockResults]    = useState([]);
+  const [blockSearching,  setBlockSearching]  = useState(false);
+  const [blockSearchDone, setBlockSearchDone] = useState(false);
+  const [blockingUid,     setBlockingUid]     = useState(new Set());
+  const [whoBlockedMe,    setWhoBlockedMe]    = useState(new Set());
 
   const isEmailUser = user.providerData.some(p => p.providerId === "password");
 
@@ -341,6 +351,11 @@ export default function Settings({
         });
       })
       .catch(() => {});
+    getDocs(query(collection(db, "blocks"), where("blockedId", "==", user.uid)))
+      .then(snap => {
+        setWhoBlockedMe(new Set(snap.docs.map(d => d.data().blockerId)));
+      })
+      .catch(() => {});
   }, [tab, blockedLoaded, user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUnblock = async (blockedId, docId) => {
@@ -357,6 +372,68 @@ export default function Settings({
       setBlockedUsers(prev => prev.filter(b => b.blockedId !== blockedId));
     } catch { /* ignore */ }
     setUnblocking(prev => { const s = new Set(prev); s.delete(blockedId); return s; });
+  };
+
+  const handleBlockSearch = async () => {
+    const q = blockSearch.trim();
+    if (q.length < 2) return;
+    setBlockSearching(true);
+    setBlockResults([]);
+    setBlockSearchDone(false);
+    try {
+      const snap = await getDocs(collection(db, "users"));
+      const alreadyBlockedUids = new Set(blockedUsers.map(b => b.blockedId));
+      const lower = q.toLowerCase();
+      const results = snap.docs
+        .map(d => ({ uid: d.id, ...d.data() }))
+        .filter(u =>
+          u.uid !== user.uid &&
+          !alreadyBlockedUids.has(u.uid) &&
+          !whoBlockedMe.has(u.uid) &&
+          (u.displayName || "").toLowerCase().includes(lower)
+        )
+        .slice(0, 10)
+        .map(u => ({
+          uid: u.uid,
+          displayName: u.displayName || "…",
+          photoURL: u.photoURL || null,
+          emoji: u.emoji || "👤",
+        }));
+      setBlockResults(results);
+    } catch { /* ignore */ }
+    setBlockSearchDone(true);
+    setBlockSearching(false);
+  };
+
+  const handlePreventiveBlock = async (targetUid) => {
+    if (blockingUid.has(targetUid)) return;
+    setBlockingUid(prev => new Set([...prev, targetUid]));
+    try {
+      const docId = `${user.uid}_${targetUid}`;
+      await setDoc(doc(db, "blocks", docId), {
+        blockerId: user.uid,
+        blockedId: targetUid,
+        createdAt: serverTimestamp(),
+      });
+      const [uidA, uidB] = [user.uid, targetUid].sort();
+      try {
+        await updateDoc(doc(db, "conversations", `${uidA}_${uidB}`), {
+          hiddenFor: arrayUnion(user.uid, targetUid),
+        });
+      } catch { /* no conversation — fine */ }
+      const profile = blockResults.find(r => r.uid === targetUid) || {};
+      setBlockedUsers(prev => [...prev, { docId, blockedId: targetUid }]);
+      setBlockedProfiles(prev => ({
+        ...prev,
+        [targetUid]: {
+          displayName: profile.displayName || "…",
+          photoURL: profile.photoURL || null,
+          emoji: profile.emoji || "👤",
+        },
+      }));
+      setBlockResults(prev => prev.filter(r => r.uid !== targetUid));
+    } catch { /* ignore */ }
+    setBlockingUid(prev => { const s = new Set(prev); s.delete(targetUid); return s; });
   };
 
   const updNotif   = (k, v) => { setSettings(s => ({ ...s, notif:   { ...s.notif,   [k]: v } })); setDirty(true); setSaveMsg({ text:"", type:"" }); };
@@ -780,6 +857,49 @@ export default function Settings({
                 </div>
                 <Toggle on={settings.privacy.incognitoMode} onChange={v => updPrivacy("incognitoMode", v)} />
               </div>
+            </div>
+
+            <div className="sg-section">
+              <div className="sg-sec-title">{t("settings.blockSearchTitle")}</div>
+              <div className="sg-field">
+                <div className="sg-row-sub" style={{ marginBottom:8 }}>{t("settings.blockSearchDesc")}</div>
+                <input
+                  className="sg-inp"
+                  placeholder={t("settings.blockSearchPlaceholder")}
+                  value={blockSearch}
+                  onChange={e => { setBlockSearch(e.target.value); setBlockSearchDone(false); setBlockResults([]); }}
+                  onKeyDown={e => e.key === "Enter" && handleBlockSearch()}
+                />
+                <button
+                  className="sg-field-btn"
+                  style={{ marginTop:8 }}
+                  onClick={handleBlockSearch}
+                  disabled={blockSearching || blockSearch.trim().length < 2}
+                >
+                  {blockSearching ? t("settings.blockSearching") : t("settings.blockSearchBtn")}
+                </button>
+              </div>
+              {blockResults.map(r => (
+                <div key={r.uid} className="sg-blocked-row">
+                  <div className="sg-blocked-avatar">
+                    {r.photoURL
+                      ? <img src={r.photoURL} alt={r.displayName} />
+                      : <span>{r.emoji}</span>
+                    }
+                  </div>
+                  <span className="sg-blocked-name">{r.displayName}</span>
+                  <button
+                    className="sg-btn-block"
+                    disabled={blockingUid.has(r.uid)}
+                    onClick={() => handlePreventiveBlock(r.uid)}
+                  >
+                    {blockingUid.has(r.uid) ? t("settings.blocking") : t("settings.block")}
+                  </button>
+                </div>
+              ))}
+              {blockSearchDone && blockResults.length === 0 && !blockSearching && (
+                <div className="sg-blocked-empty">{t("settings.blockNoResults")}</div>
+              )}
             </div>
 
             <div className="sg-section">

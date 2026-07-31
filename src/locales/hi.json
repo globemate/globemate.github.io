@@ -470,7 +470,15 @@
     "visibilityWorldwide": "🌍 विश्वव्यापी दृश्यमान",
     "visibilityExcept": "🚫 विश्वव्यापी दृश्यमान सिवाय:",
     "visibilityOnly": "✅ केवल इनमें दृश्यमान:",
-    "searchCountry": "देश खोजें…"
+    "searchCountry": "देश खोजें…",
+    "blockSearchTitle": "किसी उपयोगकर्ता को ब्लॉक करें",
+    "blockSearchDesc": "किसी भी उपयोगकर्ता को नाम से खोजें और सीधे ब्लॉक करें, बिना मैच या पूर्व बातचीत के।",
+    "blockSearchPlaceholder": "नाम से खोजें…",
+    "blockSearchBtn": "खोजें",
+    "blockSearching": "खोज रहे हैं…",
+    "blockNoResults": "उस नाम का कोई उपयोगकर्ता नहीं मिला।",
+    "block": "ब्लॉक करें",
+    "blocking": "ब्लॉक हो रहा है…"
   },
   "langSelector": {
     "label": "भाषा"

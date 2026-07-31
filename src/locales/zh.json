@@ -470,7 +470,15 @@
     "visibilityWorldwide": "🌍 全球可见",
     "visibilityExcept": "🚫 全球可见，以下除外：",
     "visibilityOnly": "✅ 仅在以下地区可见：",
-    "searchCountry": "搜索国家…"
+    "searchCountry": "搜索国家…",
+    "blockSearchTitle": "屏蔽用户",
+    "blockSearchDesc": "按姓名搜索任意用户并直接屏蔽，无需匹配或事先对话。",
+    "blockSearchPlaceholder": "按姓名搜索…",
+    "blockSearchBtn": "搜索",
+    "blockSearching": "搜索中…",
+    "blockNoResults": "未找到该姓名的用户。",
+    "block": "屏蔽",
+    "blocking": "屏蔽中…"
   },
   "langSelector": {
     "label": "语言"

@@ -470,7 +470,15 @@
     "visibilityWorldwide": "🌍 Видимость по всему миру",
     "visibilityExcept": "🚫 Видимость по всему миру, кроме:",
     "visibilityOnly": "✅ Видимость только в:",
-    "searchCountry": "Поиск страны…"
+    "searchCountry": "Поиск страны…",
+    "blockSearchTitle": "Заблокировать пользователя",
+    "blockSearchDesc": "Найдите любого пользователя по имени и заблокируйте его напрямую, без матча или предварительной беседы.",
+    "blockSearchPlaceholder": "Поиск по имени…",
+    "blockSearchBtn": "Найти",
+    "blockSearching": "Поиск…",
+    "blockNoResults": "Пользователь с таким именем не найден.",
+    "block": "Заблокировать",
+    "blocking": "Блокировка…"
   },
   "langSelector": {
     "label": "Язык"

@@ -470,7 +470,15 @@
     "visibilityWorldwide": "🌍 مرئي في جميع أنحاء العالم",
     "visibilityExcept": "🚫 مرئي في جميع أنحاء العالم إلا في:",
     "visibilityOnly": "✅ مرئي فقط في:",
-    "searchCountry": "البحث عن دولة…"
+    "searchCountry": "البحث عن دولة…",
+    "blockSearchTitle": "حظر مستخدم",
+    "blockSearchDesc": "ابحث عن أي مستخدم بالاسم وقم بحظره مباشرةً دون الحاجة إلى تطابق أو محادثة سابقة.",
+    "blockSearchPlaceholder": "البحث بالاسم…",
+    "blockSearchBtn": "بحث",
+    "blockSearching": "جاري البحث…",
+    "blockNoResults": "لم يُعثر على مستخدمين بهذا الاسم.",
+    "block": "حظر",
+    "blocking": "جاري الحظر…"
   },
   "langSelector": {
     "label": "اللغة"

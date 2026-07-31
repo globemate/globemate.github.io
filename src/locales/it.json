@@ -470,7 +470,15 @@
     "visibilityWorldwide": "🌍 Visibile in tutto il mondo",
     "visibilityExcept": "🚫 Visibile in tutto il mondo tranne in:",
     "visibilityOnly": "✅ Visibile solo in:",
-    "searchCountry": "Cerca paese…"
+    "searchCountry": "Cerca paese…",
+    "blockSearchTitle": "Blocca un utente",
+    "blockSearchDesc": "Trova qualsiasi utente per nome e bloccalo direttamente, senza bisogno di un match o di una conversazione precedente.",
+    "blockSearchPlaceholder": "Cerca per nome…",
+    "blockSearchBtn": "Cerca",
+    "blockSearching": "Ricerca…",
+    "blockNoResults": "Nessun utente trovato con quel nome.",
+    "block": "Blocca",
+    "blocking": "Blocco…"
   },
   "langSelector": {
     "label": "Lingua"
