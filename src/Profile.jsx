@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage } from "./firebase";
 import { doc, getDoc, setDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
+import { logEvent } from "./analytics";
 import { ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
@@ -622,6 +623,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
         verificationRequestedAt:   serverTimestamp(),
       }, { merge: true });
       setProfile(p => ({ ...p, verificationStatus: "pending", verificationSelfieUrl: url }));
+      logEvent("profile_verification_sent");
       closeSelfie();
       setMsg({ text: t("profile.selfieUploaded"), type: "ok" });
       setTimeout(() => setMsg({ text: "", type: "" }), 5000);
@@ -778,6 +780,7 @@ export default function Profile({ user, onBack, onNotif, notifCount, onExplore, 
         : profile.displayName;
 
       await setDoc(doc(db, "users", user.uid), { ...profile, photoURL, coverURL, displayName: computedDisplayName, updatedAt: new Date().toISOString() }, { merge: true });
+      if (profile.firstName && photoURL) logEvent("profile_completed");
       if (computedDisplayName !== profile.displayName) setProfile(p => ({ ...p, displayName: computedDisplayName }));
       setProfile(p => ({ ...p, photoURL, coverURL }));
       setPhotoFile(null);

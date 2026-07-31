@@ -482,5 +482,10 @@
   },
   "langSelector": {
     "label": "Sprache"
+  },
+  "cookieBanner": {
+    "text": "Wir verwenden Analyse-Cookies, um zu verstehen, wie GlobeMate genutzt wird, und das Erlebnis zu verbessern. Es werden keine personenbezogenen Daten weitergegeben.",
+    "accept": "Akzeptieren",
+    "reject": "Ablehnen"
   }
 }

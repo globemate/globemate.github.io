@@ -67,7 +67,7 @@ export default function Privacy({ onBack }) {
         <div className="legal-hero">
           <div className="legal-eyebrow">Documento legal</div>
           <h1 className="legal-title">Política de <em>Privacidad</em></h1>
-          <p className="legal-updated">Última actualización: junio 2026</p>
+          <p className="legal-updated">Última actualización: julio 2026</p>
         </div>
 
         <div className="legal-body">
@@ -213,13 +213,44 @@ export default function Privacy({ onBack }) {
           <div className="legal-divider" />
 
           <div className="legal-section">
-            <h2>9. Cookies</h2>
+            <h2>9. Cookies y analítica</h2>
+            <h3>Cookies estrictamente necesarias</h3>
             <p>
-              GlobeMate utiliza cookies técnicas necesarias para el funcionamiento del
-              servicio y cookies analíticas (Google Analytics/Firebase) para medir el uso
-              de la plataforma. Puedes gestionar las cookies desde la configuración de tu
-              navegador. El uso de cookies analíticas se basa en tu consentimiento, que
-              puedes retirar en cualquier momento.
+              GlobeMate utiliza cookies técnicas imprescindibles para el funcionamiento del
+              servicio (sesión de autenticación, preferencias de idioma). Estas cookies no
+              requieren consentimiento porque son necesarias para prestar el servicio que has
+              solicitado.
+            </p>
+            <h3>Cookies de analítica (Firebase Analytics / Google)</h3>
+            <p>
+              Con tu consentimiento expreso, utilizamos Firebase Analytics (servicio de
+              Google LLC) para recopilar estadísticas de uso agregadas: qué pantallas se
+              visitan con más frecuencia, cuántos usuarios completan el registro, rendimiento
+              general de la app, etc. Este servicio instala los siguientes identificadores en
+              tu dispositivo:
+            </p>
+            <ul>
+              <li><strong>_ga</strong> — Identifica de forma pseudónima tu navegador. Duración: 2 años.</li>
+              <li><strong>_ga_XXXXXX</strong> — Rastrea la sesión de uso de la app. Duración: 2 años.</li>
+              <li><strong>firebase_app_instance_id</strong> — Almacenado en localStorage; identifica la instancia de la app en tu navegador de forma persistente.</li>
+            </ul>
+            <p>
+              Ningún evento de analítica contiene nombre, dirección de correo, número de
+              teléfono ni ningún otro dato directamente identificable. Los datos son tratados
+              por Google LLC bajo las salvaguardas del acuerdo de transferencia internacional
+              vigente entre la UE y EE. UU. Para más información consulta la{" "}
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+                Política de Privacidad de Google
+              </a>.
+            </p>
+            <h3>Gestión del consentimiento</h3>
+            <p>
+              Al acceder a GlobeMate por primera vez se te muestra un aviso donde puedes
+              aceptar o rechazar las cookies de analítica. Las cookies de analítica
+              <strong> solo se instalan si aceptas</strong>. Puedes retirar tu consentimiento
+              en cualquier momento borrando las cookies y el almacenamiento local del sitio
+              en la configuración de tu navegador; al volver a visitar GlobeMate se te
+              mostrará de nuevo la opción de elección.
             </p>
           </div>
 

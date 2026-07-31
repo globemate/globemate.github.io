@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGES } from "./i18n";
 import { auth, db } from "./firebase";
+import { logEvent } from "./analytics";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { collection, query, where, onSnapshot, doc, getDoc, addDoc, updateDoc, writeBatch, serverTimestamp } from "firebase/firestore";
 import { useSubscription } from "./useSubscription";
@@ -20,6 +21,7 @@ import Terms from "./Terms.jsx";
 import AdminDashboard, { ADMIN_EMAIL } from "./AdminDashboard.js";
 import Navbar from "./Navbar.jsx";
 import BottomNav from "./BottomNav.jsx";
+import CookieBanner from "./CookieBanner.jsx";
 
 
 export default function App() {
@@ -343,7 +345,7 @@ export default function App() {
     else if (screen === "map") setShowMap(true);
     else if (screen === "notif") setShowNotif(true);
     else if (screen === "settings") setShowSettings(true);
-    else if (screen === "pricing") setShowPricing(true);
+    else if (screen === "pricing") { setShowPricing(true); logEvent("pricing_view"); }
     else if (screen === "privacy") setShowPrivacy(true);
     else if (screen === "terms")   setShowTerms(true);
     else if (screen === "admin")   setShowAdmin(true);
@@ -442,6 +444,7 @@ export default function App() {
           onProfile={nav.onProfile}
         />
       )}
+      <CookieBanner />
     </>
   );
 }

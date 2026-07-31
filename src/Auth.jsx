@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
+import { logEvent } from "./analytics";
 import { auth, googleProvider, facebookProvider, twitterProvider, db } from "./firebase";
 import {
   signInWithPopup,
@@ -480,6 +481,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
   };
 
   const switchMode = (next) => {
+    if (next === "register") logEvent("sign_up_start");
     setMode(next); setError(""); setInfo("");
     setPhoneError("");
   };
@@ -492,6 +494,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       if (info?.isNewUser) {
         const dn    = result.user.displayName || "";
         const parts = dn.trim().split(/\s+/).filter(Boolean);
+        logEvent("sign_up_start", { method: "social" });
         if (parts.length >= 2) {
           setFirstName(parts[0]);
           setLastName(parts.slice(1).join(" "));
@@ -502,6 +505,8 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
           setMode("name");
         }
       } else {
+        const providerId = result.user.providerData[0]?.providerId?.replace(".com", "") || "social";
+        logEvent("login", { method: providerId });
         onAuthSuccess();
       }
     } catch (err) {
@@ -517,6 +522,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
       setLoading(true);
       try {
         await signInWithEmailAndPassword(auth, email, password);
+        logEvent("login", { method: "email" });
         onAuthSuccess();
       } catch (err) {
         setError(getAuthError(err));
@@ -693,6 +699,7 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         ...(termsAccepted ? { acceptedTermsAt: serverTimestamp() } : {}),
         ...nameFields,
       }, { merge: true });
+      logEvent("sign_up", { method: pendingEmail ? "email" : "social" });
       onAuthSuccess();
     } catch (err) {
       console.error("[verifyCode] err.code:", err.code, "| err.message:", err.message, err);

@@ -482,5 +482,10 @@
   },
   "langSelector": {
     "label": "言語"
+  },
+  "cookieBanner": {
+    "text": "GlobeMateの利用状況を把握し体験を改善するために分析クッキーを使用します。個人データは共有されません。",
+    "accept": "承諾する",
+    "reject": "拒否する"
   }
 }

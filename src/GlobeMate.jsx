@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LangButton } from "./LanguageSelector";
+import { logEvent } from "./analytics";
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -803,6 +804,10 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) logEvent("landing_view");
+  }, [user]);
 
   const handleJoin = () => {
     if (email.trim()) { setJoined(true); }

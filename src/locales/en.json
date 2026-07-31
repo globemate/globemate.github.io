@@ -482,5 +482,10 @@
   },
   "langSelector": {
     "label": "Language"
+  },
+  "cookieBanner": {
+    "text": "We use analytics cookies to understand how GlobeMate is used and improve the experience. No personal data is shared.",
+    "accept": "Accept",
+    "reject": "Decline"
   }
 }

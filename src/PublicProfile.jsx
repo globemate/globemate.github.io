@@ -3,6 +3,7 @@ import { db } from "./firebase";
 import {
   doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp,
 } from "firebase/firestore";
+import { logEvent } from "./analytics";
 import ReportModal from "./ReportModal";
 
 const css = `
@@ -238,10 +239,12 @@ export default function PublicProfile({ uid, currentUser, onClose, onBlockDone }
       await setDoc(doc(db, "likes", `${fromUid}_${toUid}`), {
         fromUid, toUid, createdAt: serverTimestamp(),
       }, { merge: true });
+      logEvent("connection_request_sent");
       const inverseSnap = await getDoc(doc(db, "likes", `${toUid}_${fromUid}`));
       if (inverseSnap.exists()) {
         const [uidA, uidB] = [fromUid, toUid].sort();
         const matchId = `${uidA}_${uidB}`;
+        logEvent("match_achieved");
         await setDoc(doc(db, "matches", matchId), {
           users: [uidA, uidB], createdAt: serverTimestamp(),
         }, { merge: true });

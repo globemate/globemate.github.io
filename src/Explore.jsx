@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { collection, getDocs, doc, setDoc, getDoc, serverTimestamp, query, where, onSnapshot } from "firebase/firestore";
+import { logEvent } from "./analytics";
 import { useTranslation } from "react-i18next";
 import PublicProfile from "./PublicProfile";
 
@@ -326,6 +327,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         toUid,
         createdAt: serverTimestamp(),
       }, { merge: true });
+      logEvent("connection_request_sent");
 
       // 2. Check for mutual like
       const inverseSnap = await getDoc(doc(db, "likes", `${toUid}_${fromUid}`));
@@ -335,6 +337,7 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         const matchId = `${uidA}_${uidB}`;
 
         setPendingConnects(prev => ({ ...prev, [toUid]: "match" }));
+        logEvent("match_achieved");
         await setDoc(doc(db, "matches", matchId), {
           users: [uidA, uidB],
           createdAt: serverTimestamp(),
