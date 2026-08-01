@@ -172,7 +172,13 @@ export default function Map({ user, onBack, onChat }) {
         setAllTravelers(
           usersSnap.docs
             .map(d => ({ uid: d.id, ...d.data() }))
-            .filter(u => u.uid !== user?.uid && !blocked.has(u.uid) && !u.suspended)
+            .filter(u =>
+              u.uid !== user?.uid &&
+              !blocked.has(u.uid) &&
+              !u.suspended &&
+              u.settings?.privacy?.profileVisibility !== "hidden" &&
+              !u.settings?.privacy?.incognitoMode
+            )
         );
       } catch (err) {
         console.error("Map load error:", err);
