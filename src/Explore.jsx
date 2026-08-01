@@ -256,7 +256,12 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
         setMyLocationCountry(loc);
         const real = snap.docs
           .map(d => ({ uid: d.id, ...d.data() }))
-          .filter(u => u.uid !== user.uid && u.displayName);
+          .filter(u =>
+            u.uid !== user.uid &&
+            u.displayName &&
+            u.settings?.privacy?.profileVisibility !== "hidden" &&
+            !u.settings?.privacy?.incognitoMode
+          );
         setTravelers(real);
       } catch (err) {
         console.error("Error loading travelers:", err);
