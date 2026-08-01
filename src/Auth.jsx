@@ -477,7 +477,23 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
     try { recaptchaRef.current?.clear(); } catch (_) {}
     recaptchaRef.current = null;
     const el = document.getElementById("recaptcha-container");
-    if (el) el.innerHTML = "";
+    if (el) el.remove();
+  };
+
+  const getOrCreateVerifier = () => {
+    if (recaptchaRef.current) return recaptchaRef.current;
+    // Always create a fresh DOM node so grecaptcha never sees a "reused" element.
+    let container = document.getElementById("recaptcha-container");
+    if (container) container.remove();
+    container = document.createElement("div");
+    container.id = "recaptcha-container";
+    document.body.appendChild(container);
+    recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+      size: "invisible",
+      callback: () => {},
+      "expired-callback": () => { clearVerifier(); },
+    });
+    return recaptchaRef.current;
   };
 
   const switchMode = (next) => {
@@ -630,19 +646,6 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
     setLoading(false);
   };
 
-  const getOrCreateVerifier = () => {
-    if (!recaptchaRef.current) {
-      const el = document.getElementById("recaptcha-container");
-      if (el) el.innerHTML = "";
-      recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-        callback: () => {},
-        "expired-callback": () => { clearVerifier(); },
-      });
-    }
-    return recaptchaRef.current;
-  };
-
   const sendSMS = async () => {
     const digits = phoneNumber.replace(/\D/g, "");
     if (digits.length < 6) {
@@ -768,8 +771,6 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
   return (
     <>
       <style>{style}</style>
-      <div id="recaptcha-container" />
-
       <div className="auth-root">
 
         {onBack && (
