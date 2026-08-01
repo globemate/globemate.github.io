@@ -384,19 +384,140 @@ export const COUNTRY_COORDS = {
 };
 
 /* ─────────────────────────────────────────────────────────────
+   Normalize: lowercase + trim + strip diacritics
+───────────────────────────────────────────────────────────── */
+function normalizeText(s) {
+  return s.toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+/* ─────────────────────────────────────────────────────────────
+   English (and common alias) → Spanish COUNTRY_COORDS key
+───────────────────────────────────────────────────────────── */
+const _EN_TO_ES = {
+  "austria":"Austria","belgium":"Bélgica","france":"Francia",
+  "germany":"Alemania","ireland":"Irlanda","liechtenstein":"Liechtenstein",
+  "luxembourg":"Luxemburgo","monaco":"Mónaco","netherlands":"Países Bajos",
+  "switzerland":"Suiza","england":"Inglaterra","scotland":"Escocia",
+  "wales":"Gales","northern ireland":"Irlanda del Norte",
+  "denmark":"Dinamarca","estonia":"Estonia","finland":"Finlandia",
+  "iceland":"Islandia","latvia":"Letonia","lithuania":"Lituania",
+  "norway":"Noruega","sweden":"Suecia",
+  "albania":"Albania","andorra":"Andorra",
+  "bosnia":"Bosnia y Herzegovina","bosnia and herzegovina":"Bosnia y Herzegovina",
+  "croatia":"Croacia","cyprus":"Chipre","greece":"Grecia","italy":"Italia",
+  "kosovo":"Kosovo","malta":"Malta","montenegro":"Montenegro",
+  "north macedonia":"Macedonia del Norte","portugal":"Portugal",
+  "san marino":"San Marino","serbia":"Serbia","slovenia":"Eslovenia",
+  "spain":"España","vatican":"Vaticano",
+  "belarus":"Bielorrusia","bulgaria":"Bulgaria",
+  "czech republic":"Rep. Checa","czechia":"Rep. Checa",
+  "hungary":"Hungría","moldova":"Moldavia","poland":"Polonia",
+  "romania":"Rumania","russia":"Rusia","slovakia":"Eslovaquia",
+  "ukraine":"Ucrania",
+  "china":"China","hong kong":"Hong Kong","japan":"Japón",
+  "north korea":"Corea del Norte","south korea":"Corea del Sur",
+  "korea":"Corea del Sur","mongolia":"Mongolia","taiwan":"Taiwán",
+  "brunei":"Brunéi","cambodia":"Camboya","timor-leste":"Timor-Leste",
+  "indonesia":"Indonesia","laos":"Laos","malaysia":"Malasia",
+  "myanmar":"Myanmar","burma":"Myanmar","philippines":"Filipinas",
+  "singapore":"Singapur","thailand":"Tailandia","vietnam":"Vietnam",
+  "afghanistan":"Afganistán","bangladesh":"Bangladesh","bhutan":"Bután",
+  "india":"India","maldives":"Maldivas","nepal":"Nepal",
+  "pakistan":"Pakistán","sri lanka":"Sri Lanka",
+  "kazakhstan":"Kazajistán","kyrgyzstan":"Kirguistán",
+  "tajikistan":"Tayikistán","turkmenistan":"Turkmenistán",
+  "uzbekistan":"Uzbekistán","armenia":"Armenia","azerbaijan":"Azerbaiyán",
+  "bahrain":"Baréin","georgia":"Georgia","iraq":"Irak","iran":"Irán",
+  "israel":"Israel","jordan":"Jordania","kuwait":"Kuwait",
+  "lebanon":"Líbano","oman":"Omán","palestine":"Palestina",
+  "qatar":"Qatar","saudi arabia":"Arabia Saudí","syria":"Siria",
+  "turkey":"Turquía","turkiye":"Turquía",
+  "uae":"Emiratos Árabes","united arab emirates":"Emiratos Árabes",
+  "emirates":"Emiratos Árabes","yemen":"Yemen",
+  "algeria":"Argelia","egypt":"Egipto","libya":"Libia",
+  "morocco":"Marruecos","mauritania":"Mauritania",
+  "sudan":"Sudán","tunisia":"Túnez",
+  "benin":"Benín","burkina faso":"Burkina Faso","cape verde":"Cabo Verde",
+  "ivory coast":"Costa de Marfil","gambia":"Gambia","ghana":"Ghana",
+  "guinea":"Guinea","guinea-bissau":"Guinea-Bissau","liberia":"Liberia",
+  "mali":"Mali","niger":"Níger","nigeria":"Nigeria",
+  "senegal":"Senegal","sierra leone":"Sierra Leona","togo":"Togo",
+  "angola":"Angola","cameroon":"Camerún",
+  "central african republic":"Rep. Centroafricana","chad":"Chad",
+  "congo":"Congo","democratic republic of the congo":"Rep. Dem. del Congo",
+  "dr congo":"Rep. Dem. del Congo","equatorial guinea":"Guinea Ecuatorial",
+  "gabon":"Gabón",
+  "burundi":"Burundi","comoros":"Comoras","djibouti":"Djibouti",
+  "eritrea":"Eritrea","ethiopia":"Etiopía","kenya":"Kenia",
+  "madagascar":"Madagascar","malawi":"Malaui","mauritius":"Mauricio",
+  "mozambique":"Mozambique","rwanda":"Ruanda","seychelles":"Seychelles",
+  "somalia":"Somalia","south sudan":"Sudán del Sur",
+  "tanzania":"Tanzania","uganda":"Uganda",
+  "zambia":"Zambia","zimbabwe":"Zimbabue",
+  "botswana":"Botsuana","eswatini":"Eswatini",
+  "lesotho":"Lesoto","namibia":"Namibia","south africa":"Sudáfrica",
+  "canada":"Canadá","united states":"Estados Unidos","usa":"Estados Unidos",
+  "us":"Estados Unidos","america":"Estados Unidos","mexico":"México",
+  "belize":"Belice","costa rica":"Costa Rica","el salvador":"El Salvador",
+  "guatemala":"Guatemala","honduras":"Honduras",
+  "nicaragua":"Nicaragua","panama":"Panamá",
+  "antigua and barbuda":"Antigua y Barbuda","bahamas":"Bahamas",
+  "barbados":"Barbados","cuba":"Cuba","dominica":"Dominica",
+  "grenada":"Granada","haiti":"Haití","jamaica":"Jamaica",
+  "dominican republic":"Rep. Dominicana","saint lucia":"Santa Lucía",
+  "saint kitts and nevis":"San Cristóbal y Nieves",
+  "saint vincent and the grenadines":"San Vicente y Granadinas",
+  "trinidad and tobago":"Trinidad y Tobago",
+  "argentina":"Argentina","bolivia":"Bolivia","brazil":"Brasil",
+  "brasil":"Brasil","chile":"Chile","colombia":"Colombia",
+  "ecuador":"Ecuador","guyana":"Guyana","paraguay":"Paraguay",
+  "peru":"Perú","suriname":"Surinam","uruguay":"Uruguay",
+  "venezuela":"Venezuela",
+  "australia":"Australia","new zealand":"Nueva Zelanda","fiji":"Fiyi",
+  "papua new guinea":"Papúa Nueva Guinea",
+  "solomon islands":"Islas Salomón","vanuatu":"Vanuatu",
+  "micronesia":"Micronesia","kiribati":"Kiribati",
+  "marshall islands":"Islas Marshall","nauru":"Nauru",
+  "palau":"Palau","samoa":"Samoa","tonga":"Tonga","tuvalu":"Tuvalu",
+};
+
+/* Flat lookup: normalized country name (any language) → [lat, lng] */
+const COUNTRY_ALIASES = (() => {
+  const out = {};
+  for (const [k, v] of Object.entries(COUNTRY_COORDS)) {
+    out[normalizeText(k)] = v;
+  }
+  for (const [en, es] of Object.entries(_EN_TO_ES)) {
+    if (COUNTRY_COORDS[es]) out[normalizeText(en)] = COUNTRY_COORDS[es];
+  }
+  return out;
+})();
+
+/* ─────────────────────────────────────────────────────────────
    resolveCoords  —  location (free text) + locationCountry (Spanish name)
    Returns [lat, lng] or null.  Always city/country centroid, never GPS.
+   Lookup order: city exact → city prefix splits → country by name (any language) → locationCountry key
 ───────────────────────────────────────────────────────────── */
 export function resolveCoords(location, locationCountry) {
   if (location) {
-    const norm = location.toLowerCase().trim();
-    if (CITY_COORDS[norm]) return CITY_COORDS[norm];
-    const beforeComma = norm.split(",")[0].trim();
+    const lower = location.toLowerCase().trim();
+    // city lookups (existing — CITY_COORDS already has accented + unaccented variants)
+    if (CITY_COORDS[lower]) return CITY_COORDS[lower];
+    const beforeComma = lower.split(",")[0].trim();
     if (CITY_COORDS[beforeComma]) return CITY_COORDS[beforeComma];
-    const firstTwo = norm.split(" ").slice(0, 2).join(" ");
+    const firstTwo = lower.split(" ").slice(0, 2).join(" ");
     if (CITY_COORDS[firstTwo]) return CITY_COORDS[firstTwo];
-    const firstWord = norm.split(" ")[0];
+    const firstWord = lower.split(" ")[0];
     if (firstWord.length > 3 && CITY_COORDS[firstWord]) return CITY_COORDS[firstWord];
+    // accent-stripped city fallback
+    const stripped = normalizeText(location);
+    if (CITY_COORDS[stripped]) return CITY_COORDS[stripped];
+    // country lookup: English, Spanish, and other aliases, accent-tolerant
+    if (COUNTRY_ALIASES[stripped]) return COUNTRY_ALIASES[stripped];
+    const firstTwoStripped = stripped.split(" ").slice(0, 2).join(" ");
+    if (COUNTRY_ALIASES[firstTwoStripped]) return COUNTRY_ALIASES[firstTwoStripped];
+    const firstWordStripped = stripped.split(" ")[0];
+    if (firstWordStripped.length > 3 && COUNTRY_ALIASES[firstWordStripped]) return COUNTRY_ALIASES[firstWordStripped];
   }
   if (locationCountry && COUNTRY_COORDS[locationCountry]) {
     return COUNTRY_COORDS[locationCountry];

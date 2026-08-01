@@ -56,7 +56,10 @@ function buildDestClusters(travelers) {
     (t.upcoming || []).forEach(dest => {
       if (!dest.name) return;
       const coords = resolveCoords(dest.name, null);
-      if (!coords) return;
+      if (!coords) {
+        console.warn(`[GlobeMate Map] No geocode for destination "${dest.name}" (uid: ${t.uid})`);
+        return;
+      }
       const key = `${coords[0].toFixed(2)}_${coords[1].toFixed(2)}`;
       const clusterId = `dest_${key}`;
       if (!map[clusterId]) {
