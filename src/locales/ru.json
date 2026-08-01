@@ -318,7 +318,11 @@
     "planning": "Планируется",
     "connect": "Связаться",
     "messageArrow": "Сообщение →",
-    "commonInterests": "Общие интересы по направлению"
+    "commonInterests": "Общие интересы по направлению",
+    "viewProfile": "Смотреть профиль",
+    "liveHere": "Живёт здесь",
+    "travelingHere": "Планирует посетить",
+    "locations": "мест"
   },
   "notifications": {
     "title": "Уведомления",

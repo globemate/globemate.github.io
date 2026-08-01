@@ -318,7 +318,11 @@
     "planning": "योजना",
     "connect": "जुड़ें",
     "messageArrow": "संदेश →",
-    "commonInterests": "इस गंतव्य में साझा रुचियाँ"
+    "commonInterests": "इस गंतव्य में साझा रुचियाँ",
+    "viewProfile": "प्रोफ़ाइल देखें",
+    "liveHere": "यहाँ निवास",
+    "travelingHere": "यहाँ जाने की योजना",
+    "locations": "स्थान"
   },
   "notifications": {
     "title": "सूचनाएं",

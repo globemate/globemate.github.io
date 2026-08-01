@@ -318,7 +318,11 @@
     "planning": "يخطط",
     "connect": "تواصل",
     "messageArrow": "رسالة →",
-    "commonInterests": "اهتمامات مشتركة في هذه الوجهة"
+    "commonInterests": "اهتمامات مشتركة في هذه الوجهة",
+    "viewProfile": "عرض الملف الشخصي",
+    "liveHere": "مقيم هنا",
+    "travelingHere": "يخطط للزيارة",
+    "locations": "أماكن"
   },
   "notifications": {
     "title": "الإشعارات",

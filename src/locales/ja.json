@@ -318,7 +318,11 @@
     "planning": "計画中",
     "connect": "つながる",
     "messageArrow": "メッセージ →",
-    "commonInterests": "この目的地の共通の趣味"
+    "commonInterests": "この目的地の共通の趣味",
+    "viewProfile": "プロフィールを見る",
+    "liveHere": "ここに在住",
+    "travelingHere": "訪問予定",
+    "locations": "居住地"
   },
   "notifications": {
     "title": "通知",

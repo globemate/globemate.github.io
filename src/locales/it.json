@@ -318,7 +318,11 @@
     "planning": "In programma",
     "connect": "Connetti",
     "messageArrow": "Messaggio →",
-    "commonInterests": "Interessi comuni in questa destinazione"
+    "commonInterests": "Interessi comuni in questa destinazione",
+    "viewProfile": "Vedi profilo",
+    "liveHere": "Vive qui",
+    "travelingHere": "Pianifica di visitare",
+    "locations": "luoghi"
   },
   "notifications": {
     "title": "Notifiche",

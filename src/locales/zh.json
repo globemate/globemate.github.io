@@ -318,7 +318,11 @@
     "planning": "计划中",
     "connect": "连接",
     "messageArrow": "消息 →",
-    "commonInterests": "此目的地的共同兴趣"
+    "commonInterests": "此目的地的共同兴趣",
+    "viewProfile": "查看资料",
+    "liveHere": "居住于此",
+    "travelingHere": "计划前往",
+    "locations": "位置"
   },
   "notifications": {
     "title": "通知",

@@ -318,7 +318,11 @@
     "planning": "Geplant",
     "connect": "Verbinden",
     "messageArrow": "Nachricht →",
-    "commonInterests": "Gemeinsame Interessen hier"
+    "commonInterests": "Gemeinsame Interessen hier",
+    "viewProfile": "Profil ansehen",
+    "liveHere": "Wohnt hier",
+    "travelingHere": "Plant zu besuchen",
+    "locations": "Orte"
   },
   "notifications": {
     "title": "Benachrichtigungen",

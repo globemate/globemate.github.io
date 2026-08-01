@@ -318,7 +318,11 @@
     "planning": "계획 중",
     "connect": "연결",
     "messageArrow": "메시지 →",
-    "commonInterests": "이 목적지의 공통 관심사"
+    "commonInterests": "이 목적지의 공통 관심사",
+    "viewProfile": "프로필 보기",
+    "liveHere": "여기 거주",
+    "travelingHere": "방문 예정",
+    "locations": "위치"
   },
   "notifications": {
     "title": "알림",
