@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -135,7 +135,7 @@ const SEARCH_DESTS = [
   { id:"mex",       label:"Mexico City", country:"Mexico",      lat:19.4326, lng:-99.1332 },
 ];
 
-/* ── recenter helper ── */
+/* ── recenter on search ── */
 function FlyTo({ target }) {
   const map = useMap();
   useEffect(() => {
@@ -144,16 +144,45 @@ function FlyTo({ target }) {
   return null;
 }
 
+/* ── fit map to all visible pins on first load ── */
+function FitBounds({ locationClusters, destClusters }) {
+  const map = useMap();
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return;
+    const pts = [
+      ...locationClusters.map(c => [c.lat, c.lng]),
+      ...destClusters.map(c => [c.lat, c.lng]),
+    ];
+    if (pts.length === 0) return;
+    done.current = true;
+    if (pts.length === 1) {
+      map.setView(pts[0], 6);
+    } else {
+      map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 7 });
+    }
+  }, [locationClusters, destClusters, map]);
+  return null;
+}
+
 /* ── main component ── */
 export default function Map({ user, onBack, onChat }) {
   const { t } = useTranslation();
-  const [allTravelers,     setAllTravelers]     = useState([]);
-  const [myLocationCountry,setMyLocationCountry] = useState("");
-  const [search,           setSearch]           = useState("");
-  const [flyTarget,        setFlyTarget]        = useState(null);
-  const [filterConfirmed,  setFilterConfirmed]  = useState(false);
-  const [suggestions,      setSuggestions]      = useState([]);
-  const [selectedUid,      setSelectedUid]      = useState(null);
+  const [allTravelers,      setAllTravelers]      = useState([]);
+  const [myLocationCountry, setMyLocationCountry] = useState("");
+  const [search,            setSearch]            = useState("");
+  const [flyTarget,         setFlyTarget]         = useState(null);
+  const [filterConfirmed,   setFilterConfirmed]   = useState(false);
+  const [suggestions,       setSuggestions]       = useState([]);
+  const [selectedUid,       setSelectedUid]       = useState(null);
+  const [filtersOpen,       setFiltersOpen]       = useState(false);
+  const [isMobile,          setIsMobile]          = useState(() => window.innerWidth <= 480);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 480);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -222,6 +251,22 @@ export default function Map({ user, onBack, onChat }) {
     return uids.size;
   }, [locationClusters, destClusters]);
 
+  /* shared search suggestions dropdown */
+  const SuggestionList = () => suggestions.length > 0 ? (
+    <div style={{ background:"rgba(14,13,9,0.97)", border:"1px solid rgba(201,168,76,0.2)", borderTop:"none", boxShadow:"0 8px 24px rgba(0,0,0,0.5)" }}>
+      {suggestions.map(s => (
+        <button key={s.id} onClick={() => flyToDestination(s)}
+          style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid rgba(201,168,76,0.08)", color:"rgba(245,240,232,0.7)", padding:"10px 14px", textAlign:"left", fontFamily:"'DM Sans',sans-serif", fontSize:"0.82rem", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}
+          onMouseEnter={e => e.currentTarget.style.background="rgba(201,168,76,0.08)"}
+          onMouseLeave={e => e.currentTarget.style.background="none"}
+        >
+          <span>{s.label}</span>
+          <span style={{ fontSize:"0.7rem", color:"rgba(245,240,232,0.35)", letterSpacing:"0.1em" }}>{s.country}</span>
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <>
       <style>{`
@@ -285,41 +330,17 @@ export default function Map({ user, onBack, onChat }) {
         .leaflet-control-attribution a { color: rgba(201,168,76,0.4) !important; }
 
         @media (max-width: 480px) {
-          /* Search bar: fila completa, sin ancho fijo */
-          .gm-search {
-            top: 8px !important;
-            left: 8px !important;
-            right: 8px !important;
-            width: auto !important;
-          }
-          /* Panel de stats: se mueve debajo de la búsqueda */
-          .gm-stats {
-            top: 62px !important;
-            left: 8px !important;
-            right: 8px !important;
-            padding: 10px 14px !important;
-            flex-direction: column !important;
-            gap: 8px !important;
-          }
-          /* Contadores en fila con espacio homogéneo */
-          .gm-counters {
-            justify-content: space-around !important;
-            gap: 0 !important;
-          }
-          /* Botones de zoom más grandes para el dedo (≥44px) */
           .leaflet-control-zoom a {
             line-height: 44px !important;
             width: 44px !important;
             height: 44px !important;
             font-size: 22px !important;
           }
-          /* Popup: ancho responsivo, nunca más ancho que la pantalla */
           .leaflet-popup-content-wrapper {
             min-width: 0 !important;
             width: calc(100vw - 40px) !important;
             max-width: calc(100vw - 40px) !important;
           }
-          /* Botón de cierre del popup más grande para el dedo */
           .leaflet-popup-close-button {
             font-size: 24px !important;
             width: 32px !important;
@@ -334,55 +355,97 @@ export default function Map({ user, onBack, onChat }) {
       <div style={{ position:"fixed", inset:0, paddingTop:60, display:"flex", flexDirection:"column", background:"#0a0905", fontFamily:"'DM Sans',sans-serif" }}>
         <div style={{ flex:1, position:"relative", overflow:"hidden" }}>
 
-          {/* search bar */}
-          <div className="gm-search" style={{ position:"absolute", top:16, left:16, zIndex:400, display:"flex", flexDirection:"column", width:"min(320px,calc(100vw - 32px))" }}>
-            <div style={{ position:"relative" }}>
-              <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", color:"rgba(245,240,232,0.3)", fontSize:"0.9rem", pointerEvents:"none" }}>🔍</span>
-              <input
-                value={search}
-                onChange={e => handleSearchChange(e.target.value)}
-                placeholder={t("map.searchPlaceholder")}
-                style={{ width:"100%", background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#f5f0e8", padding:"11px 14px 11px 38px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.84rem", fontWeight:300, outline:"none", boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}
-              />
-            </div>
-            {suggestions.length > 0 && (
-              <div style={{ background:"rgba(14,13,9,0.97)", border:"1px solid rgba(201,168,76,0.2)", borderTop:"none", boxShadow:"0 8px 24px rgba(0,0,0,0.5)" }}>
-                {suggestions.map(s => (
-                  <button key={s.id} onClick={() => flyToDestination(s)} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid rgba(201,168,76,0.08)", color:"rgba(245,240,232,0.7)", padding:"10px 14px", textAlign:"left", fontFamily:"'DM Sans',sans-serif", fontSize:"0.82rem", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}
-                    onMouseEnter={e => e.currentTarget.style.background="rgba(201,168,76,0.08)"}
-                    onMouseLeave={e => e.currentTarget.style.background="none"}
-                  >
-                    <span>{s.label}</span>
-                    <span style={{ fontSize:"0.7rem", color:"rgba(245,240,232,0.35)", letterSpacing:"0.1em" }}>{s.country}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {isMobile ? (
+            /* ── Mobile: compact collapsible bar ── */
+            <div style={{ position:"absolute", top:8, left:8, right:8, zIndex:400, display:"flex", flexDirection:"column", gap:4 }}>
 
-          {/* stats + filter */}
-          <div className="gm-stats" style={{ position:"absolute", top:16, right:16, zIndex:400, background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:8, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}>
-            <div className="gm-counters" style={{ display:"flex", gap:20 }}>
-              <div>
-                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{locationClusters.length}</div>
-                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.locations")}</div>
+              {/* Row: search input + Filtros toggle */}
+              <div style={{ display:"flex", gap:6 }}>
+                <div style={{ flex:1, position:"relative" }}>
+                  <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"rgba(245,240,232,0.3)", fontSize:"0.85rem", pointerEvents:"none" }}>🔍</span>
+                  <input
+                    value={search}
+                    onChange={e => handleSearchChange(e.target.value)}
+                    placeholder={t("map.searchPlaceholder")}
+                    style={{ width:"100%", boxSizing:"border-box", background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#f5f0e8", padding:"9px 10px 9px 30px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.82rem", fontWeight:300, outline:"none", boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}
+                  />
+                </div>
+                <button
+                  onClick={() => setFiltersOpen(v => !v)}
+                  style={{ background: filtersOpen ? "rgba(201,168,76,0.18)" : "rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#c9a84c", padding:"9px 11px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.65rem", letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", display:"flex", alignItems:"center", gap:5, transition:"background 0.2s" }}
+                >
+                  Filtros&nbsp;{filtersOpen ? "▲" : "▼"}
+                </button>
               </div>
-              <div>
-                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{destClusters.length}</div>
-                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.destinations")}</div>
-              </div>
-              <div>
-                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{totalTravelers}</div>
-                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.travelers")}</div>
-              </div>
+
+              <SuggestionList />
+
+              {/* Collapsible counters + toggle */}
+              {filtersOpen && (
+                <div style={{ background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"8px 14px", display:"flex", flexDirection:"column", gap:6, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}>
+                  <div style={{ display:"flex", justifyContent:"space-around" }}>
+                    {[
+                      { val: locationClusters.length, key: "map.locations" },
+                      { val: destClusters.length,     key: "map.destinations" },
+                      { val: totalTravelers,           key: "map.travelers" },
+                    ].map(({ val, key }) => (
+                      <div key={key} style={{ textAlign:"center" }}>
+                        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.1rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{val}</div>
+                        <div style={{ fontSize:"0.55rem", letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:2 }}>{t(key)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
+                    <div onClick={() => setFilterConfirmed(v => !v)} style={{ width:28, height:16, borderRadius:8, background:filterConfirmed?"rgba(201,168,76,0.35)":"rgba(245,240,232,0.08)", border:filterConfirmed?"1px solid #c9a84c":"1px solid rgba(201,168,76,0.2)", position:"relative", transition:"all 0.22s", flexShrink:0 }}>
+                      <div style={{ position:"absolute", top:2, left:filterConfirmed?12:2, width:10, height:10, borderRadius:"50%", background:filterConfirmed?"#c9a84c":"rgba(245,240,232,0.35)", transition:"all 0.22s" }} />
+                    </div>
+                    <span style={{ fontSize:"0.65rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{t("map.confirmedOnly")}</span>
+                  </label>
+                </div>
+              )}
             </div>
-            <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
-              <div onClick={() => setFilterConfirmed(v => !v)} style={{ width:32, height:18, borderRadius:9, background:filterConfirmed?"rgba(201,168,76,0.35)":"rgba(245,240,232,0.08)", border:filterConfirmed?"1px solid #c9a84c":"1px solid rgba(201,168,76,0.2)", position:"relative", transition:"all 0.22s", flexShrink:0 }}>
-                <div style={{ position:"absolute", top:2, left:filterConfirmed?14:2, width:12, height:12, borderRadius:"50%", background:filterConfirmed?"#c9a84c":"rgba(245,240,232,0.35)", transition:"all 0.22s" }} />
+          ) : (
+            /* ── Desktop: original side-by-side layout ── */
+            <>
+              {/* search bar */}
+              <div style={{ position:"absolute", top:16, left:16, zIndex:400, display:"flex", flexDirection:"column", width:"min(320px,calc(100vw - 32px))" }}>
+                <div style={{ position:"relative" }}>
+                  <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", color:"rgba(245,240,232,0.3)", fontSize:"0.9rem", pointerEvents:"none" }}>🔍</span>
+                  <input
+                    value={search}
+                    onChange={e => handleSearchChange(e.target.value)}
+                    placeholder={t("map.searchPlaceholder")}
+                    style={{ width:"100%", background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#f5f0e8", padding:"11px 14px 11px 38px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.84rem", fontWeight:300, outline:"none", boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}
+                  />
+                </div>
+                <SuggestionList />
               </div>
-              <span style={{ fontSize:"0.7rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{t("map.confirmedOnly")}</span>
-            </label>
-          </div>
+
+              {/* stats + filter */}
+              <div style={{ position:"absolute", top:16, right:16, zIndex:400, background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:8, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}>
+                <div style={{ display:"flex", gap:20 }}>
+                  <div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{locationClusters.length}</div>
+                    <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.locations")}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{destClusters.length}</div>
+                    <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.destinations")}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{totalTravelers}</div>
+                    <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.travelers")}</div>
+                  </div>
+                </div>
+                <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
+                  <div onClick={() => setFilterConfirmed(v => !v)} style={{ width:32, height:18, borderRadius:9, background:filterConfirmed?"rgba(201,168,76,0.35)":"rgba(245,240,232,0.08)", border:filterConfirmed?"1px solid #c9a84c":"1px solid rgba(201,168,76,0.2)", position:"relative", transition:"all 0.22s", flexShrink:0 }}>
+                    <div style={{ position:"absolute", top:2, left:filterConfirmed?14:2, width:12, height:12, borderRadius:"50%", background:filterConfirmed?"#c9a84c":"rgba(245,240,232,0.35)", transition:"all 0.22s" }} />
+                  </div>
+                  <span style={{ fontSize:"0.7rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{t("map.confirmedOnly")}</span>
+                </label>
+              </div>
+            </>
+          )}
 
           {/* legend */}
           <div style={{ position:"absolute", bottom:24, left:16, zIndex:400, background:"rgba(10,9,5,0.88)", border:"1px solid rgba(201,168,76,0.15)", padding:"10px 14px", display:"flex", flexDirection:"column", gap:7, boxShadow:"0 4px 16px rgba(0,0,0,0.4)" }}>
@@ -406,6 +469,7 @@ export default function Map({ user, onBack, onChat }) {
             />
             <ZoomControl position="bottomright" />
             <FlyTo target={flyTarget} />
+            <FitBounds locationClusters={locationClusters} destClusters={destClusters} />
 
             {locationClusters.map(cluster => (
               <Marker key={cluster.id} position={[cluster.lat, cluster.lng]} icon={makeHomeIcon(cluster.travelers.length)}>
