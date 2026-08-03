@@ -283,13 +283,59 @@ export default function Map({ user, onBack, onChat }) {
           color: rgba(245,240,232,0.25) !important; font-size: 9px !important;
         }
         .leaflet-control-attribution a { color: rgba(201,168,76,0.4) !important; }
+
+        @media (max-width: 480px) {
+          /* Search bar: fila completa, sin ancho fijo */
+          .gm-search {
+            top: 8px !important;
+            left: 8px !important;
+            right: 8px !important;
+            width: auto !important;
+          }
+          /* Panel de stats: se mueve debajo de la búsqueda */
+          .gm-stats {
+            top: 62px !important;
+            left: 8px !important;
+            right: 8px !important;
+            padding: 10px 14px !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+          /* Contadores en fila con espacio homogéneo */
+          .gm-counters {
+            justify-content: space-around !important;
+            gap: 0 !important;
+          }
+          /* Botones de zoom más grandes para el dedo (≥44px) */
+          .leaflet-control-zoom a {
+            line-height: 44px !important;
+            width: 44px !important;
+            height: 44px !important;
+            font-size: 22px !important;
+          }
+          /* Popup: ancho responsivo, nunca más ancho que la pantalla */
+          .leaflet-popup-content-wrapper {
+            min-width: 0 !important;
+            width: calc(100vw - 40px) !important;
+            max-width: calc(100vw - 40px) !important;
+          }
+          /* Botón de cierre del popup más grande para el dedo */
+          .leaflet-popup-close-button {
+            font-size: 24px !important;
+            width: 32px !important;
+            height: 32px !important;
+            line-height: 30px !important;
+            top: 8px !important;
+            right: 8px !important;
+          }
+        }
       `}</style>
 
       <div style={{ position:"fixed", inset:0, paddingTop:60, display:"flex", flexDirection:"column", background:"#0a0905", fontFamily:"'DM Sans',sans-serif" }}>
         <div style={{ flex:1, position:"relative", overflow:"hidden" }}>
 
           {/* search bar */}
-          <div style={{ position:"absolute", top:16, left:16, zIndex:400, display:"flex", flexDirection:"column", width:"min(320px,calc(100vw - 32px))" }}>
+          <div className="gm-search" style={{ position:"absolute", top:16, left:16, zIndex:400, display:"flex", flexDirection:"column", width:"min(320px,calc(100vw - 32px))" }}>
             <div style={{ position:"relative" }}>
               <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", color:"rgba(245,240,232,0.3)", fontSize:"0.9rem", pointerEvents:"none" }}>🔍</span>
               <input
@@ -315,8 +361,8 @@ export default function Map({ user, onBack, onChat }) {
           </div>
 
           {/* stats + filter */}
-          <div style={{ position:"absolute", top:16, right:16, zIndex:400, background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:8, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}>
-            <div style={{ display:"flex", gap:20 }}>
+          <div className="gm-stats" style={{ position:"absolute", top:16, right:16, zIndex:400, background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:8, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}>
+            <div className="gm-counters" style={{ display:"flex", gap:20 }}>
               <div>
                 <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{locationClusters.length}</div>
                 <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.locations")}</div>
