@@ -356,6 +356,12 @@ export default function Map({ user, onBack, onChat }) {
             right: 8px !important;
           }
         }
+        /* BottomNav appears on ≤860px: lift legend above it + iOS safe area */
+        @media (max-width: 860px) {
+          .gm-legend {
+            bottom: calc(62px + 10px + env(safe-area-inset-bottom)) !important;
+          }
+        }
       `}</style>
 
       {/* ── Map: fills viewport below header ── */}
@@ -489,8 +495,8 @@ export default function Map({ user, onBack, onChat }) {
         </>
       )}
 
-      {/* ── Legend: fixed bottom-left, above Leaflet ── */}
-      <div style={{ position:"fixed", bottom:24, left:16, zIndex:1100, background:"rgba(10,9,5,0.88)", border:"1px solid rgba(201,168,76,0.15)", padding:"10px 14px", display:"flex", flexDirection:"column", gap:7, boxShadow:"0 4px 16px rgba(0,0,0,0.4)", fontFamily:"'DM Sans',sans-serif" }}>
+      {/* ── Legend: fixed bottom-left, above Leaflet and BottomNav ── */}
+      <div className="gm-legend" style={{ position:"fixed", bottom:24, left:16, zIndex:1100, background:"rgba(10,9,5,0.88)", border:"1px solid rgba(201,168,76,0.15)", padding:"10px 14px", display:"flex", flexDirection:"column", gap:7, boxShadow:"0 4px 16px rgba(0,0,0,0.4)", fontFamily:"'DM Sans',sans-serif" }}>
         {[
           { cls:"gm-pin-home", symbol:"●", label:t("map.liveHere") },
           { cls:"gm-pin-dest", symbol:"✈", label:t("map.travelingHere") },
