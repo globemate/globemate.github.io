@@ -796,9 +796,9 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
           </p>
           <div className="auth-panel-stats">
             {[
-              { num: "124K", lbl: t("auth.travelers") },
-              { num: "89",   lbl: t("auth.countries") },
-              { num: "4.2K", lbl: t("auth.matchesPerMonth") },
+              { num: "✓",   lbl: t("landing.statVerified") },
+              { num: "12",  lbl: t("landing.statLanguages") },
+              { num: "🌍",  lbl: t("landing.statPrivacy") },
             ].map((s) => (
               <div key={s.lbl}>
                 <div className="auth-stat-num">{s.num}</div>
