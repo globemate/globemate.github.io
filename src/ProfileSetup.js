@@ -442,11 +442,11 @@ const profileData = {
               </p>
               <div className="space-y-2">
                 <a
-                  href="mailto:soporte@globemate.com"
+                  href="mailto:support@globemate.app"
                   className="flex items-center gap-2 text-teal-600 hover:text-teal-700"
                 >
                   <Mail size={16} />
-                  soporte@globemate.com
+                  support@globemate.app
                 </a>
                 <p className="text-xs text-gray-500">
                   Tiempo de respuesta: 24-48 horas

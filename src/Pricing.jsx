@@ -466,7 +466,7 @@ export default function Pricing({
         <p className="px-footer-note">
           Puedes cancelar tu suscripción en cualquier momento desde la configuración de tu cuenta.
           Los precios incluyen IVA. Al suscribirte aceptas nuestros{" "}
-          <a href="#terms">términos y condiciones</a>.
+          <a href="/#terms" target="_blank" rel="noopener noreferrer">términos y condiciones</a>.
         </p>
 
       </div>

@@ -979,8 +979,8 @@ export default function GlobeMate({ user, onSignIn, onSignOut, onProfile, onExpl
         <ul className="footer-links">
           <li><button className="footer-link-btn" onClick={onPrivacy}>{t("landing.footerPrivacy")}</button></li>
           <li><button className="footer-link-btn" onClick={onTerms}>{t("landing.footerTerms")}</button></li>
-          <li><a href="#">{t("landing.footerContact")}</a></li>
-          <li><a href="#">Instagram</a></li>
+          <li><a href="mailto:support@globemate.app">{t("landing.footerContact")}</a></li>
+          <li><a href="https://instagram.com/globemate_app" target="_blank" rel="noopener noreferrer">Instagram</a></li>
         </ul>
         <div className="footer-copy">{t("landing.footerCopy")}</div>
         {onAdmin && (
