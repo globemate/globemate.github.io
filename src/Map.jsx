@@ -251,7 +251,7 @@ export default function Map({ user, onBack, onChat }) {
     return uids.size;
   }, [locationClusters, destClusters]);
 
-  /* shared search suggestions dropdown */
+  /* suggestions dropdown — shared between mobile and desktop */
   const SuggestionList = () => suggestions.length > 0 ? (
     <div style={{ background:"rgba(14,13,9,0.97)", border:"1px solid rgba(201,168,76,0.2)", borderTop:"none", boxShadow:"0 8px 24px rgba(0,0,0,0.5)" }}>
       {suggestions.map(s => (
@@ -266,6 +266,12 @@ export default function Map({ user, onBack, onChat }) {
       ))}
     </div>
   ) : null;
+
+  /*
+   * HEADER_H = height of the app's top navigation bar (the paddingTop on the
+   * map wrapper). Overlays are position:fixed so they need to offset by this.
+   */
+  const HEADER_H = 60;
 
   return (
     <>
@@ -352,142 +358,148 @@ export default function Map({ user, onBack, onChat }) {
         }
       `}</style>
 
-      <div style={{ position:"fixed", inset:0, paddingTop:60, display:"flex", flexDirection:"column", background:"#0a0905", fontFamily:"'DM Sans',sans-serif" }}>
-        <div style={{ flex:1, position:"relative", overflow:"hidden" }}>
+      {/* ── Map: fills viewport below header ── */}
+      <div style={{ position:"fixed", inset:0, paddingTop:HEADER_H, background:"#0a0905", fontFamily:"'DM Sans',sans-serif" }}>
+        <MapContainer
+          center={[25, 15]} zoom={2} minZoom={2} maxZoom={12}
+          zoomControl={false}
+          style={{ height:"100%", width:"100%" }}
+          worldCopyJump={true}
+        >
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            subdomains="abcd" maxZoom={19}
+          />
+          <ZoomControl position="bottomright" />
+          <FlyTo target={flyTarget} />
+          <FitBounds locationClusters={locationClusters} destClusters={destClusters} />
 
-          {isMobile ? (
-            /* ── Mobile: compact collapsible bar ── */
-            <div style={{ position:"absolute", top:8, left:8, right:8, zIndex:400, display:"flex", flexDirection:"column", gap:4 }}>
+          {locationClusters.map(cluster => (
+            <Marker key={cluster.id} position={[cluster.lat, cluster.lng]} icon={makeHomeIcon(cluster.travelers.length)}>
+              <Popup minWidth={260} maxWidth={320}>
+                <PopupContent cluster={cluster} onViewProfile={setSelectedUid} />
+              </Popup>
+            </Marker>
+          ))}
 
-              {/* Row: search input + Filtros toggle */}
-              <div style={{ display:"flex", gap:6 }}>
-                <div style={{ flex:1, position:"relative" }}>
-                  <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"rgba(245,240,232,0.3)", fontSize:"0.85rem", pointerEvents:"none" }}>🔍</span>
-                  <input
-                    value={search}
-                    onChange={e => handleSearchChange(e.target.value)}
-                    placeholder={t("map.searchPlaceholder")}
-                    style={{ width:"100%", boxSizing:"border-box", background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#f5f0e8", padding:"9px 10px 9px 30px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.82rem", fontWeight:300, outline:"none", boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}
-                  />
-                </div>
-                <button
-                  onClick={() => setFiltersOpen(v => !v)}
-                  style={{ background: filtersOpen ? "rgba(201,168,76,0.18)" : "rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#c9a84c", padding:"9px 11px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.65rem", letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", display:"flex", alignItems:"center", gap:5, transition:"background 0.2s" }}
-                >
-                  Filtros&nbsp;{filtersOpen ? "▲" : "▼"}
-                </button>
-              </div>
+          {destClusters.map(cluster => (
+            <Marker key={cluster.id} position={[cluster.lat, cluster.lng]} icon={makeDestIcon(cluster.travelers.length)}>
+              <Popup minWidth={260} maxWidth={320}>
+                <PopupContent cluster={cluster} onViewProfile={setSelectedUid} />
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
 
-              <SuggestionList />
+      {/*
+       * ── Overlays: position:fixed, z-index 1100 ──
+       * Completely outside the Leaflet DOM tree. Not affected by any
+       * Leaflet transform or stacking context. Always anchored to viewport.
+       */}
 
-              {/* Collapsible counters + toggle */}
-              {filtersOpen && (
-                <div style={{ background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"8px 14px", display:"flex", flexDirection:"column", gap:6, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}>
-                  <div style={{ display:"flex", justifyContent:"space-around" }}>
-                    {[
-                      { val: locationClusters.length, key: "map.locations" },
-                      { val: destClusters.length,     key: "map.destinations" },
-                      { val: totalTravelers,           key: "map.travelers" },
-                    ].map(({ val, key }) => (
-                      <div key={key} style={{ textAlign:"center" }}>
-                        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.1rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{val}</div>
-                        <div style={{ fontSize:"0.55rem", letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:2 }}>{t(key)}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
-                    <div onClick={() => setFilterConfirmed(v => !v)} style={{ width:28, height:16, borderRadius:8, background:filterConfirmed?"rgba(201,168,76,0.35)":"rgba(245,240,232,0.08)", border:filterConfirmed?"1px solid #c9a84c":"1px solid rgba(201,168,76,0.2)", position:"relative", transition:"all 0.22s", flexShrink:0 }}>
-                      <div style={{ position:"absolute", top:2, left:filterConfirmed?12:2, width:10, height:10, borderRadius:"50%", background:filterConfirmed?"#c9a84c":"rgba(245,240,232,0.35)", transition:"all 0.22s" }} />
-                    </div>
-                    <span style={{ fontSize:"0.65rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{t("map.confirmedOnly")}</span>
-                  </label>
-                </div>
-              )}
+      {isMobile ? (
+        /* ── Mobile: compact bar — search always visible, filters collapsible ── */
+        <div style={{ position:"fixed", top: HEADER_H + 8, left:8, right:8, zIndex:1100, display:"flex", flexDirection:"column", gap:4, fontFamily:"'DM Sans',sans-serif" }}>
+
+          {/* Row 1: search input + Filtros toggle */}
+          <div style={{ display:"flex", gap:6 }}>
+            <div style={{ flex:1, position:"relative" }}>
+              <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"rgba(245,240,232,0.3)", fontSize:"0.85rem", pointerEvents:"none" }}>🔍</span>
+              <input
+                value={search}
+                onChange={e => handleSearchChange(e.target.value)}
+                placeholder={t("map.searchPlaceholder")}
+                style={{ width:"100%", boxSizing:"border-box", background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#f5f0e8", padding:"9px 10px 9px 30px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.82rem", fontWeight:300, outline:"none", boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}
+              />
             </div>
-          ) : (
-            /* ── Desktop: original side-by-side layout ── */
-            <>
-              {/* search bar */}
-              <div style={{ position:"absolute", top:16, left:16, zIndex:400, display:"flex", flexDirection:"column", width:"min(320px,calc(100vw - 32px))" }}>
-                <div style={{ position:"relative" }}>
-                  <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", color:"rgba(245,240,232,0.3)", fontSize:"0.9rem", pointerEvents:"none" }}>🔍</span>
-                  <input
-                    value={search}
-                    onChange={e => handleSearchChange(e.target.value)}
-                    placeholder={t("map.searchPlaceholder")}
-                    style={{ width:"100%", background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#f5f0e8", padding:"11px 14px 11px 38px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.84rem", fontWeight:300, outline:"none", boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}
-                  />
-                </div>
-                <SuggestionList />
-              </div>
-
-              {/* stats + filter */}
-              <div style={{ position:"absolute", top:16, right:16, zIndex:400, background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:8, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}>
-                <div style={{ display:"flex", gap:20 }}>
-                  <div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{locationClusters.length}</div>
-                    <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.locations")}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{destClusters.length}</div>
-                    <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.destinations")}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{totalTravelers}</div>
-                    <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.travelers")}</div>
-                  </div>
-                </div>
-                <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
-                  <div onClick={() => setFilterConfirmed(v => !v)} style={{ width:32, height:18, borderRadius:9, background:filterConfirmed?"rgba(201,168,76,0.35)":"rgba(245,240,232,0.08)", border:filterConfirmed?"1px solid #c9a84c":"1px solid rgba(201,168,76,0.2)", position:"relative", transition:"all 0.22s", flexShrink:0 }}>
-                    <div style={{ position:"absolute", top:2, left:filterConfirmed?14:2, width:12, height:12, borderRadius:"50%", background:filterConfirmed?"#c9a84c":"rgba(245,240,232,0.35)", transition:"all 0.22s" }} />
-                  </div>
-                  <span style={{ fontSize:"0.7rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{t("map.confirmedOnly")}</span>
-                </label>
-              </div>
-            </>
-          )}
-
-          {/* legend */}
-          <div style={{ position:"absolute", bottom:24, left:16, zIndex:400, background:"rgba(10,9,5,0.88)", border:"1px solid rgba(201,168,76,0.15)", padding:"10px 14px", display:"flex", flexDirection:"column", gap:7, boxShadow:"0 4px 16px rgba(0,0,0,0.4)" }}>
-            {[
-              { cls:"gm-pin-home", symbol:"●", label:t("map.liveHere") },
-              { cls:"gm-pin-dest", symbol:"✈", label:t("map.travelingHere") },
-            ].map(({ cls, symbol, label }) => (
-              <div key={label} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <div className={`gm-pin ${cls}`} style={{ width:22, height:22, fontSize:"9px", flexShrink:0 }}>{symbol}</div>
-                <span style={{ fontSize:"0.68rem", color:"rgba(245,240,232,0.4)", letterSpacing:"0.1em" }}>{label}</span>
-              </div>
-            ))}
+            <button
+              onClick={() => setFiltersOpen(v => !v)}
+              style={{ background: filtersOpen ? "rgba(201,168,76,0.18)" : "rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#c9a84c", padding:"9px 11px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.65rem", letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap", boxShadow:"0 4px 20px rgba(0,0,0,0.5)", display:"flex", alignItems:"center", gap:5, transition:"background 0.2s" }}
+            >
+              Filtros&nbsp;{filtersOpen ? "▲" : "▼"}
+            </button>
           </div>
 
-          {/* map */}
-          <MapContainer center={[25,15]} zoom={2} minZoom={2} maxZoom={12} zoomControl={false} style={{ height:"100%", width:"100%" }} worldCopyJump={true}>
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              subdomains="abcd" maxZoom={19}
-            />
-            <ZoomControl position="bottomright" />
-            <FlyTo target={flyTarget} />
-            <FitBounds locationClusters={locationClusters} destClusters={destClusters} />
+          <SuggestionList />
 
-            {locationClusters.map(cluster => (
-              <Marker key={cluster.id} position={[cluster.lat, cluster.lng]} icon={makeHomeIcon(cluster.travelers.length)}>
-                <Popup minWidth={260} maxWidth={320}>
-                  <PopupContent cluster={cluster} onViewProfile={setSelectedUid} />
-                </Popup>
-              </Marker>
-            ))}
-
-            {destClusters.map(cluster => (
-              <Marker key={cluster.id} position={[cluster.lat, cluster.lng]} icon={makeDestIcon(cluster.travelers.length)}>
-                <Popup minWidth={260} maxWidth={320}>
-                  <PopupContent cluster={cluster} onViewProfile={setSelectedUid} />
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+          {/* Row 2 (collapsible): counters + confirmed toggle */}
+          {filtersOpen && (
+            <div style={{ background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"8px 14px", display:"flex", flexDirection:"column", gap:6, boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}>
+              <div style={{ display:"flex", justifyContent:"space-around" }}>
+                {[
+                  { val: locationClusters.length, key: "map.locations" },
+                  { val: destClusters.length,     key: "map.destinations" },
+                  { val: totalTravelers,           key: "map.travelers" },
+                ].map(({ val, key }) => (
+                  <div key={key} style={{ textAlign:"center" }}>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.1rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{val}</div>
+                    <div style={{ fontSize:"0.55rem", letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:2 }}>{t(key)}</div>
+                  </div>
+                ))}
+              </div>
+              <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
+                <div onClick={() => setFilterConfirmed(v => !v)} style={{ width:28, height:16, borderRadius:8, background:filterConfirmed?"rgba(201,168,76,0.35)":"rgba(245,240,232,0.08)", border:filterConfirmed?"1px solid #c9a84c":"1px solid rgba(201,168,76,0.2)", position:"relative", transition:"all 0.22s", flexShrink:0 }}>
+                  <div style={{ position:"absolute", top:2, left:filterConfirmed?12:2, width:10, height:10, borderRadius:"50%", background:filterConfirmed?"#c9a84c":"rgba(245,240,232,0.35)", transition:"all 0.22s" }} />
+                </div>
+                <span style={{ fontSize:"0.65rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{t("map.confirmedOnly")}</span>
+              </label>
+            </div>
+          )}
         </div>
+      ) : (
+        /* ── Desktop: search left, stats right ── */
+        <>
+          <div style={{ position:"fixed", top: HEADER_H + 16, left:16, zIndex:1100, display:"flex", flexDirection:"column", width:"min(320px,calc(100vw - 32px))", fontFamily:"'DM Sans',sans-serif" }}>
+            <div style={{ position:"relative" }}>
+              <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", color:"rgba(245,240,232,0.3)", fontSize:"0.9rem", pointerEvents:"none" }}>🔍</span>
+              <input
+                value={search}
+                onChange={e => handleSearchChange(e.target.value)}
+                placeholder={t("map.searchPlaceholder")}
+                style={{ width:"100%", background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.25)", color:"#f5f0e8", padding:"11px 14px 11px 38px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.84rem", fontWeight:300, outline:"none", boxShadow:"0 4px 20px rgba(0,0,0,0.5)" }}
+              />
+            </div>
+            <SuggestionList />
+          </div>
+
+          <div style={{ position:"fixed", top: HEADER_H + 16, right:16, zIndex:1100, background:"rgba(10,9,5,0.92)", border:"1px solid rgba(201,168,76,0.2)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:8, boxShadow:"0 4px 20px rgba(0,0,0,0.5)", fontFamily:"'DM Sans',sans-serif" }}>
+            <div style={{ display:"flex", gap:20 }}>
+              <div>
+                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{locationClusters.length}</div>
+                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.locations")}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{destClusters.length}</div>
+                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.destinations")}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:300, color:"#e8c97a", lineHeight:1 }}>{totalTravelers}</div>
+                <div style={{ fontSize:"0.6rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(245,240,232,0.35)", marginTop:3 }}>{t("map.travelers")}</div>
+              </div>
+            </div>
+            <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
+              <div onClick={() => setFilterConfirmed(v => !v)} style={{ width:32, height:18, borderRadius:9, background:filterConfirmed?"rgba(201,168,76,0.35)":"rgba(245,240,232,0.08)", border:filterConfirmed?"1px solid #c9a84c":"1px solid rgba(201,168,76,0.2)", position:"relative", transition:"all 0.22s", flexShrink:0 }}>
+                <div style={{ position:"absolute", top:2, left:filterConfirmed?14:2, width:12, height:12, borderRadius:"50%", background:filterConfirmed?"#c9a84c":"rgba(245,240,232,0.35)", transition:"all 0.22s" }} />
+              </div>
+              <span style={{ fontSize:"0.7rem", color:"rgba(245,240,232,0.45)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{t("map.confirmedOnly")}</span>
+            </label>
+          </div>
+        </>
+      )}
+
+      {/* ── Legend: fixed bottom-left, above Leaflet ── */}
+      <div style={{ position:"fixed", bottom:24, left:16, zIndex:1100, background:"rgba(10,9,5,0.88)", border:"1px solid rgba(201,168,76,0.15)", padding:"10px 14px", display:"flex", flexDirection:"column", gap:7, boxShadow:"0 4px 16px rgba(0,0,0,0.4)", fontFamily:"'DM Sans',sans-serif" }}>
+        {[
+          { cls:"gm-pin-home", symbol:"●", label:t("map.liveHere") },
+          { cls:"gm-pin-dest", symbol:"✈", label:t("map.travelingHere") },
+        ].map(({ cls, symbol, label }) => (
+          <div key={label} style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div className={`gm-pin ${cls}`} style={{ width:22, height:22, fontSize:"9px", flexShrink:0 }}>{symbol}</div>
+            <span style={{ fontSize:"0.68rem", color:"rgba(245,240,232,0.4)", letterSpacing:"0.1em" }}>{label}</span>
+          </div>
+        ))}
       </div>
 
       {selectedUid && (
@@ -509,7 +521,6 @@ function PopupContent({ cluster, onViewProfile }) {
 
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:"#f5f0e8" }}>
-      {/* header */}
       <div style={{ padding:"14px 16px 10px", borderBottom:"1px solid rgba(201,168,76,0.12)", background:"rgba(201,168,76,0.05)" }}>
         <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.05rem", fontWeight:300, color:"#f5f0e8", marginBottom:2 }}>
           {cluster.label || cluster.country}
@@ -519,11 +530,9 @@ function PopupContent({ cluster, onViewProfile }) {
         </div>
       </div>
 
-      {/* traveler list */}
       <div style={{ maxHeight:240, overflowY:"auto" }}>
         {cluster.travelers.map((tr, i) => (
           <div key={tr.uid} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", borderBottom: i < cluster.travelers.length - 1 ? "1px solid rgba(201,168,76,0.07)" : "none" }}>
-            {/* avatar */}
             <div style={{ width:38, height:38, borderRadius:"50%", border:"1.5px solid rgba(201,168,76,0.35)", background:"rgba(10,9,5,0.8)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"1.15rem", flexShrink:0, overflow:"hidden" }}>
               {tr.photoURL
                 ? <img src={tr.photoURL} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
@@ -531,7 +540,6 @@ function PopupContent({ cluster, onViewProfile }) {
               }
             </div>
 
-            {/* name + status (destinations only) */}
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:"0.85rem", color:"#f5f0e8", marginBottom:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                 {tr.displayName}
@@ -543,7 +551,6 @@ function PopupContent({ cluster, onViewProfile }) {
               )}
             </div>
 
-            {/* view profile */}
             <button
               onClick={() => onViewProfile(tr.uid)}
               style={{ background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.35)", color:"#c9a84c", padding:"5px 10px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.64rem", letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all 0.2s" }}
