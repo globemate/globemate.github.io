@@ -389,7 +389,8 @@
     "termsLink": "条款和条件",
     "freeTitle": "免费",
     "premiumTitle": "高级",
-    "eliteTitle": "精英"
+    "eliteTitle": "精英",
+    "comingSoon": "即将推出"
   },
   "settings": {
     "title": "设置",
@@ -411,6 +412,9 @@
     "changePassword": "更改密码",
     "pauseAccount": "暂停账户",
     "pauseAccountDesc": "暂停后，您的资料将对其他用户隐藏。",
+    "resumeAccount": "恢复账户",
+    "pauseActivated": "账户已暂停。您的个人资料不再显示。",
+    "pauseDeactivated": "账户已恢复。您的个人资料重新显示。",
     "deleteAccount": "删除账户",
     "deleteWarning": "此操作不可逆。您的所有数据将被永久删除。",
     "deleteTypeToConfirm": "输入 ELIMINAR 以确认",

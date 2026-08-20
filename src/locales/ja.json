@@ -389,7 +389,8 @@
     "termsLink": "利用規約",
     "freeTitle": "無料",
     "premiumTitle": "プレミアム",
-    "eliteTitle": "エリート"
+    "eliteTitle": "エリート",
+    "comingSoon": "近日公開"
   },
   "settings": {
     "title": "設定",
@@ -411,6 +412,9 @@
     "changePassword": "パスワードを変更",
     "pauseAccount": "アカウントを一時停止",
     "pauseAccountDesc": "一時停止中は他のユーザーにプロフィールが表示されません。",
+    "resumeAccount": "アカウントを再開",
+    "pauseActivated": "アカウントを一時停止しました。プロフィールは非表示です。",
+    "pauseDeactivated": "アカウントを再開しました。プロフィールが再び表示されます。",
     "deleteAccount": "アカウントを削除",
     "deleteWarning": "この操作は元に戻せません。すべてのデータが完全に削除されます。",
     "deleteTypeToConfirm": "確認のためELIMINARと入力してください",

@@ -206,7 +206,8 @@ export default function Map({ user, onBack, onChat }) {
               !blocked.has(u.uid) &&
               !u.suspended &&
               u.settings?.privacy?.profileVisibility !== "hidden" &&
-              !u.settings?.privacy?.incognitoMode
+              !u.settings?.privacy?.incognitoMode &&
+              !u.settings?.accountPaused
             )
         );
       } catch (err) {

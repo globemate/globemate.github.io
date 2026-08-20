@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { db } from "./firebase";
 import { addDoc, collection, onSnapshot } from "firebase/firestore";
+import { PAYMENTS_ENABLED } from "./config/payments";
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -246,6 +247,14 @@ const style = `
     margin-top: 10px; font-size: 0.72rem; color: #f5a0a0;
     text-align: center; line-height: 1.5;
   }
+  .px-btn-coming-soon {
+    width: 100%; padding: 14px;
+    background: none; border: 1px solid rgba(201,168,76,0.15);
+    color: rgba(245,240,232,0.3);
+    font-family: var(--sans); font-size: 0.72rem;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    cursor: not-allowed;
+  }
 
   /* ── footer note ── */
   .px-footer-note {
@@ -416,7 +425,7 @@ export default function Pricing({
             </ul>
             {isCurrentPlan("premium") ? (
               <button className="px-btn-current" disabled>Plan actual ✦</button>
-            ) : (
+            ) : PAYMENTS_ENABLED ? (
               <button
                 className="px-btn-subscribe"
                 onClick={() => handleSubscribe("premium")}
@@ -424,8 +433,12 @@ export default function Pricing({
               >
                 {loadingPlan === "premium" ? "Redirigiendo…" : "Suscribirse — 7 días gratis"}
               </button>
+            ) : (
+              <button className="px-btn-coming-soon" disabled>
+                {t("pricing.comingSoon")}
+              </button>
             )}
-            {checkoutErr && <div className="px-checkout-error">{checkoutErr}</div>}
+            {PAYMENTS_ENABLED && checkoutErr && <div className="px-checkout-error">{checkoutErr}</div>}
           </div>
 
           {/* ELITE */}
@@ -449,13 +462,17 @@ export default function Pricing({
             </ul>
             {isCurrentPlan("elite") ? (
               <button className="px-btn-current" disabled>Plan actual ✦</button>
-            ) : (
+            ) : PAYMENTS_ENABLED ? (
               <button
                 className="px-btn-subscribe"
                 onClick={() => handleSubscribe("elite")}
                 disabled={!!loadingPlan}
               >
                 {loadingPlan === "elite" ? "Redirigiendo…" : "Suscribirse — 7 días gratis"}
+              </button>
+            ) : (
+              <button className="px-btn-coming-soon" disabled>
+                {t("pricing.comingSoon")}
               </button>
             )}
           </div>

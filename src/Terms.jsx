@@ -80,7 +80,7 @@ export default function Terms({ onBack }) {
               es operada por:
             </p>
             <ul>
-              <li><strong>Titular:</strong> <span className="legal-placeholder">[NOMBRE COMPLETO Y NIF DE LA AUTÓNOMA - PENDIENTE]</span></li>
+              <li><strong>Titular:</strong> Daniela Alejandra Jiménez Angarita</li>
               <li><strong>Actividad:</strong> Plataforma digital de contacto entre viajeros</li>
               <li><strong>Domicilio:</strong> España</li>
               <li><strong>Correo electrónico:</strong> <a href="mailto:support@globemate.app">support@globemate.app</a></li>
@@ -183,8 +183,7 @@ export default function Terms({ onBack }) {
             <h2>7. Propiedad intelectual</h2>
             <p>
               Todos los contenidos de GlobeMate (diseño, código, textos, logotipos,
-              imágenes propias) son propiedad de{" "}
-              <span className="legal-placeholder">[NOMBRE COMPLETO Y NIF DE LA AUTÓNOMA - PENDIENTE]</span>{" "}
+              imágenes propias) son propiedad de Daniela Alejandra Jiménez Angarita
               o de sus licenciantes, y están protegidos por la legislación sobre propiedad
               intelectual e industrial. Queda prohibida su reproducción total o parcial sin
               autorización escrita.

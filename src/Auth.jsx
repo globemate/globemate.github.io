@@ -359,8 +359,8 @@ const style = `
 ───────────────────────────────────────── */
 const AUTH_ERROR_KEYS = {
   "auth/invalid-credential":                       "auth.errInvalidCredential",
-  "auth/user-not-found":                           "auth.errUserNotFound",
-  "auth/wrong-password":                           "auth.errWrongPassword",
+  "auth/user-not-found":                           "auth.errInvalidCredential",
+  "auth/wrong-password":                           "auth.errInvalidCredential",
   "auth/email-already-in-use":                     "auth.errEmailInUse",
   "auth/weak-password":                            "auth.errWeakPassword",
   "auth/invalid-email":                            "auth.errInvalidEmail",
@@ -541,9 +541,10 @@ export default function Auth({ onAuthSuccess, onBack, initialMode }) {
         logEvent("login", { method: "email" });
         onAuthSuccess();
       } catch (err) {
-        setError(getAuthError(err));
+        setError(getAuthError(err, t));
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     } else {
       if (!firstName.trim() || !lastName.trim()) {
         setError(t("auth.errNameRequired")); return;

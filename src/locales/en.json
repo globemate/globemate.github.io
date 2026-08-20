@@ -389,7 +389,8 @@
     "termsLink": "terms and conditions",
     "freeTitle": "Free",
     "premiumTitle": "Premium",
-    "eliteTitle": "Elite"
+    "eliteTitle": "Elite",
+    "comingSoon": "Coming soon"
   },
   "settings": {
     "title": "Settings",
@@ -411,6 +412,9 @@
     "changePassword": "Change password",
     "pauseAccount": "Pause account",
     "pauseAccountDesc": "Your profile will be hidden from other users while paused.",
+    "resumeAccount": "Resume account",
+    "pauseActivated": "Account paused. Your profile is no longer visible.",
+    "pauseDeactivated": "Account resumed. Your profile is visible again.",
     "deleteAccount": "Delete account",
     "deleteWarning": "This action is irreversible. All your data will be permanently deleted.",
     "deleteTypeToConfirm": "Type ELIMINAR to confirm",

@@ -389,7 +389,8 @@
     "termsLink": "Allgemeinen Geschäftsbedingungen",
     "freeTitle": "Kostenlos",
     "premiumTitle": "Premium",
-    "eliteTitle": "Elite"
+    "eliteTitle": "Elite",
+    "comingSoon": "Demnächst"
   },
   "settings": {
     "title": "Einstellungen",
@@ -411,6 +412,9 @@
     "changePassword": "Passwort ändern",
     "pauseAccount": "Konto pausieren",
     "pauseAccountDesc": "Dein Profil wird anderen Nutzern während der Pause ausgeblendet.",
+    "resumeAccount": "Konto reaktivieren",
+    "pauseActivated": "Konto pausiert. Dein Profil ist nicht mehr sichtbar.",
+    "pauseDeactivated": "Konto reaktiviert. Dein Profil ist wieder sichtbar.",
     "deleteAccount": "Konto löschen",
     "deleteWarning": "Diese Aktion ist unwiderruflich. Alle deine Daten werden dauerhaft gelöscht.",
     "deleteTypeToConfirm": "Tippe ELIMINAR zur Bestätigung",

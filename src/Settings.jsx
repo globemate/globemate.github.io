@@ -4,7 +4,7 @@ import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, ge
 import {
   updatePassword, verifyBeforeUpdateEmail,
   reauthenticateWithCredential, reauthenticateWithPopup,
-  EmailAuthProvider, GoogleAuthProvider, deleteUser,
+  EmailAuthProvider, GoogleAuthProvider, FacebookAuthProvider, TwitterAuthProvider, deleteUser,
 } from "firebase/auth";
 import { useTranslation } from "react-i18next";
 import { LangButton, LangSelect } from "./LanguageSelector";
@@ -519,10 +519,22 @@ export default function Settings({
     setPwdBusy(false);
   };
 
+  const [pauseBusy, setPauseBusy] = useState(false);
+  const [pauseMsg,  setPauseMsg]  = useState("");
+
   const handlePauseToggle = async () => {
+    if (pauseBusy) return;
+    setPauseBusy(true);
     const next = { ...settings, accountPaused: !settings.accountPaused };
-    setSettings(next);
-    await setDoc(doc(db, "users", user.uid), { settings: next }, { merge: true });
+    try {
+      await setDoc(doc(db, "users", user.uid), { settings: next }, { merge: true });
+      setSettings(next);
+      setPauseMsg(next.accountPaused ? t("settings.pauseActivated") : t("settings.pauseDeactivated"));
+      setTimeout(() => setPauseMsg(""), 3000);
+    } catch {
+      setPauseMsg(t("settings.errorSaving"));
+    }
+    setPauseBusy(false);
   };
 
   const handleDeleteAccount = async () => {
@@ -537,8 +549,12 @@ export default function Settings({
         const cred = EmailAuthProvider.credential(currentUser.email, delPwd);
         await reauthenticateWithCredential(currentUser, cred);
       } else {
-        const pid = currentUser.providerData[0]?.providerId;
-        const provider = pid === "google.com" ? new GoogleAuthProvider() : null;
+        const pid = currentUser.providerData.find(p => p.providerId !== "password")?.providerId;
+        const provider =
+          pid === "google.com"   ? new GoogleAuthProvider() :
+          pid === "facebook.com" ? new FacebookAuthProvider() :
+          pid === "twitter.com"  ? new TwitterAuthProvider() :
+          null;
         if (!provider) { setDelErr(t("settings.errProviderNotFound")); setDelBusy(false); return; }
         await reauthenticateWithPopup(currentUser, provider);
       }
@@ -977,12 +993,24 @@ export default function Settings({
                   <div className="sg-row-lbl">{t("settings.pauseAccount")}</div>
                   <div className="sg-row-sub" style={{ marginTop:4 }}>{t("settings.pauseAccountDesc")}</div>
                 </div>
-                <button
-                  className={`sg-btn-pause${settings.accountPaused ? " paused" : ""}`}
-                  onClick={handlePauseToggle}
-                >
-                  {t("settings.pauseAccount")}
-                </button>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+                  <button
+                    className={`sg-btn-pause${settings.accountPaused ? " paused" : ""}`}
+                    onClick={handlePauseToggle}
+                    disabled={pauseBusy}
+                  >
+                    {pauseBusy
+                      ? "…"
+                      : settings.accountPaused
+                        ? t("settings.resumeAccount")
+                        : t("settings.pauseAccount")}
+                  </button>
+                  {pauseMsg && (
+                    <div style={{ fontSize:"0.72rem", color:"rgba(245,240,232,0.55)", letterSpacing:"0.06em" }}>
+                      {pauseMsg}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

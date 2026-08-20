@@ -389,7 +389,8 @@
     "termsLink": "नियम और शर्तें",
     "freeTitle": "मुफ़्त",
     "premiumTitle": "प्रीमियम",
-    "eliteTitle": "एलीट"
+    "eliteTitle": "एलीट",
+    "comingSoon": "जल्द आ रहा है"
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -411,6 +412,9 @@
     "changePassword": "पासवर्ड बदलें",
     "pauseAccount": "खाता रोकें",
     "pauseAccountDesc": "रोके जाने पर आपकी प्रोफ़ाइल अन्य उपयोगकर्ताओं से छिपी रहेगी।",
+    "resumeAccount": "खाता पुनः सक्रिय करें",
+    "pauseActivated": "खाता रोका गया। आपकी प्रोफ़ाइल अब दिखाई नहीं दे रही।",
+    "pauseDeactivated": "खाता पुनः सक्रिय। आपकी प्रोफ़ाइल फिर से दिखाई दे रही है।",
     "deleteAccount": "खाता हटाएं",
     "deleteWarning": "यह क्रिया अपरिवर्तनीय है। आपका सारा डेटा स्थायी रूप से हटा दिया जाएगा।",
     "deleteTypeToConfirm": "पुष्टि के लिए ELIMINAR टाइप करें",

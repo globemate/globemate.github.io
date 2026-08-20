@@ -389,7 +389,8 @@
     "termsLink": "الشروط والأحكام",
     "freeTitle": "مجاني",
     "premiumTitle": "بريميوم",
-    "eliteTitle": "إيليت"
+    "eliteTitle": "إيليت",
+    "comingSoon": "قريباً"
   },
   "settings": {
     "title": "الإعدادات",
@@ -411,6 +412,9 @@
     "changePassword": "تغيير كلمة المرور",
     "pauseAccount": "إيقاف الحساب مؤقتاً",
     "pauseAccountDesc": "سيكون ملفك الشخصي مخفياً عن المستخدمين الآخرين أثناء الإيقاف المؤقت.",
+    "resumeAccount": "إعادة تفعيل الحساب",
+    "pauseActivated": "تم إيقاف الحساب مؤقتاً. ملفك الشخصي لم يعد مرئياً.",
+    "pauseDeactivated": "تم إعادة تفعيل الحساب. ملفك الشخصي مرئي مرة أخرى.",
     "deleteAccount": "حذف الحساب",
     "deleteWarning": "هذا الإجراء لا رجعة فيه. سيتم حذف جميع بياناتك بشكل دائم.",
     "deleteTypeToConfirm": "اكتب ELIMINAR للتأكيد",

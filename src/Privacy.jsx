@@ -80,7 +80,7 @@ export default function Privacy({ onBack }) {
               GlobeMate son tratados por:
             </p>
             <ul>
-              <li><strong>Titular:</strong> <span className="legal-placeholder">[NOMBRE COMPLETO Y NIF DE LA AUTÓNOMA - PENDIENTE]</span></li>
+              <li><strong>Titular:</strong> Daniela Alejandra Jiménez Angarita</li>
               <li><strong>Actividad:</strong> Plataforma de contacto entre viajeros</li>
               <li><strong>Domicilio:</strong> España</li>
               <li><strong>Correo de contacto:</strong> <a href="mailto:support@globemate.app">support@globemate.app</a></li>

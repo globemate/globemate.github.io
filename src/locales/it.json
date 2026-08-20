@@ -389,7 +389,8 @@
     "termsLink": "termini e condizioni",
     "freeTitle": "Gratuito",
     "premiumTitle": "Premium",
-    "eliteTitle": "Elite"
+    "eliteTitle": "Elite",
+    "comingSoon": "Prossimamente"
   },
   "settings": {
     "title": "Impostazioni",
@@ -411,6 +412,9 @@
     "changePassword": "Cambia password",
     "pauseAccount": "Metti in pausa l'account",
     "pauseAccountDesc": "Il tuo profilo sarà nascosto agli altri utenti mentre è in pausa.",
+    "resumeAccount": "Riattiva account",
+    "pauseActivated": "Account sospeso. Il tuo profilo non è più visibile.",
+    "pauseDeactivated": "Account riattivato. Il tuo profilo è di nuovo visibile.",
     "deleteAccount": "Elimina account",
     "deleteWarning": "Questa azione è irreversibile. Tutti i tuoi dati saranno eliminati definitivamente.",
     "deleteTypeToConfirm": "Digita ELIMINAR per confermare",

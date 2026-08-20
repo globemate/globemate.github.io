@@ -260,7 +260,8 @@ export default function Explore({ user, onBack, onProfile, onExplore, onMatches,
             u.uid !== user.uid &&
             u.displayName &&
             u.settings?.privacy?.profileVisibility !== "hidden" &&
-            !u.settings?.privacy?.incognitoMode
+            !u.settings?.privacy?.incognitoMode &&
+            !u.settings?.accountPaused
           );
         setTravelers(real);
       } catch (err) {
